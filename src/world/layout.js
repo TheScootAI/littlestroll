@@ -13,13 +13,28 @@
 // - Everything else is sea floor (SEA_Y), except a sloped sand beach around A.
 //
 // North is −Z. The trail climbs from the beach (south, +Z) to the summit (north).
+//
+// The Far Isle (zones G < H < I < J) lies east of the summit, 40 m out to sea, and
+// is reached only by the causeway ramp (flag `causeway`). Same model, plus:
+// - The marsh: a 5 × 6 grid of tiles between H and I. Over its rectangle the ground
+//   is deep water except within MARSH.edge of a tile whose bit is set in dyn.marsh,
+//   where it is MARSH_SURFACE. It overrides everything beneath it, like the lift.
+// - The watch-stone: a flat-topped rock on H (WATCH_STONE), higher than H; zoneAt
+//   still says H there. A ramp from H climbs onto it.
+// - The relay climb: three ramp legs round three sides of the summit J and a short
+//   bridge in. Legs meet at square corners where both are flat at one height.
+// A dyn without the Far Isle keys reads as their defaults (false / 0).
 import { clamp } from '../core/math.js';
 
-export const DYN_NONE = Object.freeze({ gateOpen: false, bridge: false, plank: false, lift: 0, ladder: false });
+export const DYN_NONE = Object.freeze({
+  gateOpen: false, bridge: false, plank: false, lift: 0, ladder: false,
+  causeway: false, bells: false, marsh: 0,
+});
 
 const SEA_Y = -4;
 const BEACH_SLOPE = 0.5;        // metres of drop per metre beyond A's rim
-const H = { A: 1, B: 4, C: 6, D: 7, E: 8.5, F: 13.5 };
+const H = { A: 1, B: 4, C: 6, D: 7, E: 8.5, F: 13.5, G: 3, H: 6, I: 6.3, J: 12.3 };
+export const MARSH_SURFACE = 6.15;   // H and I sit 0.15 m either side of it (±0.08 undulation)
 
 // ------------------------------------------------------------------ plateaus
 
@@ -32,6 +47,41 @@ const corridorDiscs = [];
 for (let z = PLANK_CORRIDOR.az; z >= PLANK_CORRIDOR.bz - 1e-9; z -= 0.5)
   corridorDiscs.push(disc('D', PLANK_CORRIDOR.ax, z, PLANK_CORRIDOR.hw));
 
+// ------------------------------------------------------------------ Far Isle geometry
+
+// The marsh grid. Row 0 is nearest H; i = row * cols + col; col 0 at `origin`, the
+// near-left corner (left as seen walking from H toward I).
+const MARSH = { origin: [110, -62], right: [0, 1], fwd: [1, 0], cols: 5, rows: 6, tile: 2.4, edge: 0.3 };
+const MARSH_W = MARSH.cols * MARSH.tile, MARSH_L = MARSH.rows * MARSH.tile;
+const marshAt = (u, v) => [
+  MARSH.origin[0] + MARSH.right[0] * u + MARSH.fwd[0] * v,
+  MARSH.origin[1] + MARSH.right[1] * u + MARSH.fwd[1] * v,
+];
+// The lip discs that meet the marsh's near and far edges: radius 7, centred 3.25 m
+// back from the edge, so they cross the edge line 6.2 m either side of its middle —
+// the whole 12 m width, with at most a 0.2 m sliver past either side.
+const LIP_R = 7, LIP_BACK = 3.25;
+const nearLip = marshAt(MARSH_W / 2, -LIP_BACK), farLip = marshAt(MARSH_W / 2, MARSH_L + LIP_BACK);
+
+// The summit J and the relay climb round it: the climb's centre line is a square of
+// half-side RING_D round J's centre, with a 1.5 m moat between its inner edge and J.
+const J_C = [144.25, -37], J_R = 5, RING_HW = 1.75, RING_D = J_R + 1.5 + RING_HW;
+
+function farDiscs() {
+  return [
+    disc('G', 76, -56, 8),        // landing: the causeway foot (west), the steps (east)
+    disc('G', 77, -64.5, 3),      // neck to the north outcrop
+    disc('G', 78, -70, 4),        // north outcrop: bell a
+    disc('G', 77, -47.5, 3),      // neck to the south outcrop
+    disc('G', 78, -42, 4),        // south outcrop: bell b
+    disc('H', 100, -56, 11),      // marsh near side: steps landing, watch-stone, checkpoint
+    disc('H', nearLip[0], nearLip[1], LIP_R),  // H's lip along row 0
+    disc('I', farLip[0], farLip[1], LIP_R),    // I's lip along row 5
+    disc('I', 133, -57, 8),       // marsh far side: lever, small brazier
+    disc('J', J_C[0], J_C[1], J_R),            // summit: great brazier
+  ];
+}
+
 export const ZONES = [
   disc('A', 0, 120, 16),        // beach
   disc('B', 0, 76, 15),         // gate-to-signal terrace
@@ -41,12 +91,42 @@ export const ZONES = [
   disc('D', 6, -4, 5),          // plank terrace: slot
   disc('E', 6, -24, 11.4),      // lift foot
   disc('F', 6, -56, 22),        // summit
+  ...farDiscs(),
 ];
 
 // ------------------------------------------------------------------ ramps
 
 const ramp = (from, to, flag, ax, az, bx, bz, hw, pa = 1, pb = 1) =>
   ({ from, to, flag, ax, az, bx, bz, hw, ha: H[from], hb: H[to], pa, pb });
+// A ramp whose end heights are given rather than taken from its zones.
+const rampH = (from, to, flag, ax, az, bx, bz, hw, ha, hb, pa, pb) =>
+  ({ from, to, flag, ax, az, bx, bz, hw, ha, hb, pa, pb });
+
+// The watch-stone on H: flat top WATCH_STONE.h, sheer sides, one ramp up from the west.
+export const WATCH_STONE = { x: 102.5, z: -56, r: 2.5, h: 9 };
+
+// The relay climb: start on I, south down J's west side, east along its south side,
+// north up its east side to the middle, then a bridge west onto J. Each leg runs
+// RING_HW past its corner so the two legs meeting there share a square, flat over
+// both legs' 2·RING_HW pads. Heights rise evenly over the sloped lengths.
+function relayLegs() {
+  const P = 2 * RING_HW, W = J_C[0] - RING_D, E = J_C[0] + RING_D, S = J_C[1] + RING_D, M = J_C[1];
+  const legs = [
+    { ax: W, az: -51, bx: W, bz: S + RING_HW, pa: 1, pb: P },                           // west side, from I
+    { ax: W - RING_HW, az: S, bx: E + RING_HW, bz: S, pa: P, pb: P },                   // south side
+    { ax: E, az: S + RING_HW, bx: E, bz: M - RING_HW, pa: P, pb: P },                   // east side, to the middle
+    { ax: E + RING_HW, az: M, bx: J_C[0] + J_R - 1, bz: M, pa: P, pb: 1, flat: true },  // bridge onto J
+  ];
+  const sloped = (l) => (l.flat ? 0 : Math.hypot(l.bx - l.ax, l.bz - l.az) - l.pa - l.pb);
+  const total = legs.reduce((t, l) => t + sloped(l), 0);
+  let done = 0, h = H.I;
+  return legs.map((l) => {
+    const ha = h;
+    done += sloped(l);
+    h = done >= total - 1e-9 ? H.J : Math.round((H.I + (H.J - H.I) * done / total) * 100) / 100;
+    return rampH('I', 'J', null, l.ax, l.az, l.bx, l.bz, RING_HW, ha, h, l.pa, l.pb);
+  });
+}
 
 export const RAMPS = [
   ramp('A', 'B', null, 0, 105, 0, 90, 1.5),                 // gate ramp (the door sits on it)
@@ -54,6 +134,11 @@ export const RAMPS = [
   ramp('B', 'D', 'bridge', 6, 63.25, 6, 44, 1.5),           // signal bridge
   ramp('D', 'E', 'plank', 6, -8, 6, -13.6, 0.8),            // plank span
   ramp('E', 'F', 'ladder', 11, -27.35, 11, -35.6, 0.75, 1, 1.2), // rope ladder
+  // the Far Isle
+  ramp('F', 'G', 'causeway', 27, -56, 69, -56, 2),          // causeway: 40 m of sea, 13.5 → 3
+  ramp('G', 'H', 'bells', 83, -56, 90, -56, 1.5),           // the bells' stone steps
+  rampH('H', 'H', null, 93.75, -56, 100.75, -56, 1.5, H.H, WATCH_STONE.h, 1, 1), // up the watch-stone
+  ...relayLegs(),                                           // the relay climb, I → J
 ];
 const rampGeo = RAMPS.map((r) => {
   const len = Math.hypot(r.bx - r.ax, r.bz - r.az);
@@ -78,16 +163,52 @@ const LIFT = { crank: [12, -24], platform: { x: 6, z: -32, hw: 2, hd: 3 }, low: 
 const onPlatform = (x, z) =>
   Math.abs(x - LIFT.platform.x) <= LIFT.platform.hw && Math.abs(z - LIFT.platform.z) <= LIFT.platform.hd;
 
-// ------------------------------------------------------------------ height
-
 // Cosmetic undulation on plateaus, |u| ≤ 0.08 m.
 const undulate = (x, z) => 0.05 * Math.sin(0.37 * x + 0.5) * Math.sin(0.29 * z) + 0.03 * Math.sin(0.11 * (x + z));
 
 const A = ZONES[0];
 
+// ------------------------------------------------------------------ marsh
+
+// Marsh coordinates of (x, z): u across (along `right`), v along (along `fwd`).
+const marshU = (x, z) => (x - MARSH.origin[0]) * MARSH.right[0] + (z - MARSH.origin[1]) * MARSH.right[1];
+const marshV = (x, z) => (x - MARSH.origin[0]) * MARSH.fwd[0] + (z - MARSH.origin[1]) * MARSH.fwd[1];
+const inMarsh = (u, v) => u >= 0 && u <= MARSH_W && v >= 0 && v <= MARSH_L;
+
+// Which tile (x, z) is over, or -1 off the grid. No edge margin.
+export function marshTileAt(x, z) {
+  const u = marshU(x, z), v = marshV(x, z);
+  if (!inMarsh(u, v)) return -1;
+  const c = Math.min(MARSH.cols - 1, Math.floor(u / MARSH.tile)), r = Math.min(MARSH.rows - 1, Math.floor(v / MARSH.tile));
+  return r * MARSH.cols + c;
+}
+export function marshTileCentre(i) {
+  const c = i % MARSH.cols, r = Math.floor(i / MARSH.cols);
+  return marshAt((c + 0.5) * MARSH.tile, (r + 0.5) * MARSH.tile);
+}
+// Ground over the marsh: MARSH_SURFACE within `edge` of a solid tile, else deep.
+function marshHeight(u, v, bits) {
+  if (!bits) return SEA_Y;
+  const t = MARSH.tile, e2 = MARSH.edge * MARSH.edge;
+  const c0 = Math.min(MARSH.cols - 1, Math.floor(u / t)), r0 = Math.min(MARSH.rows - 1, Math.floor(v / t));
+  for (let r = Math.max(0, r0 - 1); r <= Math.min(MARSH.rows - 1, r0 + 1); r++) {
+    for (let c = Math.max(0, c0 - 1); c <= Math.min(MARSH.cols - 1, c0 + 1); c++) {
+      if (!(bits & (1 << (r * MARSH.cols + c)))) continue;
+      const du = Math.max(c * t - u, 0, u - (c + 1) * t), dv = Math.max(r * t - v, 0, v - (r + 1) * t);
+      if (du * du + dv * dv <= e2) return MARSH_SURFACE;
+    }
+  }
+  return SEA_Y;
+}
+
+// ------------------------------------------------------------------ height
+
 export function heightAt(x, z, dyn = DYN_NONE) {
   // the lift platform is a flat deck at its own height, whatever lies beneath it
   if (onPlatform(x, z)) return LIFT.low + clamp(dyn.lift || 0, 0, 1) * (LIFT.high - LIFT.low);
+  // so is the marsh: deep water but for its solid tiles
+  const mu = marshU(x, z), mv = marshV(x, z);
+  if (inMarsh(mu, mv)) return marshHeight(mu, mv, dyn.marsh | 0);
   let h = SEA_Y;
   // sloped beach around A
   const dA = Math.hypot(x - A.x, z - A.z) - A.r;
@@ -100,6 +221,9 @@ export function heightAt(x, z, dyn = DYN_NONE) {
     if (dx * dx + dz * dz <= d.r * d.r && d.h > top) top = d.h;
   }
   if (top > -Infinity) h = Math.max(h, top + undulate(x, z));
+  // the watch-stone's flat top
+  const sx = x - WATCH_STONE.x, sz = z - WATCH_STONE.z;
+  if (sx * sx + sz * sz <= WATCH_STONE.r * WATCH_STONE.r) h = Math.max(h, WATCH_STONE.h);
   // ramps
   for (let i = 0; i < rampGeo.length; i++) {
     const g = rampGeo[i];
@@ -111,9 +235,10 @@ export function heightAt(x, z, dyn = DYN_NONE) {
 }
 
 // Which plateau a point is on: null on ramps (present or not), the lift platform,
-// the beach slope and water.
+// the marsh, the beach slope and water. The watch-stone counts as H.
 export function zoneAt(x, z) {
   if (onPlatform(x, z)) return null;
+  if (inMarsh(marshU(x, z), marshV(x, z))) return null;
   for (const g of rampGeo) if (rampS(g, x, z) >= 0) return null;
   let best = null;
   for (const d of ZONES) {
@@ -167,6 +292,9 @@ export const SITES = {
     [[4.5, -15.5], [7.5, -15.5]],   // 3 E, just past the plank
     [[4.5, -38.5], [7.5, -38.5]],   // 4 F, top of the lift
     [[3, -64], [9, -64]],           // 5 F, by the beacon
+    [[106.5, -59.5], [106.5, -52.5]], // 6 H, by the marsh's near edge
+    [[129, -59], [133, -59]],       // 7 I, by the small brazier
+    [[142.5, -35.5], [146, -35.5]], // 8 J, the summit
   ],
   gate: {
     plateA: [0, 110],
@@ -196,14 +324,41 @@ export const SITES = {
     hint: { p1: [0, -50], p2: [-6, -59] },
   },
   beacon: BEACON,
+  causeway: rampSeg('causeway'),
+  bells: {
+    a: [78, -70],                   // north outcrop
+    b: [78, -42],                   // south outcrop
+    steps: rampSeg('bells'),
+  },
+  marsh: {
+    ...MARSH,
+    plate: { x: WATCH_STONE.x, z: WATCH_STONE.z, r: 1.5 },
+    lever: [126.5, -60.5],
+  },
+  relay: {
+    small: [130, -63],
+    great: [...J_C],
+  },
 };
 
-// The walkable route from spawn to the beacon (spur to C left out), for drawing a path.
+// The relay climb's centre line, from the small brazier to the great one.
+export const RELAY_ROUTE = (() => {
+  const W = J_C[0] - RING_D, E = J_C[0] + RING_D, S = J_C[1] + RING_D;
+  return [SITES.relay.small, [W, -54], [W, S], [E, S], [E, J_C[1]], [...J_C]];
+})();
+
+// The walkable route from spawn to the beacon (spur to C left out), then on over the
+// causeway, round the watch-stone, up the marsh's middle column and the relay climb.
 export const TRAIL = [
   [0, 124], SITES.gate.plateA, [0, 97], SITES.gate.plateB, [0, 76], [6, 66],
   [6, 63.25], [6, 44], [6, 38], ...PLANK_ROUTE,
   [6, -13.6], [6, -20], [6, -32], [6, -38.5],
   [-4.5, -45], [-5, -55], [-3, -61], BEACON,
+  [20, -59], [27, -56], [69, -56], [76, -56],                        // causeway to G
+  [83, -56], [90, -56],                                               // the steps
+  [92, -60], [107, -60], [109, -56],                                  // round the watch-stone
+  marshAt(MARSH_W / 2, 0), marshAt(MARSH_W / 2, MARSH_L), [127, -56], // the middle column
+  ...RELAY_ROUTE,
 ];
 
 // ------------------------------------------------------------------ blockers

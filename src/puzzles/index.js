@@ -57,6 +57,7 @@ export const solvedLine = (n) => ORDER[n]?.done ?? null;
 export const dynOf = (S) => ({
   gateOpen: S.gate.amt > 0.5 || S.gate.open,
   bridge: S.signal.bridge >= 1, plank: S.plank.placed, lift: S.lift.y, ladder: S.lift.ladder,
+  causeway: false, bells: false, marsh: 0,   // the Far Isle: wired up by its puzzles' tasks
 });
 
 // First hint among the unsolved puzzles, in trail order.

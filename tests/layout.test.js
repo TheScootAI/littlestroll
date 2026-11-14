@@ -1,13 +1,17 @@
 import { test, expect, describe } from 'vitest';
 import {
   DYN_NONE, heightAt, blockers, zoneAt, SITES, ZONES, RAMPS, TRAIL, PLANK_ROUTE, PLANK_CORRIDOR,
+  marshTileAt, marshTileCentre, MARSH_SURFACE, WATCH_STONE,
 } from '../src/world/layout.js';
 import { occluded } from '../src/world/sight.js';
-import { reachable } from './helpers/reach.js';
+import { reachable, walkDistance } from './helpers/reach.js';
 import { DROWN_Y, STEP_UP, PLAYER_R } from '../src/config.js';
 import { pointSegDist, segCircle, rayPointDist } from '../src/core/math.js';
 
 const D = (o) => ({ ...DYN_NONE, ...o });
+const ALL5 = { gateOpen: true, bridge: true, plank: true, lift: 0, ladder: true };
+const mask = (tiles) => tiles.reduce((m, i) => m | (1 << i), 0);
+const column = (c) => [0, 1, 2, 3, 4, 5].map((r) => r * 5 + c);       // a straight path up column c
 const at = (p) => [p[0], p[1]];
 const ALL = D({ gateOpen: true, bridge: true, plank: true, ladder: true });
 
@@ -50,7 +54,7 @@ test('ladder down: the summit and both mirrors', () => {
 test('every checkpoint is dry land', () => {
   for (const pair of SITES.checkpoints) for (const [x, z] of pair)
     expect(heightAt(x, z, DYN_NONE)).toBeGreaterThan(0.2);
-  expect(SITES.checkpoints).toHaveLength(6);
+  expect(SITES.checkpoints).toHaveLength(9);
 });
 test('the lookout faces the back of the wall, close enough to read', () => {
   const { wall, lookout } = SITES.signal;
@@ -129,7 +133,7 @@ describe('A. zones', () => {
       expect(zoneAt(r.ax - ux * 1.5, r.az - uz * 1.5)).toBe(from);
       expect(zoneAt(r.bx + ux * 1.5, r.bz + uz * 1.5)).toBe(to);
     }
-    expect(RAMPS).toHaveLength(5);
+    expect(RAMPS.filter((q) => 'ABCDEF'.includes(q.to))).toHaveLength(5);   // the first island's five
   });
   test('heights rise along the trail; C is a spur above B', () => {
     expect(zoneH('A')).toBeLessThan(zoneH('B'));
@@ -332,12 +336,21 @@ describe('F. lift', () => {
 // ---------------------------------------------------------------- ramp seams
 
 test('every ramp, with its flag on, is walkable along its centre and both edges', () => {
-  const dyn = D({ ...ALL, lift: 0 });
+  const dyn = D({ ...ALL, lift: 0, causeway: true, bells: true });
   for (const r of RAMPS) {
     const len = Math.hypot(r.bx - r.ax, r.bz - r.az), ux = (r.bx - r.ax) / len, uz = (r.bz - r.az) / len;
+    // An end inside another ramp is a corner of the relay climb: walk up to it, not past
+    // it (past it is open sea beside the corner). Every other end runs onto a plateau.
+    const inside = (q, x, z) => {
+      const l = Math.hypot(q.bx - q.ax, q.bz - q.az), qx = (q.bx - q.ax) / l, qz = (q.bz - q.az) / l;
+      const dx = x - q.ax, dz = z - q.az, s = dx * qx + dz * qz;
+      return s >= 0 && s <= l && Math.abs(-dx * qz + dz * qx) <= q.hw;
+    };
+    const joint = (s) => RAMPS.some((q) => q !== r && inside(q, r.ax + ux * s, r.az + uz * s));
+    const s0 = joint(0.1) ? 0 : -0.5, s1 = joint(len - 0.1) ? len - 0.01 : len + 0.5;
     for (const off of [0, r.hw - 0.05, -(r.hw - 0.05)]) {
       const hs = [];
-      for (let s = -0.5; s <= len + 0.5; s += 0.1) {
+      for (let s = s0; s <= s1; s += 0.1) {
         const h = heightAt(r.ax + ux * s - uz * off, r.az + uz * s + ux * off, dyn);
         expect(h, `${r.from}->${r.to} at ${s.toFixed(1)}/${off}`).toBeGreaterThan(DROWN_Y);
         hs.push(h);
@@ -421,7 +434,7 @@ describe('G. beam', () => {
 // ---------------------------------------------------------------- H. checkpoints
 
 test('H. checkpoints sit in the right zones', () => {
-  const want = ['A', 'B', 'D', 'E', 'F', 'F'];
+  const want = ['A', 'B', 'D', 'E', 'F', 'F', 'H', 'I', 'J'];
   SITES.checkpoints.forEach((pair, i) => {
     expect(pair).toHaveLength(2);
     expect(Math.hypot(pair[0][0] - pair[1][0], pair[0][1] - pair[1][1])).toBeGreaterThanOrEqual(1.5);
@@ -494,19 +507,299 @@ describe('K. renderer data', () => {
   test('RAMPS carry their geometry and flag', () => {
     for (const r of RAMPS) {
       for (const k of ['ax', 'az', 'bx', 'bz', 'hw', 'ha', 'hb']) expect(typeof r[k]).toBe('number');
-      expect([null, 'bridge', 'plank', 'ladder']).toContain(r.flag);
+      expect([null, 'bridge', 'plank', 'ladder', 'causeway', 'bells']).toContain(r.flag);
     }
     expect(JSON.parse(JSON.stringify(RAMPS))).toEqual(RAMPS);
     expect(JSON.parse(JSON.stringify(SITES))).toEqual(SITES);
   });
-  test('TRAIL runs from spawn to the beacon over walkable ground', () => {
+  test('TRAIL runs from spawn past the beacon to the great brazier over walkable ground', () => {
     expect(Math.hypot(TRAIL[0][0] - SITES.spawn[0][0], TRAIL[0][1] - SITES.spawn[0][1])).toBeLessThan(3);
-    expect(TRAIL[TRAIL.length - 1]).toEqual(SITES.beacon);
+    expect(TRAIL).toContainEqual(SITES.beacon);
+    expect(TRAIL[TRAIL.length - 1]).toEqual(SITES.relay.great);
+    const all8 = D({ ...ALL, causeway: true, bells: true, marsh: mask(column(2)) });
     const L = polyLen(TRAIL);
     for (let s = 0; s <= L; s += 0.25) {
       const p = along(TRAIL, s);
-      expect(heightAt(...p, ALL)).toBeGreaterThan(DROWN_Y);
-      if (Math.hypot(p[0] - SITES.beacon[0], p[1] - SITES.beacon[1]) > 2.5) expect(clearOf(...p, ALL), `${p}`).toBe(true);
+      expect(heightAt(...p, all8), `${p}`).toBeGreaterThan(DROWN_Y);
+      if (Math.hypot(p[0] - SITES.beacon[0], p[1] - SITES.beacon[1]) > 2.5) expect(clearOf(...p, all8), `${p}`).toBe(true);
     }
+  });
+});
+
+// ---------------------------------------------------------------- L. the Far Isle
+
+describe('L. the Far Isle', () => {
+  const { bells = {}, marsh = { plate: {} }, relay = {} } = SITES;
+  const plate = [marsh.plate.x, marsh.plate.z];
+  const ALL_TILES = (1 << 30) - 1;
+  const full = (marshBits) => D({ ...ALL5, causeway: true, bells: true, marsh: marshBits });
+  const farSites = () => [bells.a, bells.b, plate, relay.small, relay.great];
+  const hiSites = () => [plate, marsh.lever, relay.small, relay.great, ...SITES.checkpoints.slice(6).flat()];
+  const summit = SITES.checkpoints[5][0];                 // "from the beacon": its checkpoint
+  const cp6 = (SITES.checkpoints[6] ?? [[NaN, NaN]])[0];
+  const isFar = (d) => 'GHIJ'.includes(d.zone);
+  const local = (x, z) => {                               // marsh coordinates: [across, along]
+    const dx = x - marsh.origin[0], dz = z - marsh.origin[1];
+    return [dx * marsh.right[0] + dz * marsh.right[1], dx * marsh.fwd[0] + dz * marsh.fwd[1]];
+  };
+  const world = (u, v) => [
+    marsh.origin[0] + marsh.right[0] * u + marsh.fwd[0] * v,
+    marsh.origin[1] + marsh.right[1] * u + marsh.fwd[1] * v,
+  ];
+  const W = marsh.cols * marsh.tile, Lm = marsh.rows * marsh.tile;
+
+  test('zones G H I J exist, rise in trail order, below the summit they hang off', () => {
+    for (const L of 'GHIJ') expect(ZONES.some((z) => z.zone === L)).toBe(true);
+    expect(zoneH('G')).toBeLessThan(zoneH('H'));
+    expect(zoneH('H')).toBeLessThan(zoneH('I'));
+    expect(zoneH('I')).toBeLessThan(zoneH('J'));
+    expect(zoneH('G')).toBeLessThan(zoneH('F'));
+    expect(zoneAt(...bells.a)).toBe('G');
+    expect(zoneAt(...bells.b)).toBe('G');
+    expect(zoneAt(...plate)).toBe('H');
+    expect(zoneAt(...marsh.lever)).toBe('I');
+    expect(zoneAt(...relay.small)).toBe('I');
+    expect(zoneAt(...relay.great)).toBe('J');
+  });
+
+  test('without the causeway no Far Isle site; with it the bells and the foot of the steps, not the plate', () => {
+    const r0 = reachable(summit, D(ALL5));
+    for (const p of farSites()) expect(r0(...p), `${p}`).toBe(false);
+    const r1 = reachable(summit, D({ ...ALL5, causeway: true }));
+    expect(r1(...bells.a)).toBe(true);
+    expect(r1(...bells.b)).toBe(true);
+    expect(r1(bells.steps.ax, bells.steps.az)).toBe(true);
+    expect(r1(...plate)).toBe(false);
+  });
+
+  test('steps up: the plate and checkpoint 6, not the lever or the small brazier', () => {
+    const r = reachable(summit, D({ ...ALL5, causeway: true, bells: true }));
+    expect(r(...plate)).toBe(true);
+    for (const p of SITES.checkpoints[6]) expect(r(...p)).toBe(true);
+    expect(r(...marsh.lever)).toBe(false);
+    expect(r(...relay.small)).toBe(false);
+  });
+
+  test('any straight column of solid tiles carries a walker from H to the lever', () => {
+    for (let c = 0; c < 5; c++) {
+      const r = reachable(cp6, full(mask(column(c))));
+      expect(r(...marsh.lever), `column ${c}`).toBe(true);
+      for (const i of column(c)) expect(r(...marshTileCentre(i)), `tile ${i}`).toBe(true);
+    }
+  });
+
+  test('with no tile solid nothing past H is reachable, whatever else is set', () => {
+    for (const from of [cp6, plate, summit]) {
+      const r = reachable(from, full(0));
+      for (const p of [marsh.lever, relay.small, relay.great, ...SITES.checkpoints[7], ...SITES.checkpoints[8]])
+        expect(r(...p), `${p}`).toBe(false);
+    }
+  });
+
+  test('a zig-zag path reaches the lever; the same path with a middle tile missing does not', () => {
+    const zig = [0, 1, 6, 11, 12, 13, 18, 23, 28];    // r0c0 r0c1 r1c1 r2c1 r2c2 r2c3 r3c3 r4c3 r5c3
+    expect(reachable(cp6, full(mask(zig)))(...marsh.lever)).toBe(true);
+    const broken = zig.filter((i) => i !== 12);       // r2c2 out: r2c1 and r2c3 are a whole tile apart
+    expect(reachable(cp6, full(mask(broken)))(...marsh.lever)).toBe(false);
+  });
+
+  test('tile model: indices, solid surface, forgiving edges', () => {
+    expect(marsh.cols).toBe(5);
+    expect(marsh.rows).toBe(6);
+    expect(Math.hypot(...marsh.right)).toBeCloseTo(1, 9);
+    expect(Math.hypot(...marsh.fwd)).toBeCloseTo(1, 9);
+    expect(marsh.right[0] * marsh.fwd[0] + marsh.right[1] * marsh.fwd[1]).toBeCloseTo(0, 9);
+    for (let i = 0; i < 30; i++) {
+      expect(marshTileAt(...marshTileCentre(i))).toBe(i);
+      expect(heightAt(...marshTileCentre(i), full(1 << i))).toBe(MARSH_SURFACE);
+      expect(heightAt(...marshTileCentre(i), full(ALL_TILES & ~(1 << i)))).toBeLessThan(DROWN_Y);
+    }
+    expect(marshTileAt(...world(-0.2, 1))).toBe(-1);
+    expect(marshTileAt(...world(1, Lm + 0.2))).toBe(-1);
+    expect(marshTileAt(9999, 9999)).toBe(-1);
+    // tile 12 (row 2, col 2) alone: 0.2 m past its edge still holds, 0.5 m past it is marsh
+    const one = full(1 << 12), [cu, cv] = local(...marshTileCentre(12)), half = marsh.tile / 2;
+    for (const [du, dv] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      expect(heightAt(...world(cu + du * (half + 0.2), cv + dv * (half + 0.2)), one)).toBe(MARSH_SURFACE);
+      expect(heightAt(...world(cu + du * (half + 0.5), cv + dv * (half + 0.5)), one)).toBeLessThan(DROWN_Y);
+    }
+    // the whole marsh is deep without tiles, and with a dyn that has no marsh key at all
+    for (let i = 0; i < 30; i++) {
+      expect(heightAt(...marshTileCentre(i), D({}))).toBeLessThan(DROWN_Y);
+      expect(heightAt(...marshTileCentre(i), { gateOpen: true })).toBeLessThan(DROWN_Y);
+    }
+  });
+
+  test('H meets row 0 and I meets row 5 along their whole width; deep water down both sides', () => {
+    for (let u = 0.05; u < W; u += 0.1) {
+      const near = world(u, -0.05), far = world(u, Lm + 0.05);
+      expect(zoneAt(...near), `near ${u}`).toBe('H');
+      expect(zoneAt(...far), `far ${u}`).toBe('I');
+      expect(Math.abs(heightAt(...near, DYN_NONE) - MARSH_SURFACE)).toBeLessThanOrEqual(0.3);
+      expect(Math.abs(heightAt(...far, DYN_NONE) - MARSH_SURFACE)).toBeLessThanOrEqual(0.3);
+    }
+    for (let v = 0; v <= Lm; v += 0.1)
+      for (const u of [-0.3, W + 0.3]) expect(heightAt(...world(u, v), full(ALL_TILES)), `${u},${v}`).toBeLessThan(DROWN_Y);
+    expect(zoneAt(...marshTileCentre(12))).toBeNull();
+  });
+
+  test('bells: far apart in a straight line and on foot; the steps start between them', () => {
+    expect(Math.hypot(bells.a[0] - bells.b[0], bells.a[1] - bells.b[1])).toBeGreaterThanOrEqual(25);
+    const d = walkDistance(bells.a, D({ ...ALL5, causeway: true }))(...bells.b);
+    expect(d).toBeGreaterThanOrEqual(25);
+    expect(d).toBeLessThan(Infinity);
+    const r = rampFor('bells');
+    expect(sameSeg(r, bells.steps)).toBe(true);
+    expect(r.from).toBe('G');
+    expect(r.to).toBe('H');
+    const foot = [r.ax, r.az];
+    const da = Math.hypot(foot[0] - bells.a[0], foot[1] - bells.a[1]), db = Math.hypot(foot[0] - bells.b[0], foot[1] - bells.b[1]);
+    expect(Math.abs(da - db)).toBeLessThan(5);
+    expect(Math.min(da, db)).toBeGreaterThan(10);
+    const m = midOf(r);
+    expect(heightAt(...m, D({ causeway: true }))).toBeLessThan(DROWN_Y);
+    expect(heightAt(...m, D({ causeway: true, bells: true }))).toBeGreaterThan(0.2);
+  });
+
+  test('the watch-stone: high over the marsh, set back, centred, a long walk from any tile', () => {
+    expect(marsh.plate.r).toBe(1.5);
+    expect(heightAt(...plate, DYN_NONE) - MARSH_SURFACE).toBeGreaterThanOrEqual(2.5);
+    for (let k = 0; k < 16; k++) {                      // the whole plate is on the flat top
+      const a = k * Math.PI / 8, p = [plate[0] + 1.5 * Math.cos(a), plate[1] + 1.5 * Math.sin(a)];
+      expect(heightAt(...p, DYN_NONE)).toBe(heightAt(...plate, DYN_NONE));
+      expect(zoneAt(...p)).toBe('H');
+    }
+    const [u, v] = local(...plate);
+    expect(-v).toBeGreaterThanOrEqual(4);
+    expect(-v).toBeLessThanOrEqual(10);
+    expect(Math.abs(u - W / 2)).toBeLessThanOrEqual(1.5);
+    expect(Math.hypot(WATCH_STONE.x - plate[0], WATCH_STONE.z - plate[1])).toBeLessThanOrEqual(WATCH_STONE.r - marsh.plate.r);
+    const wd = walkDistance(plate, full(ALL_TILES));
+    let nearest = Infinity;
+    for (let i = 0; i < 30; i++) nearest = Math.min(nearest, wd(...marshTileCentre(i)));
+    expect(nearest).toBeGreaterThan(6);
+    expect(nearest).toBeLessThan(Infinity);
+  });
+
+  test('relay: 55-70 m on foot from the small brazier to the great one, on wide ramps', () => {
+    const d = walkDistance(relay.small, full(mask(column(2))))(...relay.great);
+    expect(d).toBeGreaterThanOrEqual(55);
+    expect(d).toBeLessThanOrEqual(70);
+    for (const r of RAMPS.filter((q) => q.from === 'I' || q.to === 'J')) expect(r.hw).toBeGreaterThanOrEqual(1.5);
+    expect(RAMPS.some((q) => q.from === 'I' && q.to === 'J')).toBe(true);
+  });
+
+  test('checkpoints 6-8: H by the marsh, I by the small brazier, J', () => {
+    const toMarsh = (p) => { const [u, v] = local(...p); return Math.hypot(Math.max(0, -u, u - W), Math.max(0, -v, v - Lm)); };
+    for (const p of SITES.checkpoints[6]) {
+      expect(toMarsh(p)).toBeGreaterThanOrEqual(3);
+      expect(toMarsh(p)).toBeLessThanOrEqual(6);
+      expect(local(...p)[1]).toBeLessThan(0);           // on the near side
+    }
+    for (const p of SITES.checkpoints[7]) expect(Math.hypot(p[0] - relay.small[0], p[1] - relay.small[1])).toBeLessThan(6);
+    for (const p of SITES.checkpoints[8]) expect(zoneAt(...p)).toBe('J');
+    expect(SITES.checkpoints[5]).toEqual([[3, -64], [9, -64]]);
+  });
+
+  test('isolation: no Far Isle site without the causeway; nothing in H/I/J without the steps', () => {
+    const noCause = D({ ...ALL5, bells: true, marsh: ALL_TILES, lift: 1 });
+    for (const from of [SITES.spawn[0], summit]) {
+      const r = reachable(from, noCause);
+      for (const p of [...farSites(), ...hiSites()]) expect(r(...p), `${p}`).toBe(false);
+    }
+    const r = reachable(summit, D({ ...ALL5, causeway: true, marsh: ALL_TILES }));
+    for (const p of hiSites()) expect(r(...p), `${p}`).toBe(false);
+  });
+
+  test('stepping off the first island never lands on the Far Isle: 30 m of sea between their discs', () => {
+    for (const f of ZONES.filter(isFar))
+      for (const d of ZONES.filter((q) => !isFar(q)))
+        expect(Math.hypot(f.x - d.x, f.z - d.z) - f.r - d.r, `${f.zone}@${f.x},${f.z} / ${d.zone}@${d.x},${d.z}`).toBeGreaterThanOrEqual(30);
+  });
+
+  test('the causeway: F to G, conditional, wide, gentle, over at least 30 m of open sea', () => {
+    const r = rampFor('causeway');
+    expect(r.from).toBe('F');
+    expect(r.to).toBe('G');
+    expect(r.hw).toBeGreaterThanOrEqual(1.5);
+    expect(Math.hypot(r.ax - SITES.beacon[0], r.az - SITES.beacon[1])).toBeLessThan(25);
+    const len = Math.hypot(r.bx - r.ax, r.bz - r.az), ux = (r.bx - r.ax) / len, uz = (r.bz - r.az) / len;
+    expect(zoneAt(r.ax - ux * 1.5, r.az - uz * 1.5)).toBe('F');
+    expect(zoneAt(r.bx + ux * 1.5, r.bz + uz * 1.5)).toBe('G');
+    let run = 0, best = 0;
+    for (let s = 0; s <= len; s += 0.05) {
+      run = heightAt(r.ax + ux * s, r.az + uz * s, DYN_NONE) < DROWN_Y ? run + 0.05 : 0;
+      best = Math.max(best, run);
+    }
+    expect(best).toBeGreaterThanOrEqual(30);
+    // gentle: walk it both ways at run speed's 30 Hz substeps (0.18 m) and never rise > STEP_UP
+    const dyn = D({ causeway: true });
+    for (const off of [0, r.hw - 0.05, -(r.hw - 0.05)]) {
+      let prev = null;
+      for (let s = -0.5; s <= len + 0.5; s += 0.05) {
+        const h = heightAt(r.ax + ux * s - uz * off, r.az + uz * s + ux * off, dyn);
+        expect(h).toBeGreaterThan(DROWN_Y);
+        if (prev !== null) expect(Math.abs(h - prev)).toBeLessThan(0.1);
+        prev = h;
+      }
+    }
+  });
+
+  test('cliffs or water between Far Isle zones; plateaus nearly flat (the watch-stone aside)', () => {
+    const S = 0.25;
+    const nominal = Object.fromEntries(ZONES.map((z) => [z.zone, z.h]));
+    const onStone = (x, z) => Math.hypot(x - WATCH_STONE.x, z - WATCH_STONE.z) <= WATCH_STONE.r + 0.3;
+    const xs = ZONES.filter(isFar).flatMap((d) => [d.x - d.r, d.x + d.r]);
+    const zs = ZONES.filter(isFar).flatMap((d) => [d.z - d.r, d.z + d.r]);
+    const x0 = Math.floor(Math.min(...xs)) - 2, x1 = Math.ceil(Math.max(...xs)) + 2;
+    const z0 = Math.floor(Math.min(...zs)) - 2, z1 = Math.ceil(Math.max(...zs)) + 2;
+    let prevRow = null;
+    for (let z = z0; z <= z1; z += S) {
+      const row = [];
+      for (let x = x0; x <= x1; x += S) {
+        const zone = zoneAt(x, z), h = heightAt(x, z, DYN_NONE);
+        row.push([zone, h]);
+        if (zone && !onStone(x, z)) expect(Math.abs(h - nominal[zone]), `${zone} at ${x},${z}`).toBeLessThan(0.12);
+        const left = row.length > 1 ? row[row.length - 2] : null, up = prevRow ? prevRow[row.length - 1] : null;
+        for (const n of [left, up]) {
+          if (n && n[0] && zone && n[0] !== zone && Math.abs(n[1] - h) < 1.2)
+            throw new Error(`soft border ${n[0]}/${zone} at ${x},${z}`);
+        }
+      }
+      prevRow = row;
+    }
+  });
+
+  test('a dyn without the new keys reads exactly like one with their defaults', () => {
+    const olds = [DYN_NONE, ALL5, { gateOpen: true }, { gateOpen: true, bridge: true, plank: true, lift: 0.5, ladder: false }];
+    const strip = (o) => { const { causeway, bells: b, marsh: m, ...rest } = o; return rest; };
+    let k = 0;
+    for (let i = 0; i < 200; i++) {
+      // a deterministic scatter over the first island
+      const x = -50 + ((i * 37) % 200) * 0.4, z = -80 + ((i * 53) % 200) * 1.1;
+      for (const o of olds) {
+        const old = strip(o), neu = { ...old, causeway: false, bells: false, marsh: 0 };
+        expect(heightAt(x, z, old)).toBe(heightAt(x, z, neu));
+        expect(blockers(old)).toEqual(blockers(neu));
+        k++;
+      }
+      expect(zoneAt(x, z)).toBe(zoneAt(x, z));
+    }
+    expect(k).toBe(800);
+    expect(Object.keys(DYN_NONE).sort()).toEqual(['bells', 'causeway', 'gateOpen', 'ladder', 'lift', 'marsh', 'plank', 'bridge'].sort());
+    expect(DYN_NONE.causeway).toBe(false);
+    expect(DYN_NONE.bells).toBe(false);
+    expect(DYN_NONE.marsh).toBe(0);
+  });
+
+  test('renderer data: the new ramps carry their flags; heightAt stays cheap over the Far Isle', () => {
+    expect(RAMPS.filter((r) => r.flag === 'causeway')).toHaveLength(1);
+    expect(RAMPS.filter((r) => r.flag === 'bells')).toHaveLength(1);
+    for (const r of RAMPS) expect(r.hw).toBeGreaterThan(0);
+    const t0 = performance.now();
+    let sum = 0;
+    for (let i = 0; i < 300; i++) for (let j = 0; j < 300; j++) sum += heightAt(40 + i * 0.4, -90 + j * 0.25, full(mask(column(2))));
+    expect(performance.now() - t0).toBeLessThan(2500);
+    expect(Number.isFinite(sum)).toBe(true);
   });
 });
