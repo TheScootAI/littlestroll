@@ -1,0 +1,9 @@
+export const WALK = 3.2;      // m/s
+export const RUN = 5.5;       // m/s
+export const STEP_UP = 0.45;  // tallest step a walker climbs
+export const PLAYER_R = 0.4;
+export const WATER_Y = 0;
+export const DROWN_Y = -0.5;
+export const LOGIC_HZ = 30;
+export const NET_HZ = 15;
+export const MAX_DT = 0.1;
