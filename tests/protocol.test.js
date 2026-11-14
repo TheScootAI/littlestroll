@@ -12,7 +12,7 @@ describe('protocol', () => {
     expect(decode(encode({ t: 'full' }))).toEqual({ t: 'full' });
     const s = { t: 's', S: { time: 1, gate: { a: 1 } } };
     expect(decode(encode(s))).toEqual(s);
-    expect(PROTOCOL_V).toBe(4);
+    expect(PROTOCOL_V).toBe(5);
     expect(MAX_BYTES).toBe(16384);
   });
 
@@ -22,7 +22,7 @@ describe('protocol', () => {
       JSON.stringify({ t: 'hello', v: 1 }), 'x'.repeat(20000),
       JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: 0 }),
       JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1.5, solved: 0 }),
-      JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: 9 }),
+      JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: 12 }),
       JSON.stringify({ t: 's', S: [] }), JSON.stringify({ t: 's', S: null }),
       JSON.stringify({ ...P, hold: 1 }), JSON.stringify({ ...P, eN: -1 }), JSON.stringify({ ...P, eN: 1.5 }),
       JSON.stringify({ ...P, q: 'no' })];
@@ -30,9 +30,9 @@ describe('protocol', () => {
     for (const b of [undefined, null, 5, {}, []]) expect(decode(b)).toBeNull();
   });
 
-  test('welcome.solved accepts 0 to 8 and rejects 9', () => {
-    for (const n of [0, 5, 8]) expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: n }))?.solved).toBe(n);
-    expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: 9 }))).toBeNull();
+  test('welcome.solved accepts 0 to 11 and rejects 12', () => {
+    for (const n of [0, 5, 9, 11]) expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: n }))?.solved).toBe(n);
+    expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: 12 }))).toBeNull();
     expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: -1 }))).toBeNull();
   });
 

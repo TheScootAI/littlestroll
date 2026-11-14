@@ -12,6 +12,7 @@ import * as beam from './beam.js';
 import * as bells from './bells.js';
 import * as marsh from './marsh.js';
 import * as relay from './relay.js';
+import * as pillars from './pillars.js';
 
 // Trail order. `solved(S)` says whether that puzzle is done.
 const ORDER = [
@@ -23,9 +24,10 @@ const ORDER = [
   { key: 'bells', mod: bells, valid: bells.valid, solved: (S) => S.bells.solved, done: 'The steps rise' },
   { key: 'marsh', mod: marsh, valid: marsh.valid, solved: (S) => S.marsh.solved, done: 'The path holds' },
   { key: 'relay', mod: relay, valid: relay.valid, solved: (S) => S.relay.solved, done: 'The Far Isle is lit' },
+  { key: 'pillars', mod: pillars, valid: pillars.valid, solved: (S) => S.pillars.solved, done: 'The pillars stand' },
 ];
 
-export const createAll = (seed) => ({ time: 0, gate: gate.create(seed), signal: signal.create(seed), plank: plank.create(), lift: lift.create(), beam: beam.create(), bells: bells.create(), marsh: marsh.create(seed), relay: relay.create(), ended: null });
+export const createAll = (seed) => ({ time: 0, gate: gate.create(seed), signal: signal.create(seed), plank: plank.create(), lift: lift.create(), beam: beam.create(), bells: bells.create(), marsh: marsh.create(seed), relay: relay.create(), pillars: pillars.create(), ended: null });
 
 export function stepAll(S, players, dt) {
   dt = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), MAX_DT) : 0;
@@ -38,6 +40,7 @@ export function stepAll(S, players, dt) {
   bells.step(S.bells, players, dt);
   marsh.step(S.marsh, players, dt);
   relay.step(S.relay, players, dt);
+  pillars.step(S.pillars, players, dt, S.relay.solved);   // dormant until the Relay is solved
   // the walk ends the moment the last puzzle in the order is solved
   if (!S.ended && ORDER.at(-1).solved(S)) S.ended = { time: S.time };
 }
@@ -66,7 +69,7 @@ export const dynOf = (S) => ({
   gateOpen: S.gate.amt > 0.5 || S.gate.open,
   bridge: S.signal.bridge >= 1, plank: S.plank.placed, lift: S.lift.y, ladder: S.lift.ladder,
   causeway: S.beam.solved, bells: S.bells.steps >= 1, marsh: marsh.maskOf(S.marsh),
-  pillars: 0, ring: false,   // the Lantern Isle's puzzles are not wired in yet
+  pillars: pillars.maskOf(S.pillars), ring: false,   // ring: not wired in yet
 });
 
 // First hint among the unsolved puzzles, in trail order.

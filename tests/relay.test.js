@@ -152,7 +152,7 @@ test('valid / forceSolve', () => {
 });
 
 // ---- index wiring: the relay is the last puzzle and ends the walk
-test('index: the relay is last; lighting it ends the walk', () => {
+test('index: lighting the relay is the eighth puzzle; the walk goes on to the pillars', () => {
   const S = createAll(1); forceSolved(S, 7);
   expect(solvedCount(S)).toBe(7); expect(S.ended).toBe(null);
   S.time = 50;
@@ -161,11 +161,11 @@ test('index: the relay is last; lighting it ends the walk', () => {
   expect(promptFor(S, 0, [P(far), P(far)])).toBe("You can't run with the flame");
   stepAll(S, [P(great, { pressed: true }), P(far)], 1 / 30);
   expect(S.relay.solved).toBe(true);
-  expect(S.ended).toEqual({ time: expect.any(Number) });
+  expect(S.ended).toBe(null);
   expect(solvedCount(S)).toBe(8);
   expect(solvedLine(7)).toBe('The Far Isle is lit');
   expect(validState(JSON.parse(JSON.stringify(S)))).toBe(true);
-  const U = createAll(1); forceSolved(U, 8); expect(U.relay.solved).toBe(true); expect(U.ended).not.toBe(null);
+  const U = createAll(1); forceSolved(U, 8); expect(U.relay.solved).toBe(true); expect(U.ended).toBe(null);
   const V = JSON.parse(JSON.stringify(S)); V.relay.holder = 5; expect(validState(V)).toBe(false);
   const T = createAll(1); forceSolved(T, 7); expect(T.ended).toBe(null);
   expect(dynOf(T)).toEqual(dynOf(JSON.parse(JSON.stringify(T))));

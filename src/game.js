@@ -27,6 +27,7 @@ import { createView as createBeamView } from './puzzles/views/beam.js';
 import { createView as createCausewayView } from './puzzles/views/causeway.js';
 import { createView as createBellsView } from './puzzles/views/bells.js';
 import { createView as createMarshView } from './puzzles/views/marsh.js';
+import { createView as createPillarsView } from './puzzles/views/pillars.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
 
@@ -112,6 +113,7 @@ export class Game {
       { key: 'bells', view: createBellsView(this.scene) },
       { key: 'marsh', view: createMarshView(this.scene) },
       { key: 'relay', view: createRelayView(this.scene) },
+      { key: 'pillars', view: createPillarsView(this.scene) },
     ];
     this.input = createInput(canvas);
     // carrying the relay's flame: no running, whoever asks (see readInput)
@@ -237,6 +239,13 @@ export class Game {
       if (this.bellPrev) { if (b.a < this.bellPrev[0]) this.audio.bell(0); if (b.b < this.bellPrev[1]) this.audio.bell(1); }
       this.bellPrev = [b.a, b.b];
     }
+    // a pillar newly rising: a soft knock, at most one per 0.15 s
+    const pm = this.dyn.pillars | 0;
+    if (pm & ~(this.pillarPrev | 0)) {
+      const now = performance.now();
+      if (!(now - (this.thudAt ?? -1e9) < 150)) { this.audio.thud(); this.thudAt = now; }
+    }
+    this.pillarPrev = pm;
     // the flame changing hands (whoosh), and the great brazier catching (roar)
     const rl = this.S.relay;
     if (rl) {
@@ -286,7 +295,7 @@ export class Game {
       this.S = createAll(m.seed);
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
-      this.bellPrev = null;
+      this.bellPrev = null; this.pillarPrev = 0;
       this.relayPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);

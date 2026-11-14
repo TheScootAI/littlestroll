@@ -56,7 +56,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, chime: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0 },   // for checking in a browser
+    calls: { step: 0, chime: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0 },   // for checking in a browser
     step: safe(() => {
       audio.calls.step++;
       noise(ctx.currentTime, 0.07, 0.005, 700 + Math.random() * 300, 1.2, 0.5);
@@ -91,6 +91,11 @@ export function createAudio() {
       tone(f * 2.76, t, 1.4, 0.07);
       tone(f * 0.5, t, 3.2, 0.12);
       noise(t, 0.08, 0.003, f * 3, 2, 0.12);
+    }),
+    // a pillar coming up: one soft low knock
+    thud: safe(() => {
+      audio.calls.thud++;
+      tone(110, ctx.currentTime, 0.22, 0.28);
     }),
     // the flame changing hands: a soft, short whoosh
     pass: safe(() => {

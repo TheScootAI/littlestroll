@@ -3,7 +3,7 @@ import { dirFromYawPitch } from '../core/math.js';
 import { readInput } from '../player/input.js';
 import { clean, MAX_LEN } from '../core/chat.js';
 
-export const PROTOCOL_V = 4;   // bump whenever the shape of S or dyn, or what a message means, changes
+export const PROTOCOL_V = 5;   // bump whenever the shape of S or dyn, or what a message means, changes
 export const MAX_BYTES = 16384;
 
 // [field, min, max]
@@ -28,7 +28,7 @@ export function decode(text) {
       return m.v === PROTOCOL_V ? { t: 'hello', v: m.v } : null;
     case 'welcome':
       if (m.v !== PROTOCOL_V || !Number.isSafeInteger(m.seed)) return null;
-      if (!Number.isInteger(m.solved) || m.solved < 0 || m.solved > 8) return null;
+      if (!Number.isInteger(m.solved) || m.solved < 0 || m.solved > 11) return null;
       return { t: 'welcome', v: m.v, seed: m.seed, solved: m.solved };
     case 'full':
       return { t: 'full' };

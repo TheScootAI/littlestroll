@@ -3,7 +3,7 @@
 // sets the input fields (mx, mz, run, hold, eN, q, shoutN, waveN, camYaw, camPitch) through
 // input.forced, so stepPlayer, the plank veto and the blockers all still apply. It never
 // writes to S and never moves the walker directly. main.js imports this only under ?pilot.
-import { SITES, zoneAt, marshTileCentre } from '../world/layout.js';
+import { SITES, zoneAt, marshTileCentre, pillarCentre } from '../world/layout.js';
 import { findPath, steer, planningDyn } from './path.js';
 import { PITCH_MIN, PITCH_MAX } from '../player/input.js';
 import { clamp } from '../core/math.js';
@@ -90,6 +90,7 @@ export function createPilot(game) {
 
   const api = {
     sites: () => SITES,
+    pillar: (line, r) => { try { return pillarCentre(line, r).map(r2); } catch { return null; } },   // [x, z] centre of pillar r (0 = nearest) on line 0 (west) or 1 (east)
     tile: (i) => { try { return marshTileCentre(i).map(r2); } catch { return null; } },   // [x, z] centre of marsh tile i
 
     state() {
@@ -104,6 +105,7 @@ export function createPilot(game) {
           bells: { a: r2(S.bells.a), b: r2(S.bells.b), steps: r2(S.bells.steps), hint: !!S.bells.hint, solved: !!S.bells.solved },
           marsh: { held: !!S.marsh.held, solved: !!S.marsh.solved },   // never the path: a player cannot see it
           relay: { holder: S.relay.holder, t: r2(S.relay.t), solved: !!S.relay.solved },
+          pillars: { mask: game.dyn?.pillars | 0, solved: !!S.pillars?.solved },
         } : null;
         return {
           me: p ? { x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), zone: zoneAt(p.x, p.z) } : null,
@@ -177,6 +179,8 @@ export function createPilot(game) {
     help: () => [
       '__pilot.sites()                    SITES (where everything is)',
       '__pilot.tile(i)                    [x, z] centre of marsh tile i; tiles are numbered row*5+col from the near-left corner',
+      '__pilot.pillar(line, r)            [x, z] centre of pillar r (0 = nearest) on line 0 (west) or 1 (east)',
+      'pillars: mask bit line*9+r = raised',
       '__pilot.state()                    me, friend, solved, prompt, ended, busy, puzzles (no signal answer)',
       '__pilot.goTo(x, z, {run, within, timeoutMs})  walk there -> Promise {arrived, reason?, x, z}',
       '__pilot.follow(dist) / stop()      keep within dist of the friend / cancel and stand still',
