@@ -201,3 +201,23 @@ test('validState rejects a bad pillars slice', () => {
   const W = createAll(1); W.pillars.t.pop(); expect(validState(W)).toBe(false);
   expect(validState(JSON.parse(JSON.stringify(createAll(1))))).toBe(true);
 });
+
+test('owls: createAll starts at 0, a walker on an owl sets its bit, finding all changes nothing else', () => {
+  const S = createAll(2);
+  expect(S.owls).toBe(0);
+  const [x, z] = SITES.owls[5];
+  stepAll(S, [P([x, z]), P(far)], 0.05);
+  expect(S.owls).toBe(1 << 5);
+  for (const [ax, az] of SITES.owls) stepAll(S, [P([ax, az]), P(far)], 0.05);
+  expect(S.owls).toBe(255);
+  expect(solvedCount(S)).toBe(0);
+  expect(S.ended).toBe(null);
+  expect(promptFor(S, 0, [P([x, z]), P(far)])).toBe(promptFor(createAll(2), 0, [P([x, z]), P(far)]));
+});
+test('validState rejects a bad or missing owls', () => {
+  for (const v of [256, -1, 1.5, NaN, '1', undefined]) {
+    const S = createAll(3); S.owls = v; expect(validState(S)).toBe(false);
+  }
+  const S = createAll(3); delete S.owls; expect(validState(S)).toBe(false);
+  const ok = createAll(3); ok.owls = 255; expect(validState(ok)).toBe(true);
+});

@@ -58,7 +58,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0 },   // for checking in a browser
+    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0, hoot: 0 },   // for checking in a browser
     step: safe(() => {
       audio.calls.step++;
       noise(ctx.currentTime, 0.07, 0.005, 700 + Math.random() * 300, 1.2, 0.5);
@@ -107,6 +107,13 @@ export function createAudio() {
       const t = ctx.currentTime;
       tone(f, t, 0.9, 0.2);
       tone(f * 2, t, 0.5, 0.05);
+    }),
+    // an owl found: two soft low notes, the second a little lower
+    hoot: safe(() => {
+      audio.calls.hoot++;
+      const t = ctx.currentTime;
+      tone(329.63, t, 0.45, 0.14);
+      tone(261.63, t + 0.32, 0.6, 0.14);
     }),
     // four judged wrong: a soft low note
     dud: safe(() => {

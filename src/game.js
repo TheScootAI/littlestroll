@@ -31,6 +31,8 @@ import { createView as createPillarsView } from './puzzles/views/pillars.js';
 import { createView as createRingView } from './puzzles/views/ring.js';
 import { createView as createLanternsView } from './puzzles/views/lanterns.js';
 import { LAMP_H } from './puzzles/lanterns.js';
+import { OWLS, count as owlCount } from './puzzles/owls.js';
+import { createView as createOwlsView } from './puzzles/views/owls.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
 
@@ -111,6 +113,7 @@ export class Game {
       { key: 'pillars', view: createPillarsView(this.scene) },
       { key: 'ring', view: createRingView(this.scene) },
       { key: 'lanterns', view: createLanternsView(this.scene) },
+      { key: 'owls', view: createOwlsView(this.scene) },
     ];
     this.input = createInput(canvas);
     // carrying the relay's flame: no running, whoever asks (see readInput)
@@ -225,8 +228,16 @@ export class Game {
   applyState() {
     this.dyn = dynOf(this.S);
     const n = solvedCount(this.S);
-    if (n > this.solved) { this.hud?.flash(solvedLine(n - 1)); this.audio.riff(n - 1, !!this.S.ended); }
+    let flashed = false;
+    if (n > this.solved) { this.hud?.flash(solvedLine(n - 1)); this.audio.riff(n - 1, !!this.S.ended); flashed = true; }
     this.solved = n;
+    // an owl found (host or joiner alike); the first state after a welcome only sets the baseline
+    const oc = owlCount(this.S.owls | 0);
+    if (this.owlPrev != null && oc > this.owlPrev) {
+      if (!flashed) this.hud?.flash(`An owl — ${oc} of ${OWLS}`);
+      this.audio.hoot();
+    }
+    this.owlPrev = oc;
     const amt = this.S.gate?.amt ?? 0;
     if (Math.abs(amt - this.gateAmt) > 1e-4) this.audio.creak();
     this.gateAmt = amt;
@@ -311,7 +322,7 @@ export class Game {
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
       this.bellPrev = null; this.pillarPrev = 0; this.ringPrev = null;
-      this.relayPrev = null; this.lanternPrev = null;
+      this.relayPrev = null; this.lanternPrev = null; this.owlPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);
       this.welcomedOnce = true;
@@ -574,7 +585,7 @@ export class Game {
     }
     if (!e.shown && card) {
       const mine = this.player.dist, theirs = this.remote?.dist ?? 0;
-      this.hud?.showEnding({ time: e.time, dist: this.idx === 0 ? [mine, theirs] : [theirs, mine] });
+      this.hud?.showEnding({ time: e.time, dist: this.idx === 0 ? [mine, theirs] : [theirs, mine], owls: [owlCount(this.S.owls | 0), OWLS] });
       e.shown = true;
     }
   }

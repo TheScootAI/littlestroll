@@ -10,6 +10,7 @@ import { clamp } from '../core/math.js';
 import { CHEST } from '../puzzles/beam.js';
 import { since } from '../core/chat.js';
 import { bothInside } from '../puzzles/ring.js';
+import { count as owlCount } from '../puzzles/owls.js';
 
 const r2 = (n) => (typeof n === 'number' && Number.isFinite(n) ? Math.round(n * 100) / 100 : null);
 const STALL_SECS = 1.5;      // no progress for this long: re-plan
@@ -114,13 +115,14 @@ export function createPilot(game) {
           me: p ? { x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), zone: zoneAt(p.x, p.z) } : null,
           friend: f ? { x: r2(f.x), y: r2(f.y), z: r2(f.z) } : null,
           solved: game.solved ?? null,
+          owls: S?.owls != null ? owlCount(S.owls) : 0,
           prompt: game.prompt ?? null,
           ended: S?.ended ?? null,
           busy: !!job,
           puzzles,
           chatN: game.chat?.items.at(-1)?.id ?? 0,   // newest chat line id: a cheap "anything new?"
         };
-      } catch { return { me: null, friend: null, solved: null, prompt: null, ended: null, busy: false, puzzles: null, chatN: 0 }; }
+      } catch { return { me: null, friend: null, solved: null, owls: 0, prompt: null, ended: null, busy: false, puzzles: null, chatN: 0 }; }
     },
 
     goTo(x, z, { run = true, within = 0.4, timeoutMs = 60000 } = {}) {

@@ -130,13 +130,18 @@ export function createHud(root) {
       arrow.style.transform = `translate(calc(${x}px - 50%), calc(${y}px - 50%)) rotate(${angle}rad)`;
     },
     // The ending card: time as m:ss and each walker's metres ([host, joiner]) by scarf colour.
-    showEnding({ time, dist }) {
+    showEnding({ time, dist, owls }) {
       end.replaceChildren();
       const card = el('div', 'card');
       card.appendChild(el('h2', '', 'You walked it together'));
       const t = el('p', 'time', 'Time ');
       t.appendChild(el('b', '', fmtTime(time)));
       card.appendChild(t);
+      if (Array.isArray(owls)) {
+        const o = el('p', 'time', 'Owls found ');
+        o.appendChild(el('b', '', `${owls[0]} of ${owls[1]}`));
+        card.appendChild(o);
+      }
       const walkers = el('div', 'walkers');
       (Array.isArray(dist) ? dist : [dist]).forEach((m, i) => {
         const w = el('div', 'walker');
