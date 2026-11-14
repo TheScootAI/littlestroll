@@ -466,6 +466,7 @@ export const SITES = {
   },
   pillars: {
     ...PILLARS,
+    fwd: [...PILLARS.fwd],
     lines: P_LINES.map((o) => ({ origin: [...o] })),
     // Discs that take in the ground just before and just past both lines without touching a
     // pillar: the near one on J's landing, the far one on K.

@@ -517,7 +517,8 @@ describe('K. renderer data', () => {
     expect(TRAIL).toContainEqual(SITES.beacon);
     // on past the great brazier to the Lantern Isle: see layout-lantern.test.js
     const upTo = TRAIL.slice(0, TRAIL.findIndex((p) => p[0] === SITES.relay.great[0] && p[1] === SITES.relay.great[1]) + 1);
-    expect(upTo[upTo.length - 1]).toEqual(SITES.relay.great);
+    expect(TRAIL).toContainEqual(SITES.relay.great);   // a vertex of the trail, not merely a point on it
+    expect(upTo.length).toBeGreaterThan(1);
     const all8 = D({ ...ALL, causeway: true, bells: true, marsh: mask(column(2)) });
     const L = polyLen(upTo);
     for (let s = 0; s <= L; s += 0.25) {

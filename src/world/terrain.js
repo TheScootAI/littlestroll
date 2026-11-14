@@ -28,6 +28,7 @@ export const PALETTE = {
   rock: 0x9d93a8, rockDark: 0x857b91,
   trail: 0xdcc69c,
   water: 0x6cbcb4,
+  lanternGrass: 0xa4c885, lanternGrassHigh: 0xb9cf92, torRock: 0xaaa0b2, torRockDark: 0x938a9e,
   trunk: 0x8a6a52, pine: 0x6f9e6a, leaf: 0x93c072, boulder: 0xa49aae, tuft: 0x86b562,
 };
 
@@ -256,6 +257,77 @@ export function placeFarScenery(seed = 20261114) {
   return out;
 }
 
+// ---- the Lantern Isle's scenery: zones K and L, from its OWN seeded stream. The tor's crag is
+// dealt last from the same stream, so it never shifts the trees, rocks and tufts before it.
+const LANTERN_GREEN = new Set(['K', 'L']);
+const TOR = LANTERN_ZONES.find((d) => d.zone === 'T');
+const RING_KEEP = SITES.ring.r;                    // nothing inside the ring of stones
+const LANTERN_KEEP = 3;                            // metres off the tall sites
+const LANTERN_ANCHORS = [
+  ...SITES.ring.stones, ...SITES.ring.seeing.flatMap((s) => [s.stone, [s.spot.x, s.spot.z]]),
+  ...SITES.lanterns.posts, SITES.lanterns.tally, SITES.lanterns.lamp,
+  ...SITES.owls, ...SITES.checkpoints.flat(),
+];
+const SEEING_LINE = SITES.ring.seeing.map((s) => [s.spot.x, s.spot.z]);   // the stones' sight line across the ring
+
+// Everything the Lantern Isle's trees and boulders must keep clear.
+function lanternClear(x, z) {
+  if (featureClearance(x, z) < 2 || Math.hypot(x - SITES.ring.centre[0], z - SITES.ring.centre[1]) < RING_KEEP) return false;
+  return !LANTERN_ANCHORS.some(([ax, az]) => Math.hypot(x - ax, z - az) < LANTERN_KEEP);
+}
+const lanternGround = (x, z) => LANTERN_GREEN.has(zoneAt(x, z));
+const seeingLine = (x, z) => pointSegDist(x, z, ...SEEING_LINE[0], ...SEEING_LINE[1]).d;
+
+const LANTERN_RULES = {
+  trees: { count: 56, ok: (x, z) => lanternGround(x, z) && level(x, z, 1.2, 0.3) && seeingLine(x, z) >= 3 },
+  boulders: { count: 14, ok: (x, z) => lanternGround(x, z) && level(x, z, 1, 0.4) && seeingLine(x, z) >= 3 },
+  rocks: { count: 36, ok: (x, z) => lanternGround(x, z) && level(x, z, 0.4, 0.5) },
+  tufts: { count: 260, ok: (x, z) => lanternGround(x, z) && level(x, z, 0.3, 0.2) },
+};
+
+const CRAG_TOP = 34, CRAG_WALL = 38, CRAG_OUT = 1.5;   // rocks piled on the tor's top and against its wall
+
+export function placeLanternScenery(seed = 20261115) {
+  const rnd = mulberry32(seed);
+  const xs = LANTERN_ZONES.filter((d) => LANTERN_GREEN.has(d.zone));
+  const x0 = Math.min(...xs.map((d) => d.x - d.r)), x1 = Math.max(...xs.map((d) => d.x + d.r));
+  const z0 = Math.min(...xs.map((d) => d.z - d.r)), z1 = Math.max(...xs.map((d) => d.z + d.r));
+  const out = {};
+  for (const [kind, rule] of Object.entries(LANTERN_RULES)) {
+    const list = [];
+    for (let tries = 0; list.length < rule.count && tries < rule.count * 400; tries++) {
+      const x = lerp(x0, x1, rnd()), z = lerp(z0, z1, rnd());
+      const r1 = rnd(), r2 = rnd(), r3 = rnd();
+      if (!lanternClear(x, z) || !rule.ok(x, z)) continue;
+      const item = { x, y: heightAt(x, z), z, rot: r1 * Math.PI * 2, s: 0.75 + r2 * 0.6, tint: r3 };
+      if (kind === 'trees') item.kind = r3 < 0.55 ? 'pine' : 'round';
+      if (kind === 'boulders') item.y -= 0.2 * item.s;
+      if (kind === 'rocks') item.y -= 0.05;
+      list.push(item);
+    }
+    out[kind] = list;
+  }
+  // The crag. Scenery only: it blocks nothing. Top rocks rest on the tor's top, wall rocks sit
+  // half into its face at any height from the foot up and may stand CRAG_OUT outside the disc.
+  const lampXZ = SITES.lanterns.lamp, footY = heightAt(TOR.x + TOR.r + 1, TOR.z, DYN_NONE), topY = heightAt(TOR.x, TOR.z, DYN_NONE);
+  const keepOff = (x, z) => Math.hypot(x - lampXZ[0], z - lampXZ[1]) >= LANTERN_KEEP && !LANTERN_ANCHORS.some(([ax, az]) => Math.hypot(x - ax, z - az) < LANTERN_KEEP);
+  const crag = [];
+  for (const [n, wall] of [[CRAG_TOP, false], [CRAG_WALL, true]]) {
+    for (let k = 0, tries = 0; k < n && tries < n * 100; tries++) {
+      const a = rnd() * Math.PI * 2, f = rnd(), r1 = rnd(), r2 = rnd(), r3 = rnd();
+      const d = wall ? TOR.r - 0.8 + f * (0.8 + CRAG_OUT) : lerp(5, TOR.r - 1, Math.sqrt(f));
+      const x = TOR.x + Math.cos(a) * d, z = TOR.z + Math.sin(a) * d;
+      if (!keepOff(x, z)) continue;
+      const s = 1.5 + r2 * 1.9;
+      const y = wall ? lerp(footY - 0.3, topY - 0.8, r1 * r1) : topY - 0.3 * s;
+      crag.push({ x, y, z, rot: r3 * Math.PI * 2, s, tint: f, sy: 0.7 + r1 * 0.5 });
+      k++;
+    }
+  }
+  out.crag = crag;
+  return out;
+}
+
 // ------------------------------------------------------------------ terrain mesh
 
 const col = (hex) => new Color(hex);   // converts sRGB hex to the linear working space
@@ -289,6 +361,10 @@ function faceColour(x, z, h, ny, n) {
     const t = clamp((h - 4) / 9.5, 0, 1);
     c.copy(C.grassLow).lerp(C.grassMid, clamp(t * 2, 0, 1)).lerp(C.grassHigh, clamp(t * 2 - 1, 0, 1));
     if (zone === 'C') c.lerp(C.grassHigh, 0.25);
+    // the Lantern Isle: a fresher green on K, a paler one on L; the tor is bare rock
+    if (zone === 'K') c.copy(C.lanternGrass);
+    if (zone === 'L') c.copy(C.lanternGrass).lerp(C.lanternGrassHigh, 0.5);
+    if (zone === 'T') c.copy(C.torRock).lerp(C.torRockDark, clamp(n * 1.6 - 0.3, 0, 1));
   }
   // the walkable trail reads as a worn path on dry, gentle ground
   if (ny >= 0.72 && h > 0.3 && zone !== 'A') {
@@ -409,8 +485,8 @@ function instanced(geo, items, base, place, shadows = true) {
 }
 
 function buildScenery(scene) {
-  const a = placeScenery(), b = placeFarScenery();
-  const s = Object.fromEntries(Object.keys(a).map((k) => [k, [...a[k], ...b[k]]]));
+  const a = placeScenery(), b = placeFarScenery(), { crag, ...l } = placeLanternScenery();
+  const s = Object.fromEntries(Object.keys(a).map((k) => [k, [...a[k], ...b[k], ...l[k]]]));
   const trees = s.trees, pines = trees.filter((t) => t.kind === 'pine'), rounds = trees.filter((t) => t.kind === 'round');
   const put = (sy = 1, dy = 0) => (it, o) => { o.position.set(it.x, it.y + dy, it.z); o.rotation.set(0, it.rot, 0); o.scale.set(it.s, it.s * sy, it.s); };
 
@@ -423,6 +499,8 @@ function buildScenery(scene) {
     ['boulders', instanced(rockGeometry(11), s.boulders, C.boulder, (it, o) => { put()(it, o); o.scale.multiplyScalar(1.4); })],
     ['rocks', instanced(rockGeometry(29), s.rocks, C.boulder, (it, o) => { put()(it, o); o.scale.multiplyScalar(0.35); })],
     ['tufts', instanced(tuftGeometry(), s.tufts, C.tuft, put())],
+    // the tor's crag: big rocks, flattened a little by `sy`
+    ['crag', instanced(rockGeometry(53), crag, C.torRock, (it, o) => { put()(it, o); o.scale.set(it.s, it.s * it.sy, it.s); })],
   ];
   for (const [name, m] of parts) { m.name = name; scene.add(m); }
 }

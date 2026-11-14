@@ -349,6 +349,20 @@ test('TRAIL: on from J over the pillars, through the ring, up the steps to the t
     }
     return false;
   };
+  // every 0.25 m along the trail after the great brazier; over the sea between the two pillar
+  // lines the trail runs down the middle, where there is nothing to stand on
+  let sampled = 0;
+  for (let i = 1; i < rest.length; i++) {
+    const len = dist(rest[i - 1], rest[i]);
+    for (let s = 0; s <= len; s += 0.25) {
+      const p = [rest[i - 1][0] + (rest[i][0] - rest[i - 1][0]) * s / len, rest[i - 1][1] + (rest[i][1] - rest[i - 1][1]) * s / len];
+      const between = p[1] <= P.near.z && p[1] >= P.far.z;
+      if (between && pillarAt(...p) === null && heightAt(...p, ALL) <= DROWN_Y) continue;
+      sampled++;
+      expect(walkable(p), `${p}`).toBe(true);
+    }
+  }
+  expect(sampled).toBeGreaterThan(200);
   for (let i = 1; i < rest.length; i++) {
     expect(walkable(rest[i]), `${rest[i]}`).toBe(true);
     expect(dist(rest[i - 1], rest[i])).toBeLessThanOrEqual(45);
@@ -357,6 +371,19 @@ test('TRAIL: on from J over the pillars, through the ring, up the steps to the t
   expect(rest).toContainEqual([ring.steps.ax, ring.steps.az]);
   expect(rest).toContainEqual([ring.steps.bx, ring.steps.bz]);
   expect(dist(rest[rest.length - 1], lanterns.tally)).toBeLessThan(3);
+});
+
+test('the Lantern Isle stands in open sea: 30 m from the first island, 15 m from the Far Isle', () => {
+  const lantern = ZONES.filter((d) => 'KLT'.includes(d.zone));
+  expect(lantern.length).toBeGreaterThan(10);
+  const gap = (a, b) => Math.hypot(a.x - b.x, a.z - b.z) - a.r - b.r;
+  for (const a of lantern) {
+    for (const b of ZONES) {
+      if ('ABCDEF'.includes(b.zone)) expect(gap(a, b), `${a.zone}(${a.x},${a.z}) / ${b.zone}(${b.x},${b.z})`).toBeGreaterThanOrEqual(30);
+      // J's landing is where the pillars start; the lines of the Lantern Isle's discs may meet it
+      else if ('GHIJ'.includes(b.zone) && !(b.zone === 'J' && b.x === 152.5 && b.z === -50)) expect(gap(a, b), `${a.zone}(${a.x},${a.z}) / ${b.zone}(${b.x},${b.z})`).toBeGreaterThanOrEqual(15);
+    }
+  }
 });
 
 test('the first two islands: as reachable as before with the new keys at rest', () => {

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { Scene, Box3 } from 'three';
-import { placeScenery, placeFarScenery, featureClearance, trailDistance, siteAnchors, terrainExtent, buildTerrain, meshHeightAt, mulberry32 } from '../src/world/terrain.js';
+import { placeScenery, placeFarScenery, placeLanternScenery, featureClearance, trailDistance, siteAnchors, terrainExtent, buildTerrain, meshHeightAt, mulberry32 } from '../src/world/terrain.js';
 import { marshTileAt, WATCH_STONE } from '../src/world/layout.js';
 import island1 from './helpers/scenery-island1.json';
 import island2 from './helpers/scenery-island2.json';
@@ -120,6 +120,29 @@ describe('buildTerrain', () => {
   });
 });
 
+describe('the Lantern Isle is drawn', () => {
+  test('the sea and the sea floor reach every Lantern disc; the mesh covers them and the tor carries its crag', () => {
+    const scene = new Scene();
+    buildTerrain(scene);
+    const e = terrainExtent();
+    for (const name of ['water', 'seabed']) {
+      const m = scene.getObjectByName(name);
+      const half = m.geometry.parameters.width / 2;
+      for (const d of ZONES) expect(Math.hypot(d.x, d.z) + d.r, name).toBeLessThan(half);
+    }
+    const tor = ZONES.find((d) => d.zone === 'T');
+    expect(e.z0).toBeLessThanOrEqual(tor.z - tor.r);
+    const crag = scene.getObjectByName('crag');
+    expect(crag.isInstancedMesh).toBe(true);
+    expect(crag.count).toBe(placeLanternScenery().crag.length);
+    expect(crag.castShadow).toBe(true);
+    const pos = scene.getObjectByName('terrain').geometry.getAttribute('position');
+    let top = -Infinity;
+    for (let i = 0; i < pos.count; i++) if (Math.hypot(pos.getX(i) - tor.x, pos.getZ(i) - tor.z) < 5) top = Math.max(top, pos.getY(i));
+    expect(top).toBeCloseTo(tor.h, 1);
+  });
+});
+
 describe('terrainExtent covers the Far Isle', () => {
   test('every unconditional ramp, end to end and hw wide, lies inside the extent', () => {
     const e = terrainExtent();
@@ -162,19 +185,21 @@ describe('Far Isle scenery', () => {
     for (const t of s.trees) expect(seat(t.x, t.z)).toBeGreaterThanOrEqual(3.5);
     for (const b of s.boulders) expect(seat(b.x, b.z)).toBeGreaterThanOrEqual(2.5);
   });
-  test('the first island is placed exactly as before (first 20 of each kind, and the counts)', () => {
+  test('the first island is placed exactly as before (every item of every kind)', () => {
     const s = placeScenery();
     const r6 = (v) => Math.round(v * 1e6) / 1e6;
+    expect(Object.keys(s)).toEqual(Object.keys(island1));
     for (const k of Object.keys(island1)) {
       expect(s[k].length).toBe(island1[k].n);
-      expect(s[k].slice(0, 20).map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island1[k].first);
+      expect(s[k].map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island1[k].all);
     }
   });
-  test('the Far Isle is placed exactly as before (first 20 of each kind, and the counts)', () => {
+  test('the Far Isle is placed exactly as before (every item of every kind)', () => {
     const r6 = (v) => Math.round(v * 1e6) / 1e6;
+    expect(Object.keys(far)).toEqual(Object.keys(island2));
     for (const k of Object.keys(island2)) {
       expect(far[k].length).toBe(island2[k].n);
-      expect(far[k].slice(0, 20).map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island2[k].first);
+      expect(far[k].map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island2[k].all);
     }
   });
   test('is deterministic, covers trees, boulders, rocks and tufts, all on zones G to J', () => {
@@ -205,5 +230,83 @@ describe('Far Isle scenery', () => {
   });
   test('everything sits on the ground', () => {
     for (const it of farAll) expect(Math.abs(it.y - heightAt(it.x, it.z, DYN_NONE))).toBeLessThan(0.6);
+  });
+});
+
+describe('Lantern Isle scenery', () => {
+  const lan = placeLanternScenery();
+  const lanAll = all(lan);
+  const { ring, lanterns, owls, checkpoints } = SITES;
+  const tor = ZONES.find((d) => d.zone === 'T');
+  const xz = (d) => [d.x, d.z];
+  const stones = [...ring.stones, ...ring.seeing.flatMap((s) => [s.stone, xz(s.spot)])];
+  const keep = [...stones, ...lanterns.posts, lanterns.tally, ...owls, ...checkpoints.flat()];
+  const rampOut = (r, x, z) => {
+    const len = Math.hypot(r.bx - r.ax, r.bz - r.az), ux = (r.bx - r.ax) / len, uz = (r.bz - r.az) / len;
+    const dx = x - r.ax, dz = z - r.az, s = dx * ux + dz * uz, c = Math.abs(-dx * uz + dz * ux);
+    return Math.hypot(Math.max(0, -s, s - len), Math.max(0, c - r.hw));
+  };
+
+  test('is deterministic, and draws trees, boulders, rocks and tufts', () => {
+    expect(placeLanternScenery()).toEqual(lan);
+    for (const k of ['trees', 'boulders', 'rocks', 'tufts']) expect(lan[k].length, k).toBeGreaterThan(5);
+    expect(lan.tufts.length).toBeGreaterThan(100);
+  });
+  test('L is wooded enough to hide a lantern', () => {
+    expect(lan.trees.filter((t) => zoneAt(t.x, t.z) === 'L').length).toBeGreaterThanOrEqual(25);
+  });
+  test('every item stands on zone K or L, on level ground', () => {
+    for (const it of lanAll) {
+      expect(['K', 'L']).toContain(zoneAt(it.x, it.z));
+      expect(Math.abs(it.y - heightAt(it.x, it.z, DYN_NONE))).toBeLessThan(0.6);
+    }
+  });
+  test('no tree or boulder within 2.5 m of a stone, post, tally, owl or checkpoint slot', () => {
+    for (const it of [...lan.trees, ...lan.boulders]) for (const [ax, az] of keep) expect(Math.hypot(it.x - ax, it.z - az)).toBeGreaterThanOrEqual(2.5);
+  });
+  test('nothing within 2 m of the steps or the trail, and nothing inside the ring', () => {
+    for (const it of lanAll) {
+      expect(trailDistance(it.x, it.z)).toBeGreaterThanOrEqual(2);
+      for (const r of RAMPS) expect(rampOut(r, it.x, it.z)).toBeGreaterThanOrEqual(2);
+      expect(Math.hypot(it.x - ring.centre[0], it.z - ring.centre[1])).toBeGreaterThanOrEqual(ring.r);
+    }
+  });
+  test('the seeing stones keep a clear line between their spots', () => {
+    const [a, b] = ring.seeing.map((s) => xz(s.spot));
+    for (const it of [...lan.trees, ...lan.boulders]) expect(pointSegDist(it.x, it.z, ...a, ...b).d).toBeGreaterThanOrEqual(3);
+  });
+  test('the other islands are untouched by it, and it by them', () => {
+    for (const it of lanAll) expect(it.x).toBeGreaterThan(100);
+    for (const it of [...all(placeScenery()), ...all(placeFarScenery())]) expect(['K', 'L', 'T']).not.toContain(zoneAt(it.x, it.z));
+  });
+
+  describe('the tor is dressed as a crag', () => {
+    const crag = lan.crag;
+    const lamp = lanterns.lamp;
+    const R = tor.r;
+    test('a pile of large rocks, on the top and against the wall', () => {
+      expect(crag.length).toBeGreaterThanOrEqual(40);
+      const d = (c) => Math.hypot(c.x - tor.x, c.z - tor.z);
+      expect(crag.filter((c) => d(c) < tor.r - 3).length).toBeGreaterThanOrEqual(15);
+      expect(crag.filter((c) => d(c) >= tor.r - 1.5).length).toBeGreaterThanOrEqual(15);
+      expect(Math.min(...crag.map((c) => c.s))).toBeGreaterThanOrEqual(1.2);
+    });
+    test('none more than 1.5 m outside the T disc, none near the lamp, a post, the tally or a checkpoint', () => {
+      for (const c of crag) {
+        expect(Math.hypot(c.x - tor.x, c.z - tor.z)).toBeLessThanOrEqual(R + 1.5);
+        expect(Math.hypot(c.x - lamp[0], c.z - lamp[1])).toBeGreaterThanOrEqual(3);
+        for (const [ax, az] of [...lanterns.posts, lanterns.tally, ...checkpoints.flat()]) expect(Math.hypot(c.x - ax, c.z - az)).toBeGreaterThanOrEqual(3);
+      }
+    });
+    test('they rest on the tor top or its foot, between the foot and the top', () => {
+      for (const c of crag) {
+        expect(c.y).toBeGreaterThan(ZONES.find((d) => d.zone === 'L').h - 1);
+        expect(c.y).toBeLessThan(tor.h + 0.5);
+      }
+    });
+    test('placing them does not move the rest of the island', () => {
+      const { crag: _, ...rest } = lan;
+      expect(Object.keys(rest)).toEqual(['trees', 'boulders', 'rocks', 'tufts']);
+    });
   });
 });
