@@ -228,7 +228,7 @@ export class Game {
   applyState() {
     this.dyn = dynOf(this.S);
     const n = solvedCount(this.S);
-    if (n > this.solved) { this.hud?.flash(solvedLine(n - 1)); this.audio.chime(); }
+    if (n > this.solved) { this.hud?.flash(solvedLine(n - 1)); this.audio.riff(n - 1, !!this.S.ended); }
     this.solved = n;
     const amt = this.S.gate?.amt ?? 0;
     if (Math.abs(amt - this.gateAmt) > 1e-4) this.audio.creak();

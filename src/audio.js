@@ -1,6 +1,8 @@
 // Quiet synthesised sound: Web Audio oscillators and noise, no files. The context is
 // built lazily on the first click or key press (browsers start audio suspended); every
 // method is a no-op until then and never throws.
+import { riffNotes } from './core/riff.js';
+
 export function createAudio() {
   let ctx = null, master = null, noiseBuf = null, creakUntil = 0;
 
@@ -56,15 +58,16 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, chime: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0 },   // for checking in a browser
+    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0 },   // for checking in a browser
     step: safe(() => {
       audio.calls.step++;
       noise(ctx.currentTime, 0.07, 0.005, 700 + Math.random() * 300, 1.2, 0.5);
     }),
-    chime: safe(() => {
-      audio.calls.chime++;
-      const t = ctx.currentTime;
-      [523.25, 659.25, 783.99].forEach((f, i) => tone(f, t + i * 0.13, 0.9, 0.35));
+    // a puzzle solved: the riff for puzzle n (0-based), with the flourish after the last
+    riff: safe((n, last) => {
+      audio.calls.riff++;
+      const t = ctx.currentTime + 0.03;
+      for (const k of riffNotes(n, last)) tone(k.f, t + k.at, k.dur + 0.12, k.vol, k.voice === 'lead' ? 'triangle' : 'sine');
     }),
     // a soft two-note tick: the friend said something
     blip: safe(() => {
