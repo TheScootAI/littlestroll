@@ -1,5 +1,5 @@
 // Chat lines: cleaning, a short log, and a flood gate. Pure: no DOM, no network.
-export const MAX_LEN = 200;   // characters (code points) in one chat line
+export const MAX_LEN = 400;   // characters (code points) in one chat line
 export const KEEP = 50;       // lines a log remembers
 
 // Control characters, line/paragraph separators and bidi overrides/isolates (which can make

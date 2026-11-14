@@ -1,5 +1,6 @@
 // HUD: room code, status line, interact prompt, friend arrow, ending card.
 import { injectStyles, el, ACCENT, INK, PAPER } from './style.js';
+import { MAX_LEN } from '../core/chat.js';
 
 const CSS = `
 .lr-hud { position: absolute; inset: 0; font-family: system-ui, -apple-system, sans-serif; color: ${INK}; }
@@ -79,7 +80,7 @@ export function createHud(root) {
   const chat = el('div', 'lr-chat');
   const chatLog = el('div', 'lr-chat-log');
   const chatBox = el('input', 'lr-chat-box');
-  chatBox.maxLength = 200;
+  chatBox.maxLength = MAX_LEN;
   chatBox.placeholder = 'Say something…';
   chatBox.autocomplete = 'off';
   chat.append(chatLog, chatBox);
@@ -161,7 +162,12 @@ export function createHud(root) {
         line.append(dot, document.createTextNode(`${SCARVES[who].name}: ${text}`));
       } else line.appendChild(document.createTextNode(String(text)));
       chatLog.appendChild(line);
-      while (chatLog.childNodes.length > 6) chatLog.firstChild.remove();
+      // at most 6 lines, and no taller than most of the view (two full-length lines fit a
+      // laptop screen): long lines push old ones out sooner. A hidden tab reports no height,
+      // so there the count alone decides.
+      const room = window.innerHeight * 0.7 || Infinity;
+      while (chatLog.childNodes.length > 6
+        || (chatLog.childNodes.length > 1 && chatLog.offsetHeight > room)) chatLog.firstChild.remove();
       showLog();
     },
     // Enter opens the box; Enter in it sends, Esc cancels. Call once.

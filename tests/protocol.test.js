@@ -12,7 +12,7 @@ describe('protocol', () => {
     expect(decode(encode({ t: 'full' }))).toEqual({ t: 'full' });
     const s = { t: 's', S: { time: 1, gate: { a: 1 } } };
     expect(decode(encode(s))).toEqual(s);
-    expect(PROTOCOL_V).toBe(3);
+    expect(PROTOCOL_V).toBe(4);
     expect(MAX_BYTES).toBe(16384);
   });
 
@@ -136,12 +136,18 @@ describe('chat message', () => {
     expect(decode(raw)).toEqual({ t: 'c', text: 'hi there' });
   });
   test('rejects non-string, empty, whitespace-only and over-long text', () => {
-    for (const text of [5, null, undefined, {}, [], '', '   ', '\n\t', '\u202E', 'x'.repeat(401)]) {
+    for (const text of [5, null, undefined, {}, [], '', '   ', '\n\t', '\u202E', 'x'.repeat(801)]) {
       expect(decode(JSON.stringify({ t: 'c', text })), String(text)).toBeNull();
     }
     expect(decode(JSON.stringify({ t: 'c' }))).toBeNull();
   });
-  test('400 raw units is the longest accepted, and is cut to 200 after cleaning', () => {
-    expect(decode(JSON.stringify({ t: 'c', text: 'x'.repeat(400) })).text).toHaveLength(200);
+  test('a full 400-character line arrives whole', () => {
+    expect(decode(JSON.stringify({ t: 'c', text: 'x'.repeat(400) })).text).toBe('x'.repeat(400));
+  });
+  test('a full line of 400 emoji (800 raw units) arrives whole', () => {
+    expect(decode(JSON.stringify({ t: 'c', text: '😀'.repeat(400) })).text).toBe('😀'.repeat(400));
+  });
+  test('800 raw units is the longest accepted, and is cut to 400 after cleaning', () => {
+    expect(decode(JSON.stringify({ t: 'c', text: 'x'.repeat(800) })).text).toHaveLength(400);
   });
 });

@@ -18,15 +18,16 @@ describe('clean', () => {
   test('trims', () => { expect(clean('   hey  ')).toBe('hey'); });
   test('all-whitespace is empty', () => { expect(clean(' \n\t  ')).toBe(''); });
   test('cuts to MAX_LEN code points', () => {
-    expect(MAX_LEN).toBe(200);
-    expect(clean('x'.repeat(300))).toBe('x'.repeat(200));
+    expect(MAX_LEN).toBe(400);
+    expect(clean('x'.repeat(400))).toBe('x'.repeat(400));
+    expect(clean('x'.repeat(600))).toBe('x'.repeat(400));
   });
   test('never splits a surrogate pair at the cut', () => {
-    const s = 'x'.repeat(199) + '😀' + 'tail';
+    const s = 'x'.repeat(399) + '😀' + 'tail';
     const out = clean(s);
-    expect(out).toBe('x'.repeat(199) + '😀');
-    expect([...out].length).toBe(200);
-    expect(out.length).toBe(201);
+    expect(out).toBe('x'.repeat(399) + '😀');
+    expect([...out].length).toBe(400);
+    expect(out.length).toBe(401);
   });
 });
 

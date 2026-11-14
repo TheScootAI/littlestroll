@@ -1,9 +1,9 @@
 // Message format between the two browsers. Pure: no three.js, no DOM, no network.
 import { dirFromYawPitch } from '../core/math.js';
 import { readInput } from '../player/input.js';
-import { clean } from '../core/chat.js';
+import { clean, MAX_LEN } from '../core/chat.js';
 
-export const PROTOCOL_V = 3;   // bump whenever the shape of S or dyn, or what a message means, changes
+export const PROTOCOL_V = 4;   // bump whenever the shape of S or dyn, or what a message means, changes
 export const MAX_BYTES = 16384;
 
 // [field, min, max]
@@ -40,8 +40,9 @@ export function decode(text) {
       return out;
     }
     case 'c': {
-      // raw length is capped before cleaning; what is left after cleaning must be something to say
-      if (typeof m.text !== 'string' || m.text.length < 1 || m.text.length > 400) return null;
+      // raw length is capped before cleaning (two UTF-16 units per character, so a full line of
+      // emoji fits); what is left after cleaning must be something to say
+      if (typeof m.text !== 'string' || m.text.length < 1 || m.text.length > 2 * MAX_LEN) return null;
       const text = clean(m.text);
       return text ? { t: 'c', text } : null;
     }
