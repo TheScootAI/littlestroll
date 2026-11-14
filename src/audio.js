@@ -58,7 +58,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0 },   // for checking in a browser
+    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0 },   // for checking in a browser
     step: safe(() => {
       audio.calls.step++;
       noise(ctx.currentTime, 0.07, 0.005, 700 + Math.random() * 300, 1.2, 0.5);
@@ -99,6 +99,19 @@ export function createAudio() {
     thud: safe(() => {
       audio.calls.thud++;
       tone(110, ctx.currentTime, 0.22, 0.28);
+    }),
+    // the n-th stone of the ring lit: a soft rising note (the same whether it is right or wrong)
+    chimeStone: safe((n) => {
+      audio.calls.chimeStone++;
+      const f = 392 * Math.pow(2, ([0, 2, 4, 7][Math.min(3, Math.max(0, n | 0))]) / 12);
+      const t = ctx.currentTime;
+      tone(f, t, 0.9, 0.2);
+      tone(f * 2, t, 0.5, 0.05);
+    }),
+    // four judged wrong: a soft low note
+    dud: safe(() => {
+      audio.calls.dud++;
+      tone(130.81, ctx.currentTime, 0.5, 0.22);
     }),
     // the flame changing hands: a soft, short whoosh
     pass: safe(() => {

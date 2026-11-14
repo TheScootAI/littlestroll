@@ -28,6 +28,7 @@ import { createView as createCausewayView } from './puzzles/views/causeway.js';
 import { createView as createBellsView } from './puzzles/views/bells.js';
 import { createView as createMarshView } from './puzzles/views/marsh.js';
 import { createView as createPillarsView } from './puzzles/views/pillars.js';
+import { createView as createRingView } from './puzzles/views/ring.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
 
@@ -114,6 +115,7 @@ export class Game {
       { key: 'marsh', view: createMarshView(this.scene) },
       { key: 'relay', view: createRelayView(this.scene) },
       { key: 'pillars', view: createPillarsView(this.scene) },
+      { key: 'ring', view: createRingView(this.scene) },
     ];
     this.input = createInput(canvas);
     // carrying the relay's flame: no running, whoever asks (see readInput)
@@ -246,6 +248,15 @@ export class Game {
       if (!(now - (this.thudAt ?? -1e9) < 150)) { this.audio.thud(); this.thudAt = now; }
     }
     this.pillarPrev = pm;
+    // a stone lit in the ring (the same note right or wrong), and four judged wrong (a dud)
+    const rg = this.S.ring;
+    if (rg) {
+      if (this.ringPrev) {
+        if (rg.touched.length > this.ringPrev.n) this.audio.chimeStone(rg.touched.length - 1);
+        if (rg.miss < this.ringPrev.miss) this.audio.dud();
+      }
+      this.ringPrev = { n: rg.touched.length, miss: rg.miss };
+    }
     // the flame changing hands (whoosh), and the great brazier catching (roar)
     const rl = this.S.relay;
     if (rl) {
@@ -295,7 +306,7 @@ export class Game {
       this.S = createAll(m.seed);
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
-      this.bellPrev = null; this.pillarPrev = 0;
+      this.bellPrev = null; this.pillarPrev = 0; this.ringPrev = null;
       this.relayPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);

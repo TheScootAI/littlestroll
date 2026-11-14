@@ -114,10 +114,13 @@ test('with the beam solved and the bells unsolved, S.ended stays null', () => {
   expect(S.beam.solved).toBe(true); expect(S.bells.solved).toBe(false); expect(S.ended).toBe(null);
 });
 test('the ending stamps the time once, when the last puzzle first solves', () => {
-  const S = createAll(1); forceSolved(S, 8);
+  const S = createAll(1); forceSolved(S, 9);
   S.time = 100;
-  stepAll(S, [P(SITES.checkpoints[9][0]), P(far)], 1 / 30);
-  expect(S.pillars.solved).toBe(true);
+  const k = S.ring.order, at = (i) => [SITES.ring.stones[i][0], SITES.ring.stones[i][1] + 0.9 * Math.sign(SITES.ring.centre[1] - SITES.ring.stones[i][1])];
+  for (const i of k.slice(0, 3)) stepAll(S, [P(at(i), { pressed: true }), P(SITES.ring.centre)], 1 / 30);
+  expect(S.ended).toBe(null);
+  stepAll(S, [P(at(k[3]), { pressed: true }), P(SITES.ring.centre)], 1 / 30);
+  expect(S.ring.solved).toBe(true);
   expect(S.ended.time).toBeGreaterThan(100);
   const t = S.ended.time;
   for (let i = 0; i < 10; i++) stepAll(S, [P(far), P(far)], 1 / 30);
@@ -130,15 +133,15 @@ test('beam: prompts come through promptFor once the lift is done; dyn is unchang
   expect(dynOf(S)).toEqual(dynOf(JSON.parse(JSON.stringify(S))));
   expect(Object.keys(dynOf(S)).sort()).toEqual(Object.keys(DYN_NONE).sort());
 });
-test('forceSolved(S, 5) lights the beacon without ending the walk; forceSolved(S, 9) ends it', () => {
+test('forceSolved(S, 5) lights the beacon without ending the walk; forceSolved(S, 10) ends it', () => {
   const S = createAll(1); forceSolved(S, 5);
   expect(solvedCount(S)).toBe(5);
   expect(S.beam).toMatchObject({ solved: true, charge: CHARGE });
   expect(S.ended).toBe(null);
-  const U = createAll(1); forceSolved(U, 8); expect(U.ended).toBe(null); forceSolved(U, 9);
+  const U = createAll(1); forceSolved(U, 9); expect(U.ended).toBe(null); forceSolved(U, 10);
   expect(S.ended).toBe(null); expect(U.ended).toEqual({ time: expect.any(Number) });
-  expect(solvedCount(U)).toBe(9);
-  const T = createAll(1); T.ended = { time: 42 }; forceSolved(T, 9);
+  expect(solvedCount(U)).toBe(10);
+  const T = createAll(1); T.ended = { time: 42 }; forceSolved(T, 10);
   expect(T.ended).toEqual({ time: 42 });
 });
 test('validState rejects a bad beam slice', () => {
@@ -161,6 +164,17 @@ test('pillars wiring: dormant until the Relay is solved, then two walkers on the
   const V = createAll(1); forceSolved(V, 8);
   for (let i = 0; i < 5; i++) stepAll(V, abreast.map((c) => P(c)), 1 / 30);
   expect(dynOf(V).pillars).toBe(0b11100 | (0b11100 << 9));
+});
+test('ring wiring: solved by touching, steps lift dyn.ring, a bad slice is rejected, dyn at rest is DYN_NONE', () => {
+  const S = createAll(1); forceSolved(S, 9);
+  expect(solvedCount(S)).toBe(9); expect(S.ended).toBe(null);
+  expect(dynOf(S).ring).toBe(false);
+  forceSolved(S, 10);
+  expect(solvedCount(S)).toBe(10); expect(dynOf(S).ring).toBe(true);
+  expect(validState(JSON.parse(JSON.stringify(S)))).toBe(true);
+  const B = createAll(1); B.ring.signs[0] = B.ring.signs[1]; expect(validState(B)).toBe(false);
+  const C = createAll(1); delete C.ring; expect(validState(C)).toBe(false);
+  expect(dynOf(createAll(5))).toEqual(DYN_NONE);
 });
 test('validState rejects a bad pillars slice', () => {
   const S = createAll(1); S.pillars.t[3] = NaN; expect(validState(S)).toBe(false);

@@ -3,39 +3,14 @@
 // a bridge that slides out with s.bridge. Never writes to S.
 import {
   Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, BoxGeometry, CylinderGeometry, SphereGeometry,
-  PlaneGeometry, CanvasTexture, SRGBColorSpace, DoubleSide, Color, Vector3,
+  PlaneGeometry, DoubleSide, Color, Vector3,
 } from 'three';
 import { SITES, heightAt } from '../../world/layout.js';
 import { clamp } from '../../core/math.js';
 import { SYMBOLS, onBackSide } from '../signal.js';
+import { signTexture } from './signs.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
-
-// Six symbols, bold and distinct at distance: circle, triangle, square, cross, crescent, zigzag.
-function symbolTexture(i) {
-  const c = document.createElement('canvas');
-  c.width = c.height = 256;
-  const g = c.getContext('2d');
-  g.fillStyle = '#fff'; g.strokeStyle = '#fff';
-  g.lineWidth = 34; g.lineJoin = 'round'; g.lineCap = 'round';
-  g.beginPath();
-  switch (i) {
-    case 0: g.arc(128, 128, 82, 0, Math.PI * 2); g.stroke(); break;                       // circle (ring)
-    case 1: g.moveTo(128, 30); g.lineTo(226, 214); g.lineTo(30, 214); g.closePath(); g.fill(); break; // triangle
-    case 2: g.rect(40, 40, 176, 176); g.fill(); break;                                    // square
-    case 3: g.moveTo(40, 40); g.lineTo(216, 216); g.moveTo(216, 40); g.lineTo(40, 216); g.stroke(); break; // cross (X)
-    case 4:                                                                               // crescent
-      g.arc(128, 128, 96, 0, Math.PI * 2); g.fill();
-      g.globalCompositeOperation = 'destination-out';
-      g.beginPath(); g.arc(164, 108, 84, 0, Math.PI * 2); g.fill();
-      break;
-    default:                                                                              // zigzag
-      g.lineWidth = 30; g.moveTo(24, 190); g.lineTo(76, 66); g.lineTo(128, 190); g.lineTo(180, 66); g.lineTo(232, 190); g.stroke();
-  }
-  const t = new CanvasTexture(c);
-  t.colorSpace = SRGBColorSpace;
-  return t;
-}
 
 export function createView(scene) {
   const root = new Group();
@@ -44,7 +19,7 @@ export function createView(scene) {
   const { wall, dials, lookout, bridge } = SITES.signal;
   const STONE = 0x8f8880, DARK = 0x4a4540, ACCENT = 0xf08a3c, GLOW = 0xffe3a0, WOOD = 0xa9774c;
   const glowCol = new Color(GLOW), dimCol = new Color(0x3a3632);
-  const tex = Array.from({ length: SYMBOLS }, (_, i) => symbolTexture(i));
+  const tex = Array.from({ length: SYMBOLS }, (_, i) => signTexture(i));
 
   // ---- the wall: faces `wall.yaw` (front toward the dials); its back is local +Z
   const base = heightAt(wall.x + 0.5, wall.z);
