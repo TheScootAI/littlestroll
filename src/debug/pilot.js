@@ -31,7 +31,7 @@ export function createPilot(game) {
   const badge = document.createElement('div');
   badge.textContent = 'Piloted by Claude';
   Object.assign(badge.style, {
-    position: 'fixed', right: '12px', top: '12px', padding: '5px 12px', borderRadius: '999px',
+    position: 'fixed', right: '60px', top: '17px', padding: '5px 12px', borderRadius: '999px',
     background: 'rgba(60, 48, 40, 0.7)', color: '#ffe3a0', font: '600 13px/1.3 system-ui, sans-serif',
     letterSpacing: '0.03em', pointerEvents: 'none', zIndex: 20,
   });

@@ -2,9 +2,11 @@
 import { Game } from './game.js';
 import { showMenu } from './ui/menu.js';
 import { createHud } from './ui/hud.js';
+import { createFeedback } from './ui/feedback.js';
 import { Session } from './net/session.js';
 import { makeCode, normalizeCode } from './net/code.js';
 import { heightAt } from './world/layout.js';
+import { count as owlCount } from './puzzles/owls.js';
 
 const params = new URLSearchParams(window.location.search);
 // ?debug (the solo stand-in) exists only on the dev server: in a production build
@@ -46,9 +48,18 @@ async function startHost(hud) {
   return null;
 }
 
+// The feedback button is there from the menu on; once a walk exists it lets go of the walker's
+// keys while the box is open and adds how far the pair had got.
+function wireFeedback(feedback, game) {
+  feedback.onOpen = () => game.input.release();
+  feedback.info = () => `puzzles solved: ${game.solved} · owls found: ${owlCount(game.S.owls | 0)}`;
+}
+
 async function main() {
+  const feedback = createFeedback(ui);
   if (import.meta.env.DEV && debug) {
     const game = new Game(canvas, { role: 'host', session: null, debug, hud: createHud(ui) });
+    wireFeedback(feedback, game);
     const { createStandin } = await import('./debug/standin.js');
     const standin = createStandin(game);
     game.standin = standin;
@@ -76,6 +87,7 @@ async function main() {
     hud.setStatus('Connecting…');
     game = new Game(canvas, { role: 'join', session: Session.join(choice.code), hud });
   }
+  wireFeedback(feedback, game);
   if (pilotMode) await attachPilot(game);
   // ?handle on the dev server: the ?debug handle on a real two-browser walk
   if (import.meta.env.DEV && params.has('handle')) window.__lr = devHandle(game);
