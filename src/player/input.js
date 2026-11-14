@@ -85,7 +85,8 @@ export function createInput(canvas) {
   // click tries for the lock again (a refusal right after Esc must not last the whole walk).
   let lockFailed = !canLock;
 
-  const input = { state, forced: null, captured: false, dispose };
+  // release(): let go of every key (the chat box just opened), so the walker stops
+  const input = { state, forced: null, captured: false, dispose, release: () => releaseAll(state, held) };
   const locked = () => doc.pointerLockElement === canvas;
 
   const onKeyDown = (e) => {

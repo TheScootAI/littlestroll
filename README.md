@@ -10,7 +10,7 @@ Built with three.js. No accounts and no server: the two browsers connect directl
 2. One clicks **Start a walk** and reads out the five-letter code.
 3. The other clicks **Join a walk** and types it in.
 
-You'll want to be on a call together; the game has no voice chat.
+You can type to each other in the game (Enter). There is no voice chat, so a call is still nicer.
 
 | Key | Does |
 | --- | --- |
@@ -21,6 +21,7 @@ You'll want to be on a call together; the game has no voice chat.
 | Q | Point |
 | F | Shout |
 | 1 | Wave |
+| Enter | Chat (Esc to cancel) |
 
 On a small share of home networks the two browsers can't connect directly. The game says so when that happens.
 

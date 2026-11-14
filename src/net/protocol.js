@@ -1,8 +1,9 @@
 // Message format between the two browsers. Pure: no three.js, no DOM, no network.
 import { dirFromYawPitch } from '../core/math.js';
 import { readInput } from '../player/input.js';
+import { clean } from '../core/chat.js';
 
-export const PROTOCOL_V = 2;   // bump whenever the shape of S or dyn, or what a message means, changes
+export const PROTOCOL_V = 3;   // bump whenever the shape of S or dyn, or what a message means, changes
 export const MAX_BYTES = 16384;
 
 // [field, min, max]
@@ -38,6 +39,12 @@ export function decode(text) {
       for (const k of COUNT) { if (!isCount(m[k])) return null; out[k] = m[k]; }
       return out;
     }
+    case 'c': {
+      // raw length is capped before cleaning; what is left after cleaning must be something to say
+      if (typeof m.text !== 'string' || m.text.length < 1 || m.text.length > 400) return null;
+      const text = clean(m.text);
+      return text ? { t: 'c', text } : null;
+    }
     case 's':
       return isPlain(m.S) ? { t: 's', S: m.S } : null;
     default:
@@ -58,10 +65,10 @@ export function versionOf(text) {
 }
 
 // Which decoded message types a side acts on. The host: `hello` until it has
-// welcomed, then only `p`. The joiner: `welcome` or `full` until welcomed, then `p`/`s`.
+// welcomed, then `p`/`c`. The joiner: `welcome` or `full` until welcomed, then `p`/`s`/`c`.
 export function accepts(role, handshakeDone, type) {
-  if (role === 'host') return handshakeDone ? type === 'p' : type === 'hello';
-  if (role === 'join') return handshakeDone ? type === 'p' || type === 's' : type === 'welcome' || type === 'full';
+  if (role === 'host') return handshakeDone ? type === 'p' || type === 'c' : type === 'hello';
+  if (role === 'join') return handshakeDone ? type === 'p' || type === 's' || type === 'c' : type === 'welcome' || type === 'full';
   return false;
 }
 

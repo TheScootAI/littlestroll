@@ -12,7 +12,7 @@ describe('protocol', () => {
     expect(decode(encode({ t: 'full' }))).toEqual({ t: 'full' });
     const s = { t: 's', S: { time: 1, gate: { a: 1 } } };
     expect(decode(encode(s))).toEqual(s);
-    expect(PROTOCOL_V).toBe(2);
+    expect(PROTOCOL_V).toBe(3);
     expect(MAX_BYTES).toBe(16384);
   });
 
@@ -68,12 +68,12 @@ describe('protocol', () => {
   });
 
   test('accepts: who acts on what', () => {
-    const types = ['hello', 'welcome', 'full', 'p', 's'];
+    const types = ['hello', 'welcome', 'full', 'p', 's', 'c'];
     const table = {
       'host/false': ['hello'],
-      'host/true': ['p'],
+      'host/true': ['p', 'c'],
       'join/false': ['welcome', 'full'],
-      'join/true': ['p', 's'],
+      'join/true': ['p', 's', 'c'],
     };
     for (const role of ['host', 'join']) for (const done of [false, true]) {
       for (const t of types) {
@@ -124,5 +124,24 @@ describe('version detection', () => {
     for (const j of ['', 'junk', '[]', 'null', '{"t":"p","v":1}', '{"t":"hello"}', '{"t":"hello","v":"1"}', '{"t":"hello","v":1.5}',
       '{"t":"welcome","v":1}', '{"t":"full"}', 'x'.repeat(20000)]) expect(versionOf(j)).toBeNull();
     for (const b of [undefined, null, 5, {}]) expect(versionOf(b)).toBeNull();
+  });
+});
+
+describe('chat message', () => {
+  test('round trip', () => {
+    expect(decode(encode({ t: 'c', text: 'hello there' }))).toEqual({ t: 'c', text: 'hello there' });
+  });
+  test('text is cleaned on decode', () => {
+    const raw = JSON.stringify({ t: 'c', text: 'hi\n\u202Ethere  ' });
+    expect(decode(raw)).toEqual({ t: 'c', text: 'hi there' });
+  });
+  test('rejects non-string, empty, whitespace-only and over-long text', () => {
+    for (const text of [5, null, undefined, {}, [], '', '   ', '\n\t', '\u202E', 'x'.repeat(401)]) {
+      expect(decode(JSON.stringify({ t: 'c', text })), String(text)).toBeNull();
+    }
+    expect(decode(JSON.stringify({ t: 'c' }))).toBeNull();
+  });
+  test('400 raw units is the longest accepted, and is cut to 200 after cleaning', () => {
+    expect(decode(JSON.stringify({ t: 'c', text: 'x'.repeat(400) })).text).toHaveLength(200);
   });
 });

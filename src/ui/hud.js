@@ -39,6 +39,19 @@ const CSS = `
 .lr-end .dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .lr-end button { padding: 10px 26px; border: 0; border-radius: 999px; background: ${ACCENT}; color: #fff;
   font: 600 16px system-ui, sans-serif; cursor: pointer; }
+/* chat: log above, one-line box below, bottom-left; only the box takes the pointer */
+/* it sits above the start hint's row and stays narrow, clear of the centred prompt */
+.lr-chat { position: absolute; left: 18px; bottom: 74px; width: min(340px, 36vw); pointer-events: none;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.lr-chat-log { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: 100%;
+  opacity: 1; transition: opacity 0.6s; }
+.lr-chat-line { padding: 5px 12px; border-radius: 14px; background: rgba(60,48,40,0.62); color: ${PAPER};
+  font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
+.lr-chat-line.sys { color: #cfc6bb; font-style: italic; }
+.lr-chat-line .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: -1px; }
+.lr-chat-box { display: none; box-sizing: border-box; width: 100%; padding: 8px 16px; border: 0; outline: none;
+  border-radius: 999px; background: rgba(255,247,234,0.94); color: ${INK}; font: 600 16px system-ui, sans-serif;
+  pointer-events: auto; box-shadow: 0 4px 14px rgba(90,60,30,0.2); }
 `;
 
 const SCARVES = [{ name: 'Orange', hex: '#f08a3c' }, { name: 'Teal', hex: '#2fb5a6' }];
@@ -62,7 +75,21 @@ export function createHud(root) {
   let flashTimer = null;
   const arrow = el('div', 'lr-arrow');
   const end = el('div', 'lr-end');
-  hud.append(code, status, prompt, flashEl, arrow, end);
+  // chat: all text goes in through textContent / text nodes, never as markup
+  const chat = el('div', 'lr-chat');
+  const chatLog = el('div', 'lr-chat-log');
+  const chatBox = el('input', 'lr-chat-box');
+  chatBox.maxLength = 200;
+  chatBox.placeholder = 'Say something…';
+  chatBox.autocomplete = 'off';
+  chat.append(chatLog, chatBox);
+  let chatShown = false, chatFade = null, chatEnabled = false;
+  const showLog = () => {
+    chatLog.style.opacity = '1';
+    clearTimeout(chatFade);
+    chatFade = setTimeout(() => { if (!chatShown) chatLog.style.opacity = '0'; }, 10000);
+  };
+  hud.append(code, status, prompt, flashEl, arrow, chat, end);
   root.appendChild(hud);
 
   return {
@@ -125,5 +152,57 @@ export function createHud(root) {
       end.appendChild(card);
       end.style.display = 'flex';
     },
+    // who: 0 | 1 (scarf colours) or null for a grey system line
+    chatLine(who, text) {
+      const line = el('div', who === 0 || who === 1 ? 'lr-chat-line' : 'lr-chat-line sys');
+      if (who === 0 || who === 1) {
+        const dot = el('span', 'dot');
+        dot.style.background = SCARVES[who].hex;
+        line.append(dot, document.createTextNode(`${SCARVES[who].name}: ${text}`));
+      } else line.appendChild(document.createTextNode(String(text)));
+      chatLog.appendChild(line);
+      while (chatLog.childNodes.length > 6) chatLog.firstChild.remove();
+      showLog();
+    },
+    // Enter opens the box; Enter in it sends, Esc cancels. Call once.
+    enableChat({ onSend, onOpen }) {
+      if (chatEnabled) return;
+      chatEnabled = true;
+      const close = () => {
+        if (!chatShown) return;
+        chatShown = false;
+        chatBox.value = '';
+        chatBox.style.display = 'none';
+        chatBox.blur();
+        showLog();   // starts the fade countdown again
+      };
+      // Focus gone (a click on the game to look around, another window): the box closes with
+      // it. Left open and unfocused it would swallow nothing, show forever and block Enter.
+      chatBox.addEventListener('blur', close);
+      window.addEventListener('keydown', (e) => {
+        // keyCode 229: an IME is composing (Safari reports the confirming Enter this way)
+        if (e.repeat || e.isComposing || e.keyCode === 229) return;
+        const t = e.target;
+        if (chatShown && t === chatBox) {
+          if (e.key === 'Enter') {
+            e.preventDefault(); e.stopPropagation();
+            const v = chatBox.value;
+            close();
+            if (v.trim()) onSend(v);
+          } else if (e.key === 'Escape') { e.preventDefault(); close(); }
+          return;
+        }
+        if (e.key !== 'Enter' || chatShown || e.altKey || e.ctrlKey || e.metaKey) return;
+        // Enter belongs to whatever has focus: a text field, or a button it should press
+        if (t && (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT', 'A'].includes(t.tagName) || t.isContentEditable)) return;
+        e.preventDefault();
+        chatShown = true;
+        chatBox.style.display = 'block';
+        chatBox.focus();
+        showLog();
+        onOpen?.();
+      });
+    },
+    get chatOpen() { return chatShown; },
   };
 }

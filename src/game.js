@@ -10,6 +10,7 @@ import { netSnapshot, toPIn, pressTracker } from './net/protocol.js';
 import { SITES, heightAt, lookDyn } from './world/layout.js';
 import { aimPoint, edgeArrow } from './world/sight.js';
 import { createAudio } from './audio.js';
+import { clean, createLog, addLine, createGate } from './core/chat.js';
 import { CHEST } from './puzzles/beam.js';
 import { buildTerrain, followSun } from './world/terrain.js';
 import { createPlayer, stepPlayer, needsRespawn, respawn } from './player/controller.js';
@@ -127,6 +128,11 @@ export class Game {
     this.remoteAvatar.group.visible = false;
     this.scene.add(this.remoteAvatar.group);
 
+    this.chat = createLog();
+    this.chatOut = createGate();
+    this.chatIn = createGate();
+    this.hud?.enableChat({ onSend: (t) => this.say(t), onOpen: () => this.input.release() });
+
     this.hint = this.makeHint();
     this.onResize = () => this.resize();
     window.addEventListener('resize', this.onResize);
@@ -242,8 +248,33 @@ export class Game {
     }
   }
 
+  // One chat line from this walker (the box or the pilot). True when it was sent / shown.
+  say(text) {
+    const line = clean(text);
+    if (!line) return false;
+    const t = performance.now();
+    if (!this.chatOut.allow(t)) return false;
+    if (this.session && this.session.status !== 'connected') {
+      const msg = "Not delivered — your friend isn't connected";
+      addLine(this.chat, 'system', msg, t);
+      this.hud?.chatLine(null, msg);
+      return false;
+    }
+    addLine(this.chat, this.idx, line, t);
+    this.hud?.chatLine(this.idx, line);
+    if (this.session) this.session.send({ t: 'c', text: line });
+    return true;
+  }
+
   onNet(m) {
     if (m.t === 'p') this.remote = m;
+    else if (m.t === 'c') {
+      const t = performance.now();
+      if (!this.chatIn.allow(t)) return;
+      addLine(this.chat, 1 - this.idx, m.text, t);
+      this.hud?.chatLine(1 - this.idx, m.text);
+      this.audio.blip();
+    }
     else if (m.t === 's') {
       if (this.role !== 'host' && validState(m.S)) {
         // adopt only what validates; a bad candidate leaves the previous S in place
@@ -410,7 +441,7 @@ export class Game {
     const ui = document.getElementById('ui');
     if (!ui) return null;
     const el = document.createElement('div');
-    el.textContent = 'Click to look around · WASD to walk · Shift to run';
+    el.textContent = 'Click to look around · WASD to walk · Shift to run · Enter to chat';
     Object.assign(el.style, {
       position: 'absolute', left: '50%', bottom: '28px', transform: 'translateX(-50%)',
       padding: '8px 16px', borderRadius: '999px', background: 'rgba(60, 48, 40, 0.55)',

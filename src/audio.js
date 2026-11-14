@@ -56,7 +56,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, chime: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0 },   // for checking in a browser
+    calls: { step: 0, chime: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0 },   // for checking in a browser
     step: safe(() => {
       audio.calls.step++;
       noise(ctx.currentTime, 0.07, 0.005, 700 + Math.random() * 300, 1.2, 0.5);
@@ -65,6 +65,13 @@ export function createAudio() {
       audio.calls.chime++;
       const t = ctx.currentTime;
       [523.25, 659.25, 783.99].forEach((f, i) => tone(f, t + i * 0.13, 0.9, 0.35));
+    }),
+    // a soft two-note tick: the friend said something
+    blip: safe(() => {
+      audio.calls.blip++;
+      const t = ctx.currentTime;
+      tone(880, t, 0.12, 0.12);
+      tone(1174.66, t + 0.08, 0.16, 0.1);
     }),
     // a short two-tone call; near is 0..1
     shout: safe((near) => {

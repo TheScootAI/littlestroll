@@ -8,6 +8,7 @@ import { findPath, steer, planningDyn } from './path.js';
 import { PITCH_MIN, PITCH_MAX } from '../player/input.js';
 import { clamp } from '../core/math.js';
 import { CHEST } from '../puzzles/beam.js';
+import { since } from '../core/chat.js';
 
 const r2 = (n) => (typeof n === 'number' && Number.isFinite(n) ? Math.round(n * 100) / 100 : null);
 const STALL_SECS = 1.5;      // no progress for this long: re-plan
@@ -112,8 +113,9 @@ export function createPilot(game) {
           ended: S?.ended ?? null,
           busy: !!job,
           puzzles,
+          chatN: game.chat?.items.at(-1)?.id ?? 0,   // newest chat line id: a cheap "anything new?"
         };
-      } catch { return { me: null, friend: null, solved: null, prompt: null, ended: null, busy: false, puzzles: null }; }
+      } catch { return { me: null, friend: null, solved: null, prompt: null, ended: null, busy: false, puzzles: null, chatN: 0 }; }
     },
 
     goTo(x, z, { run = true, within = 0.4, timeoutMs = 60000 } = {}) {
@@ -163,6 +165,15 @@ export function createPilot(game) {
     shout() { forced.shoutN++; },
     wave() { forced.waveN++; },
 
+    // chat: say() goes through the same rules as the box (cleaning, flood gate, no friend)
+    say(text) { try { return !!game.say(text); } catch { return false; } },
+    chat(after = 0) {
+      try {
+        return since(game.chat, Number.isFinite(after) ? after : 0).map(({ id, from, text }) => (
+          { id, from: from === 'system' ? 'system' : (from === game.idx ? 'me' : 'friend'), text }));
+      } catch { return []; }
+    },
+
     help: () => [
       '__pilot.sites()                    SITES (where everything is)',
       '__pilot.tile(i)                    [x, z] centre of marsh tile i; tiles are numbered row*5+col from the near-left corner',
@@ -172,6 +183,8 @@ export function createPilot(game) {
       '__pilot.hold(bool) / press()       E held / one E press',
       '__pilot.look(yaw, pitch) / aimAt([x,y,z])',
       '__pilot.point(bool) / shout() / wave()',
+      '__pilot.say(text)                  send a chat line -> true if it went',
+      '__pilot.chat(afterId)              chat lines with id > afterId: [{ id, from: \'me\'|\'friend\'|\'system\', text }]; state().chatN is the newest id',
     ].join('\n'),
   };
 
