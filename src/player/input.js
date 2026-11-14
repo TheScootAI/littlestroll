@@ -63,7 +63,14 @@ export function applyLook(s, dx, dy) {
 }
 
 // The input the game acts on: forced fields (the debug handle) laid over the live state.
-export const readInput = (input) => (input.forced ? { ...input.state, ...input.forced } : { ...input.state });
+// The one merge the local step and the network snapshot both read. `input.mustWalk` (set by
+// the game) is a hook for puzzles that forbid running (the relay's flame carrier): whatever
+// the keyboard, the stand-in or the pilot asks for, run is off while it says true.
+export const readInput = (input) => {
+  const r = input.forced ? { ...input.state, ...input.forced } : { ...input.state };
+  if (input.mustWalk?.()) r.run = false;
+  return r;
+};
 
 const typing = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 

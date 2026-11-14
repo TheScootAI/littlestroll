@@ -114,9 +114,10 @@ test('with the beam solved and the bells unsolved, S.ended stays null', () => {
   expect(S.beam.solved).toBe(true); expect(S.bells.solved).toBe(false); expect(S.ended).toBe(null);
 });
 test('the ending stamps the time once, when the last puzzle first solves', () => {
-  const S = createAll(1); forceSolved(S, 6);
+  const S = createAll(1); forceSolved(S, 7);
   S.time = 100;
-  stepAll(S, [P(SITES.marsh.lever, { pressed: true }), P(far)], 1 / 30);
+  S.relay.holder = 0; S.relay.t = 3;
+  stepAll(S, [P(SITES.relay.great, { pressed: true }), P(far)], 1 / 30);
   expect(S.ended.time).toBeGreaterThan(100);
   const t = S.ended.time;
   for (let i = 0; i < 10; i++) stepAll(S, [P(far), P(far)], 1 / 30);
@@ -129,14 +130,14 @@ test('beam: prompts come through promptFor once the lift is done; dyn is unchang
   expect(dynOf(S)).toEqual(dynOf(JSON.parse(JSON.stringify(S))));
   expect(Object.keys(dynOf(S)).sort()).toEqual(Object.keys(DYN_NONE).sort());
 });
-test('forceSolved(S, 5) lights the beacon without ending the walk; forceSolved(S, 7) ends it', () => {
+test('forceSolved(S, 5) lights the beacon without ending the walk; forceSolved(S, 8) ends it', () => {
   const S = createAll(1); forceSolved(S, 5);
   expect(solvedCount(S)).toBe(5);
   expect(S.beam).toMatchObject({ solved: true, charge: CHARGE });
   expect(S.ended).toBe(null);
-  const U = createAll(1); forceSolved(U, 6); expect(U.ended).toBe(null); forceSolved(U, 7);
+  const U = createAll(1); forceSolved(U, 7); expect(U.ended).toBe(null); forceSolved(U, 8);
   expect(S.ended).toBe(null); expect(U.ended).toEqual({ time: expect.any(Number) });
-  const T = createAll(1); T.ended = { time: 42 }; forceSolved(T, 7);
+  const T = createAll(1); T.ended = { time: 42 }; forceSolved(T, 8);
   expect(T.ended).toEqual({ time: 42 });
 });
 test('validState rejects a bad beam slice', () => {

@@ -56,7 +56,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, chime: 0, shout: 0, creak: 0, bell: 0 },   // for checking in a browser
+    calls: { step: 0, chime: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0 },   // for checking in a browser
     step: safe(() => {
       audio.calls.step++;
       noise(ctx.currentTime, 0.07, 0.005, 700 + Math.random() * 300, 1.2, 0.5);
@@ -84,6 +84,19 @@ export function createAudio() {
       tone(f * 2.76, t, 1.4, 0.07);
       tone(f * 0.5, t, 3.2, 0.12);
       noise(t, 0.08, 0.003, f * 3, 2, 0.12);
+    }),
+    // the flame changing hands: a soft, short whoosh
+    pass: safe(() => {
+      audio.calls.pass++;
+      noise(ctx.currentTime, 0.45, 0.12, 900, 0.8, 0.35);
+    }),
+    // the great brazier catching: a low roar that swells and rolls away, under a warm held chord
+    roar: safe(() => {
+      audio.calls.roar++;
+      const t = ctx.currentTime;
+      noise(t, 3.4, 1.1, 110, 0.7, 1.1);
+      noise(t, 2.6, 0.7, 380, 0.6, 0.5);
+      [98, 146.83, 196].forEach((f, i) => tone(f, t + 0.2 + i * 0.12, 3.2, 0.16));
     }),
     // low noise swell; ignored while an earlier creak is still sounding
     creak: safe(() => {

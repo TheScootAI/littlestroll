@@ -100,6 +100,7 @@ export function createPilot(game) {
           beam: { mirrors: S.beam.mirrors.map((m) => ({ x: r2(m.x), z: r2(m.z), by: m.by })), onLens: !!S.beam.onLens, charge: r2(S.beam.charge), solved: !!S.beam.solved },
           bells: { a: r2(S.bells.a), b: r2(S.bells.b), steps: r2(S.bells.steps), hint: !!S.bells.hint, solved: !!S.bells.solved },
           marsh: { held: !!S.marsh.held, solved: !!S.marsh.solved },   // never the path: a player cannot see it
+          relay: { holder: S.relay.holder, t: r2(S.relay.t), solved: !!S.relay.solved },
         } : null;
         return {
           me: p ? { x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), zone: zoneAt(p.x, p.z) } : null,

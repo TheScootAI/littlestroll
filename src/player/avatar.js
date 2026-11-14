@@ -131,6 +131,8 @@ export function createAvatar(colour) {
     if (view.pointing && view.aim) {
       tmp.fromArray(view.aim).applyQuaternion(invYaw).normalize();
       aimArm(armR, tmp, k);
+    } else if (view.torch) {
+      aimArm(armR, tmp.set(0.12, 1, -0.25).normalize(), k);   // the flame held up high
     } else if (mirror) {
       aimArm(armR, mirrorArm(0.22, view.aim), k);
     } else if (view.carrying) {

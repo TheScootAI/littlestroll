@@ -7,7 +7,7 @@ import { MAX_DT, LOGIC_HZ } from './config.js';
 import { dirFromYawPitch, lerpAngle } from './core/math.js';
 import { createTicker, tickerDrives } from './core/ticker.js';
 import { netSnapshot, toPIn, pressTracker } from './net/protocol.js';
-import { SITES, ZONES, heightAt } from './world/layout.js';
+import { SITES, heightAt } from './world/layout.js';
 import { aimPoint, edgeArrow } from './world/sight.js';
 import { createAudio } from './audio.js';
 import { CHEST } from './puzzles/beam.js';
@@ -25,22 +25,27 @@ import { createView as createBeamView } from './puzzles/views/beam.js';
 import { createView as createCausewayView } from './puzzles/views/causeway.js';
 import { createView as createBellsView } from './puzzles/views/bells.js';
 import { createView as createMarshView } from './puzzles/views/marsh.js';
+import { createView as createRelayView } from './puzzles/views/relay.js';
+import { mustWalk } from './puzzles/relay.js';
 
 export const SCARF = [0xf08a3c, 0x2fb5a6];   // host orange, joiner teal
 
-// The ending shot: derived from the layout, not hard-coded. The camera looks west from beyond
-// the Far Isle's summit, a little above and to the south, so the lit great brazier stands in
-// front and the causeway, the first island and its beacon string out behind it.
+// The ending shot: derived from the layout, not hard-coded. The camera stands off the summit's
+// far side, a little above and to the side, looking back west over the lit great brazier, so
+// the roaring flame fills the upper half of the frame (the card takes the lower half) with the
+// Far Isle's summit under it and the causeway, the first island and its beacon strung out
+// behind. The look point sits below the brazier so the flame rides high in the frame.
 const END_SECS = 4;                       // camera ease
 const END_CARD = END_SECS + 0.4;          // then the card
 const endShot = () => {
   const [gx, gz] = SITES.relay.great, gy = heightAt(gx, gz);
   const [bx, bz] = SITES.beacon;
   const span = Math.hypot(gx - bx, gz - bz);                    // summit to the first island
-  const toIsland = [(bx - gx) / span, (bz - gz) / span];         // unit vector, summit -> beacon
-  const reach = Math.max(...ZONES.filter((d) => d.zone === 'J').map((d) => d.r)) * 9;
-  const pos = [gx - toIsland[0] * reach - toIsland[1] * reach * 0.45, gy + reach * 0.62, gz - toIsland[1] * reach + toIsland[0] * reach * 0.45];
-  const look = [gx + toIsland[0] * span * 0.12, gy + 2, gz + toIsland[1] * span * 0.12];
+  const to = [(bx - gx) / span, (bz - gz) / span];               // unit vector, summit -> beacon
+  const side = [-to[1], to[0]];                                  // a quarter turn from it
+  const back = 26, up = 8, lateral = 7;
+  const pos = [gx - to[0] * back + side[0] * lateral, gy + up, gz - to[1] * back + side[1] * lateral];
+  const look = [gx + to[0] * 40, gy - 12, gz + to[1] * 40];
   return { pos, look };
 };
 const smooth = (t) => t * t * (3 - 2 * t);
@@ -106,8 +111,11 @@ export class Game {
       { key: 'beam', view: createCausewayView(this.scene) },
       { key: 'bells', view: createBellsView(this.scene) },
       { key: 'marsh', view: createMarshView(this.scene) },
+      { key: 'relay', view: createRelayView(this.scene) },
     ];
     this.input = createInput(canvas);
+    // carrying the relay's flame: no running, whoever asks (see readInput)
+    this.input.mustWalk = () => !!this.S.relay && mustWalk(this.S.relay, this.idx);
     this.player = createPlayer(...SITES.spawn[this.idx]);
     this.avatar = createAvatar(SCARF[this.idx]);
     this.scene.add(this.avatar.group);
@@ -221,6 +229,15 @@ export class Game {
       if (this.bellPrev) { if (b.a < this.bellPrev[0]) this.audio.bell(0); if (b.b < this.bellPrev[1]) this.audio.bell(1); }
       this.bellPrev = [b.a, b.b];
     }
+    // the flame changing hands (whoosh), and the great brazier catching (roar)
+    const rl = this.S.relay;
+    if (rl) {
+      if (this.relayPrev) {
+        if (rl.holder !== null && this.relayPrev.holder !== null && rl.holder !== this.relayPrev.holder) this.audio.pass();
+        if (rl.solved && !this.relayPrev.solved) this.audio.roar();
+      }
+      this.relayPrev = { holder: rl.holder, solved: rl.solved };
+    }
   }
 
   onNet(m) {
@@ -237,6 +254,7 @@ export class Game {
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
       this.bellPrev = null;
+      this.relayPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);
       this.welcomedOnce = true;
@@ -252,6 +270,11 @@ export class Game {
   holdsPlank(i) {
     const pl = this.S.plank;
     return !pl.placed && (pl.holdA === i || pl.holdB === i);
+  }
+
+  // Is walker i carrying the relay's flame?
+  holdsFlame(i) {
+    return this.S.relay?.holder === i && !this.S.relay.solved;
   }
 
   updateRemote(dt) {
@@ -272,7 +295,7 @@ export class Game {
     av.update({
       x: this.rx, y: this.ry, z: this.rz, yaw: this.ryaw, speed: r.speed,
       aim: dirFromYawPitch(r.ay, r.ap), pointing: r.q, waveN: r.waveN,
-      carrying: this.holdsPlank(1 - this.idx) || this.holdsMirror(1 - this.idx), mirror: this.holdsMirror(1 - this.idx),
+      carrying: this.holdsPlank(1 - this.idx) || this.holdsMirror(1 - this.idx), mirror: this.holdsMirror(1 - this.idx), torch: this.holdsFlame(1 - this.idx),
     }, dt);
   }
 
@@ -447,7 +470,7 @@ export class Game {
       x: p.x, y: p.y, z: p.z, yaw: p.yaw, speed: this.speed,
       aim: dirFromYawPitch(inp.camYaw, inp.camPitch),
       pointing: !!inp.q, waveN: inp.waveN,
-      carrying: this.holdsPlank(this.idx) || this.holdsMirror(this.idx), mirror: this.holdsMirror(this.idx),
+      carrying: this.holdsPlank(this.idx) || this.holdsMirror(this.idx), mirror: this.holdsMirror(this.idx), torch: this.holdsFlame(this.idx),
     }, dt);
     this.updateRemote(dt);
     this.syncPuzzles(pins, inp, dt);
