@@ -98,6 +98,7 @@ export function createPilot(game) {
           plank: { ends: [r2(S.plank.ax), r2(S.plank.az), r2(S.plank.bx), r2(S.plank.bz)], holdA: S.plank.holdA, holdB: S.plank.holdB, placed: !!S.plank.placed },
           lift: { y: r2(S.lift.y), cranking: !!S.lift.cranking, ladder: !!S.lift.ladder },
           beam: { mirrors: S.beam.mirrors.map((m) => ({ x: r2(m.x), z: r2(m.z), by: m.by })), onLens: !!S.beam.onLens, charge: r2(S.beam.charge), solved: !!S.beam.solved },
+          bells: { a: r2(S.bells.a), b: r2(S.bells.b), steps: r2(S.bells.steps), hint: !!S.bells.hint, solved: !!S.bells.solved },
         } : null;
         return {
           me: p ? { x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), zone: zoneAt(p.x, p.z) } : null,

@@ -27,7 +27,7 @@ export function decode(text) {
       return m.v === PROTOCOL_V ? { t: 'hello', v: m.v } : null;
     case 'welcome':
       if (m.v !== PROTOCOL_V || !Number.isSafeInteger(m.seed)) return null;
-      if (!Number.isInteger(m.solved) || m.solved < 0 || m.solved > 5) return null;
+      if (!Number.isInteger(m.solved) || m.solved < 0 || m.solved > 8) return null;
       return { t: 'welcome', v: m.v, seed: m.seed, solved: m.solved };
     case 'full':
       return { t: 'full' };

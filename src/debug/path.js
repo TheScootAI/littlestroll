@@ -54,8 +54,9 @@ function gridFor(dyn = DYN_NONE) {
   const d = {
     gateOpen: !!dyn.gateOpen, bridge: !!dyn.bridge, plank: !!dyn.plank,
     lift: Number.isFinite(dyn.lift) ? dyn.lift : 0, ladder: !!dyn.ladder,
+    causeway: !!dyn.causeway, bells: !!dyn.bells, marsh: dyn.marsh | 0,
   };
-  const key = `${+d.gateOpen}${+d.bridge}${+d.plank}${+d.ladder}:${d.lift}`;
+  const key = `${+d.gateOpen}${+d.bridge}${+d.plank}${+d.ladder}${+d.causeway}${+d.bells}:${d.lift}:${d.marsh}`;
   let G = grids.get(key);
   if (G) { grids.delete(key); grids.set(key, G); return G; }
 

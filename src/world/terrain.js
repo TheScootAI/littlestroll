@@ -40,6 +40,12 @@ export function terrainExtent() {
     x0 = Math.min(x0, d.x - r); x1 = Math.max(x1, d.x + r);
     z0 = Math.min(z0, d.z - r); z1 = Math.max(z1, d.z + r);
   }
+  // ramps that are always there (the relay climb) reach past their island's disc
+  for (const r of RAMPS) {
+    if (r.flag !== null) continue;
+    x0 = Math.min(x0, r.ax - r.hw, r.bx - r.hw); x1 = Math.max(x1, r.ax + r.hw, r.bx + r.hw);
+    z0 = Math.min(z0, r.az - r.hw, r.bz - r.hw); z1 = Math.max(z1, r.az + r.hw, r.bz + r.hw);
+  }
   const m = 3;
   return { x0: Math.floor(x0 - m), x1: Math.ceil(x1 + m), z0: Math.floor(z0 - m), z1: Math.ceil(z1 + m) };
 }
@@ -63,6 +69,7 @@ export function siteAnchors() {
   xyz(S.beam.lamp.o); S.beam.mirrors.forEach(xz); xyz(S.beam.lens);
   S.beam.rocks.forEach((r) => pts.push([r.x, r.z])); xz(S.beam.hint.p1); xz(S.beam.hint.p2);
   xz(S.beacon);
+  xz(S.bells.a); xz(S.bells.b); seg(S.bells.steps);
   return pts;
 }
 

@@ -116,3 +116,23 @@ describe('buildTerrain', () => {
     expect(new Box3().setFromObject(ground).max.y).toBeGreaterThan(13);
   });
 });
+
+describe('terrainExtent covers the Far Isle', () => {
+  test('every unconditional ramp, end to end and hw wide, lies inside the extent', () => {
+    const e = terrainExtent();
+    for (const r of RAMPS.filter((q) => q.flag === null)) {
+      expect(Math.min(r.ax, r.bx) - r.hw).toBeGreaterThanOrEqual(e.x0);
+      expect(Math.max(r.ax, r.bx) + r.hw).toBeLessThanOrEqual(e.x1);
+      expect(Math.min(r.az, r.bz) - r.hw).toBeGreaterThanOrEqual(e.z0);
+      expect(Math.max(r.az, r.bz) + r.hw).toBeLessThanOrEqual(e.z1);
+    }
+  });
+  test('the east leg of the relay climb has terrain under its outer edge (x 154.25)', () => {
+    const e = terrainExtent();
+    expect(e.x1).toBeGreaterThan(154.25 + 2);
+  });
+  test('the bells are kept clear of scenery', () => {
+    const pts = siteAnchors();
+    for (const b of [SITES.bells.a, SITES.bells.b]) expect(pts.some((p) => Math.hypot(p[0] - b[0], p[1] - b[1]) < 1e-6)).toBe(true);
+  });
+});

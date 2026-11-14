@@ -207,3 +207,19 @@ describe('steer', () => {
     expect(steer({ x: -19, z: 66 }, path, 1, { dyn, run: true }).run).toBe(false);
   });
 });
+
+describe('the Far Isle dyn keys', () => {
+  it('with the causeway up a path runs from the beacon to the first bell; without it, none', () => {
+    // the beacon tower itself is a blocker, so start at the checkpoint beside it
+    const from = SITES.checkpoints[5][0];
+    expect(findPath(from, SITES.bells.a, DYN_NONE)).toBeNull();
+    const p = findPath(from, SITES.bells.a, { ...DYN_NONE, causeway: true });
+    expect(p).not.toBeNull();
+    expect(p.at(-1)).toEqual(SITES.bells.a);
+  });
+  it('the bells steps and the marsh tiles change the route too', () => {
+    const c = { ...DYN_NONE, causeway: true };
+    expect(findPath(SITES.bells.a, SITES.checkpoints[6][0], c)).toBeNull();
+    expect(findPath(SITES.bells.a, SITES.checkpoints[6][0], { ...c, bells: true })).not.toBeNull();
+  });
+});

@@ -5,7 +5,8 @@ import { pointSegDist } from '../core/math.js';
 const PLATE_R = 1.0;      // standing this close to a plate holds the gate
 const DOOR_R = 0.9;       // ...and so does standing this close to the doorway
 const SWING_S = 0.5;      // seconds for the gate to swing fully open or shut
-const THROUGH = ['B', 'C', 'D', 'E', 'F'];   // any plateau past the gate
+// any plateau past the gate counts: everything but A, a ramp, the water, and (null) nowhere
+const through = (zone) => zone !== null && zone !== 'A';
 
 export const create = () => ({ open: false, amt: 0, solved: false });
 
@@ -21,7 +22,7 @@ export function step(s, players, dt) {
     near(p, SITES.gate.plateA, PLATE_R) || near(p, SITES.gate.plateB, PLATE_R) ||
     pointSegDist(p.x, p.z, door.ax, door.az, door.bx, door.bz).d <= DOOR_R);
   if (!s.solved && players.length === 2 && here.length === 2 &&
-      here.every((p) => THROUGH.includes(zoneAt(p.x, p.z)))) s.solved = true;
+      here.every((p) => through(zoneAt(p.x, p.z)))) s.solved = true;
   s.open = s.solved || held;
   const target = s.open ? 1 : 0;
   const k = dt / SWING_S;

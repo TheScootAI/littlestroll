@@ -7,7 +7,7 @@ import { MAX_DT, LOGIC_HZ } from './config.js';
 import { dirFromYawPitch, lerpAngle } from './core/math.js';
 import { createTicker, tickerDrives } from './core/ticker.js';
 import { netSnapshot, toPIn, pressTracker } from './net/protocol.js';
-import { SITES } from './world/layout.js';
+import { SITES, ZONES, heightAt } from './world/layout.js';
 import { aimPoint, edgeArrow } from './world/sight.js';
 import { createAudio } from './audio.js';
 import { CHEST } from './puzzles/beam.js';
@@ -22,15 +22,26 @@ import { createView as createSignalView } from './puzzles/views/signal.js';
 import { createView as createPlankView } from './puzzles/views/plank.js';
 import { createView as createLiftView } from './puzzles/views/lift.js';
 import { createView as createBeamView } from './puzzles/views/beam.js';
+import { createView as createCausewayView } from './puzzles/views/causeway.js';
+import { createView as createBellsView } from './puzzles/views/bells.js';
 
 export const SCARF = [0xf08a3c, 0x2fb5a6];   // host orange, joiner teal
 
-// The ending shot: high and behind the summit (from the north-west), so the lit beacon
-// stands in front of the rocks with the whole island stretching away to the beach.
+// The ending shot: derived from the layout, not hard-coded. The camera looks west from beyond
+// the Far Isle's summit, a little above and to the south, so the lit great brazier stands in
+// front and the causeway, the first island and its beacon string out behind it.
 const END_SECS = 4;                       // camera ease
 const END_CARD = END_SECS + 0.4;          // then the card
-const END_POS = [-40, 44, -108];
-const END_LOOK = [4, 10, -35];
+const endShot = () => {
+  const [gx, gz] = SITES.relay.great, gy = heightAt(gx, gz);
+  const [bx, bz] = SITES.beacon;
+  const span = Math.hypot(gx - bx, gz - bz);                    // summit to the first island
+  const toIsland = [(bx - gx) / span, (bz - gz) / span];         // unit vector, summit -> beacon
+  const reach = Math.max(...ZONES.filter((d) => d.zone === 'J').map((d) => d.r)) * 9;
+  const pos = [gx - toIsland[0] * reach - toIsland[1] * reach * 0.45, gy + reach * 0.62, gz - toIsland[1] * reach + toIsland[0] * reach * 0.45];
+  const look = [gx + toIsland[0] * span * 0.12, gy + 2, gz + toIsland[1] * span * 0.12];
+  return { pos, look };
+};
 const smooth = (t) => t * t * (3 - 2 * t);
 
 const RING_SECS = 1.5;                    // a shout's ring grows and fades over this
@@ -91,6 +102,8 @@ export class Game {
       { key: 'plank', view: createPlankView(this.scene) },
       { key: 'lift', view: createLiftView(this.scene) },
       { key: 'beam', view: createBeamView(this.scene) },
+      { key: 'beam', view: createCausewayView(this.scene) },
+      { key: 'bells', view: createBellsView(this.scene) },
     ];
     this.input = createInput(canvas);
     this.player = createPlayer(...SITES.spawn[this.idx]);
@@ -200,6 +213,12 @@ export class Game {
     const amt = this.S.gate?.amt ?? 0;
     if (Math.abs(amt - this.gateAmt) > 1e-4) this.audio.creak();
     this.gateAmt = amt;
+    // a bell's timer jumping back down means it was just rung (host or joiner alike)
+    const b = this.S.bells;
+    if (b) {
+      if (this.bellPrev) { if (b.a < this.bellPrev[0]) this.audio.bell(0); if (b.b < this.bellPrev[1]) this.audio.bell(1); }
+      this.bellPrev = [b.a, b.b];
+    }
   }
 
   onNet(m) {
@@ -215,6 +234,7 @@ export class Game {
       this.S = createAll(m.seed);
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
+      this.bellPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);
       this.welcomedOnce = true;
@@ -442,11 +462,12 @@ export class Game {
     }
   }
 
-  // The beacon is lit: stop taking movement, let go of the pointer, and start the pull-back.
+  // The last puzzle is solved: stop taking movement, let go of the pointer, and start the pull-back.
   beginEnding() {
     const c = this.cam.camera, p = this.player;
     this.ending = {
       t: 0, shown: false,
+      shot: (() => { const s = endShot(); return { pos: new Vector3(...s.pos), look: new Vector3(...s.look) }; })(),
       from: c.position.clone(),
       fromLook: new Vector3(p.x, p.y + 1.3, p.z),
       look: new Vector3(),
@@ -463,8 +484,8 @@ export class Game {
     const e = this.ending, c = this.cam.camera;
     e.t += dt;
     const k = smooth(Math.min(1, e.t / END_SECS));
-    c.position.copy(e.from).lerp(new Vector3(...END_POS), k);
-    e.look.copy(e.fromLook).lerp(new Vector3(...END_LOOK), k);
+    c.position.copy(e.from).lerp(e.shot.pos, k);
+    e.look.copy(e.fromLook).lerp(e.shot.look, k);
     c.lookAt(e.look);
     if (e.fog) {                            // let the haze fall back so the whole island shows
       this.scene.fog.near = e.fog[0] + (160 - e.fog[0]) * k;

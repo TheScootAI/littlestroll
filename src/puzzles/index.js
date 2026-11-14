@@ -9,6 +9,7 @@ import * as signal from './signal.js';
 import * as plank from './plank.js';
 import * as lift from './lift.js';
 import * as beam from './beam.js';
+import * as bells from './bells.js';
 
 // Trail order. `solved(S)` says whether that puzzle is done.
 const ORDER = [
@@ -16,11 +17,11 @@ const ORDER = [
   { key: 'signal', mod: signal, valid: signal.valid, solved: (S) => S.signal.solved, done: 'The bridge is out' },
   { key: 'plank', mod: plank, valid: plank.valid, solved: (S) => S.plank.solved, done: 'The plank is down' },
   { key: 'lift', mod: lift, valid: lift.valid, solved: (S) => S.lift.solved, done: 'The ladder is down' },
-  // no flash line: the ending itself is the feedback
-  { key: 'beam', mod: beam, valid: beam.valid, solved: (S) => S.beam.solved, done: null },
+  { key: 'beam', mod: beam, valid: beam.valid, solved: (S) => S.beam.solved, done: 'A causeway rises from the sea' },
+  { key: 'bells', mod: bells, valid: bells.valid, solved: (S) => S.bells.solved, done: 'The steps rise' },
 ];
 
-export const createAll = (seed) => ({ time: 0, gate: gate.create(seed), signal: signal.create(seed), plank: plank.create(), lift: lift.create(), beam: beam.create(), ended: null });
+export const createAll = (seed) => ({ time: 0, gate: gate.create(seed), signal: signal.create(seed), plank: plank.create(), lift: lift.create(), beam: beam.create(), bells: bells.create(), ended: null });
 
 export function stepAll(S, players, dt) {
   dt = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), MAX_DT) : 0;
@@ -30,8 +31,9 @@ export function stepAll(S, players, dt) {
   plank.step(S.plank, players, dt);
   lift.step(S.lift, players, dt);
   beam.step(S.beam, players, dt);
-  // the walk ends the moment the beacon first lights
-  if (!S.ended && S.beam.solved) S.ended = { time: S.time };
+  bells.step(S.bells, players, dt);
+  // the walk ends the moment the last puzzle in the order is solved
+  if (!S.ended && ORDER.at(-1).solved(S)) S.ended = { time: S.time };
 }
 
 // Is S safe to adopt (joiner side)? Every ORDER row's slice is checked by its module.
@@ -57,7 +59,7 @@ export const solvedLine = (n) => ORDER[n]?.done ?? null;
 export const dynOf = (S) => ({
   gateOpen: S.gate.amt > 0.5 || S.gate.open,
   bridge: S.signal.bridge >= 1, plank: S.plank.placed, lift: S.lift.y, ladder: S.lift.ladder,
-  causeway: false, bells: false, marsh: 0,   // the Far Isle: wired up by its puzzles' tasks
+  causeway: S.beam.solved, bells: S.bells.steps >= 1, marsh: 0,   // marsh: wired up by its puzzle's task
 });
 
 // First hint among the unsolved puzzles, in trail order.
@@ -78,5 +80,5 @@ export function constraintFor(S, idx, players) {
 // Debug/test only: put the first n puzzles (trail order) in their solved, settled form.
 export function forceSolved(S, n) {
   for (let i = 0; i < Math.min(n, ORDER.length); i++) ORDER[i].mod.forceSolve(S[ORDER[i].key]);
-  if (S.beam.solved && !S.ended) S.ended = { time: S.time };
+  if (!S.ended && ORDER.at(-1).solved(S)) S.ended = { time: S.time };
 }

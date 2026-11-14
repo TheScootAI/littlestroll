@@ -56,7 +56,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, chime: 0, shout: 0, creak: 0 },   // for checking in a browser
+    calls: { step: 0, chime: 0, shout: 0, creak: 0, bell: 0 },   // for checking in a browser
     step: safe(() => {
       audio.calls.step++;
       noise(ctx.currentTime, 0.07, 0.005, 700 + Math.random() * 300, 1.2, 0.5);
@@ -73,6 +73,17 @@ export function createAudio() {
       const t = ctx.currentTime;
       tone(440, t, 0.22, v, 'triangle');
       tone(587.33, t + 0.16, 0.3, v, 'triangle');
+    }),
+    // a struck bell: which 0 / 1 are a fifth apart; a soft metal tone with a few seconds of ring
+    bell: safe((which) => {
+      audio.calls.bell++;
+      const f = which ? 587.33 : 392;   // D5 and G4: a fifth
+      const t = ctx.currentTime;
+      tone(f, t, 4.5, 0.4);
+      tone(f * 2.01, t, 2.6, 0.14);
+      tone(f * 2.76, t, 1.4, 0.07);
+      tone(f * 0.5, t, 3.2, 0.12);
+      noise(t, 0.08, 0.003, f * 3, 2, 0.12);
     }),
     // low noise swell; ignored while an earlier creak is still sounding
     creak: safe(() => {

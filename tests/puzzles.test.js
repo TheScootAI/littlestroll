@@ -99,24 +99,28 @@ test('beam: one huge step cannot light the beacon (the clamp)', () => {
   expect(S.ended).toBe(null);
   expect(S.beam.charge).toBeCloseTo(0.1);   // the beam was stepped, by the clamped 0.1 s
 });
-test('beam: 2.1 s on the lens lights the beacon and ends the walk', () => {
+test('beam: 2.1 s on the lens lights the beacon and raises the causeway; the walk goes on', () => {
   const { S, players } = beamSetUp();
   for (let i = 0; i < 63; i++) stepAll(S, players, 1 / 30);
   expect(S.beam.solved).toBe(true);
-  expect(S.ended).toEqual({ time: expect.any(Number) });
-  expect(S.ended.time).toBeCloseTo(2, 1);
+  expect(S.ended).toBe(null);
+  expect(dynOf(S).causeway).toBe(true);
   expect(solvedCount(S)).toBe(5);
   expect(validState(JSON.parse(JSON.stringify(S)))).toBe(true);
-  const t = S.ended.time;
-  stepAll(S, players, 1 / 30);
-  expect(S.ended.time).toBe(t);
 });
-test('beam: the ending stamps the time once, when the beacon first lights', () => {
-  const { S, players } = beamSetUp();
+test('with the beam solved and the bells unsolved, S.ended stays null', () => {
+  const S = createAll(1); forceSolved(S, 5);
+  for (let i = 0; i < 300; i++) stepAll(S, [P(far), P(far)], 1 / 30);
+  expect(S.beam.solved).toBe(true); expect(S.bells.solved).toBe(false); expect(S.ended).toBe(null);
+});
+test('the ending stamps the time once, when the last puzzle first solves', () => {
+  const S = createAll(1); forceSolved(S, 5);
   S.time = 100;
-  for (let i = 0; i < 63; i++) stepAll(S, players, 1 / 30);
-  expect(S.ended.time).toBeGreaterThan(101.9);
-  expect(S.ended.time).toBeLessThan(102.2);
+  stepAll(S, [P(SITES.bells.a, { pressed: true }), P(SITES.bells.b, { pressed: true })], 1 / 30);
+  expect(S.ended.time).toBeGreaterThan(100);
+  const t = S.ended.time;
+  for (let i = 0; i < 10; i++) stepAll(S, [P(far), P(far)], 1 / 30);
+  expect(S.ended.time).toBe(t);
 });
 test('beam: prompts come through promptFor once the lift is done; dyn is unchanged', () => {
   const S = createAll(1); forceSolved(S, 4);
@@ -125,12 +129,14 @@ test('beam: prompts come through promptFor once the lift is done; dyn is unchang
   expect(dynOf(S)).toEqual(dynOf(JSON.parse(JSON.stringify(S))));
   expect(Object.keys(dynOf(S)).sort()).toEqual(Object.keys(DYN_NONE).sort());
 });
-test('forceSolved(S, 5) lights the beacon and ends the walk', () => {
+test('forceSolved(S, 5) lights the beacon without ending the walk; forceSolved(S, 6) ends it', () => {
   const S = createAll(1); forceSolved(S, 5);
   expect(solvedCount(S)).toBe(5);
   expect(S.beam).toMatchObject({ solved: true, charge: CHARGE });
-  expect(S.ended).toEqual({ time: expect.any(Number) });
-  const T = createAll(1); T.ended = { time: 42 }; forceSolved(T, 5);
+  expect(S.ended).toBe(null);
+  const U = createAll(1); forceSolved(U, 6);
+  expect(S.ended).toBe(null); expect(U.ended).toEqual({ time: expect.any(Number) });
+  const T = createAll(1); T.ended = { time: 42 }; forceSolved(T, 6);
   expect(T.ended).toEqual({ time: 42 });
 });
 test('validState rejects a bad beam slice', () => {

@@ -46,3 +46,8 @@ test('state survives JSON', () => {
   const s = create(); settle(s, [P(SITES.gate.plateA), P(far)]);
   expect(JSON.parse(JSON.stringify(s))).toEqual(s);
 });
+test('a walker on the Far Isle (zone G) counts as through', () => {
+  const s = create(); const b = SITES.gate.plateB;
+  settle(s, [P(b), P(SITES.bells.a)]); expect(s.solved).toBe(true);
+  const t = create(); settle(t, [P(SITES.bells.b), P(b)]); expect(t.solved).toBe(true);
+});

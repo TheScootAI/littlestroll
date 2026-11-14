@@ -22,12 +22,18 @@ describe('protocol', () => {
       JSON.stringify({ t: 'hello', v: 2 }), 'x'.repeat(20000),
       JSON.stringify({ t: 'welcome', v: 2, seed: 1, solved: 0 }),
       JSON.stringify({ t: 'welcome', v: 1, seed: 1.5, solved: 0 }),
-      JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: 6 }),
+      JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: 9 }),
       JSON.stringify({ t: 's', S: [] }), JSON.stringify({ t: 's', S: null }),
       JSON.stringify({ ...P, hold: 1 }), JSON.stringify({ ...P, eN: -1 }), JSON.stringify({ ...P, eN: 1.5 }),
       JSON.stringify({ ...P, q: 'no' })];
     for (const b of bad) expect(decode(b)).toBeNull();
     for (const b of [undefined, null, 5, {}, []]) expect(decode(b)).toBeNull();
+  });
+
+  test('welcome.solved accepts 0 to 8 and rejects 9', () => {
+    for (const n of [0, 5, 8]) expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: n }))?.solved).toBe(n);
+    expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: 9 }))).toBeNull();
+    expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: -1 }))).toBeNull();
   });
 
   test('a message too big is dropped even if valid', () => {
