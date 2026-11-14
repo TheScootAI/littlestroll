@@ -2,9 +2,10 @@
 // peer id is littlerun-<CODE>. Everything on the wire goes through protocol.js.
 import { Peer } from 'peerjs';
 import { peerIdFor } from './code.js';
-import { encode, decode, shouldAccept, accepts, PROTOCOL_V } from './protocol.js';
+import { encode, decode, accepts, PROTOCOL_V } from './protocol.js';
+import { retryDelay, shouldReplacePartner, isSilent, SILENCE_MS } from './reconnect.js';
 
-const STALE_MS = 2500;   // a partner silent this long is treated as gone (reload, crash)
+const ATTEMPT_MS = 2500;   // one reconnect attempt that has not been welcomed by now has failed
 
 export class Session {
   constructor(role) {
@@ -48,21 +49,33 @@ export class Session {
     // a closed tab can take a long while to show up as a closed channel; the joiner
     // sends ~15 times a second, so silence means gone
     s.watch = setInterval(() => {
-      if (s.conn && s.welcomed && performance.now() - s.lastRx > STALE_MS + 1500) s._drop(s.conn);
+      if (s.conn && s.welcomed && isSilent(performance.now(), s.lastRx, SILENCE_MS)) s._drop(s.conn);
     }, 1000);
     return s;
   }
 
   _incoming(c) {
-    const stale = this.conn && performance.now() - this.lastRx > STALE_MS;
-    if (stale) this._drop(this.conn);
-    if (!shouldAccept(!!this.conn)) {
-      c.on('open', () => {
+    if (!this.conn) { this._adopt(c); return; }
+    // The slot is held. Decide at the first hello: a partner that has gone quiet is
+    // probably the same walker coming back on a half-dead connection, so the new one wins.
+    let decided = false;
+    c.on('data', (d) => {
+      if (decided) return;
+      const m = decode(d);
+      if (!m || m.t !== 'hello') return;
+      decided = true;
+      if (this.conn && !shouldReplacePartner(performance.now() - this.lastRx)) {
         try { c.send(encode({ t: 'full' })); } catch { /* ignore */ }
         setTimeout(() => { try { c.close(); } catch { /* ignore */ } }, 500);
-      });
-      return;
-    }
+        return;
+      }
+      if (this.conn) this._drop(this.conn);
+      this._adopt(c);
+      this._hostData(c, d);
+    });
+  }
+
+  _adopt(c) {
     this.conn = c;
     this.welcomed = false;
     this.lastRx = performance.now();
@@ -103,37 +116,114 @@ export class Session {
 
   static join(code, { timeoutMs = 12000 } = {}) {
     const s = new Session('join');
-    const peer = new Peer();
-    s.peer = peer;
+    s.code = code;
+    // a dead data channel does not always fire a close event: silence is closure
+    s.watch = setInterval(() => {
+      if (s.status === 'connected' && isSilent(performance.now(), s.lastRx, SILENCE_MS)) s._hostGone();
+    }, 1000);
     s.timer = setTimeout(() => { if (!s.welcomed) s._fail(); }, timeoutMs);
-    peer.on('open', () => {
-      const c = peer.connect(peerIdFor(code), { reliable: true });
-      s.conn = c;
-      c.on('open', () => c.send(encode({ t: 'hello', v: PROTOCOL_V })));
-      c.on('data', (d) => s._joinData(d));
-      c.on('close', () => s._hostGone());
-      c.on('error', () => s._hostGone());
-    });
-    peer.on('error', () => { if (!s.welcomed) s._fail(); });
+    s._makePeer(() => s._connect());
     return s;
+  }
+
+  _makePeer(onOpen) {
+    const peer = new Peer();
+    this.peer = peer;
+    peer.on('open', () => { if (this.peer === peer && !this.closed) onOpen(); });
+    peer.on('error', () => {
+      if (this.peer !== peer || this.closed) return;
+      if (this.status === 'reconnecting') this._attemptFailed();
+      else if (this.status === null) this._fail();
+      // connected: a broker hiccup does not close the data channel
+    });
+    return peer;
+  }
+
+  _connect() {
+    const c = this.peer.connect(peerIdFor(this.code), { reliable: true });
+    this.conn = c;
+    c.on('open', () => { if (this.conn === c) c.send(encode({ t: 'hello', v: PROTOCOL_V })); });
+    c.on('data', (d) => { if (this.conn === c) this._joinData(d); });
+    c.on('close', () => { if (this.conn === c) this._hostGone(); });
+    c.on('error', () => { if (this.conn === c) this._hostGone(); });
   }
 
   _fail() {
     clearTimeout(this.timer);
+    clearInterval(this.watch);
     this._status('failed');
     this._teardown();
   }
 
+  // The connection closed, or the host went silent. That does not mean the host is
+  // gone (it may have dropped us for silence), so try to get back in.
   _hostGone() {
-    if (this.status === 'connected') { this._status('lost'); this._teardown(); }
-    else if (!this.welcomed && this.status === null) { /* wait for welcome or timeout */ }
+    if (this.status === 'connected') this._startReconnect();
+    else if (this.status === 'reconnecting') this._attemptFailed();
+    // else: first connection, wait for welcome or timeout
+  }
+
+  _startReconnect() {
+    const old = this.conn;
+    this.conn = null;
+    try { old?.close(); } catch { /* ignore */ }
+    this.welcomed = false;
+    this.attempt = 0;
+    this.reconnectStart = performance.now();
+    this._status('reconnecting');
+    this._scheduleRetry();
+  }
+
+  _scheduleRetry() {
+    clearTimeout(this.retryTimer);
+    const d = retryDelay(this.attempt, performance.now() - this.reconnectStart);
+    if (d === null) { this._giveUp(); return; }
+    this.retryTimer = setTimeout(() => this._retry(), d);
+  }
+
+  _retry() {
+    if (this.closed || this.status !== 'reconnecting') return;
+    this.attempt++;
+    const old = this.conn;
+    this.conn = null;
+    try { old?.close(); } catch { /* ignore */ }
+    clearTimeout(this.attemptTimer);
+    this.attemptTimer = setTimeout(() => this._attemptFailed(), ATTEMPT_MS);
+    const peer = this.peer;
+    if (peer && !peer.destroyed && !peer.disconnected && peer.open) this._connect();
+    else {
+      try { peer?.destroy(); } catch { /* ignore */ }
+      this._makePeer(() => this._connect());
+    }
+  }
+
+  _attemptFailed() {
+    if (this.status !== 'reconnecting') return;
+    clearTimeout(this.attemptTimer);
+    const old = this.conn;
+    this.conn = null;
+    try { old?.close(); } catch { /* ignore */ }
+    this._scheduleRetry();
+  }
+
+  _giveUp() {
+    this._stopRetry();
+    this._status('lost');
+    this._teardown();
+  }
+
+  _stopRetry() {
+    clearTimeout(this.retryTimer);
+    clearTimeout(this.attemptTimer);
   }
 
   _joinData(d) {
     const m = decode(d);
     if (!m || !accepts('join', this.welcomed, m.t)) return;
+    this.lastRx = performance.now();
     if (m.t === 'full') {
       clearTimeout(this.timer);
+      this._stopRetry();
       this._status('full');
       this._teardown();
       return;
@@ -141,6 +231,7 @@ export class Session {
     if (m.t === 'welcome') {
       this.welcomed = true;
       clearTimeout(this.timer);
+      this._stopRetry();
       this._status('connected');
     }
     this.onMessage(m);
@@ -161,6 +252,7 @@ export class Session {
   close() {
     this.closed = true;
     clearTimeout(this.timer);
+    this._stopRetry();
     clearInterval(this.watch);
     this._teardown();
   }

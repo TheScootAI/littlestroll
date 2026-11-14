@@ -129,6 +129,9 @@ export class Game {
       } else if (st === 'connected') {
         hud?.setStatus(null);
         hud?.setCode(null);
+      } else if (st === 'reconnecting') {
+        this.clearRemote();   // same page, same walker: only the link is being rebuilt
+        hud?.setStatus('Reconnecting to your friend…');
       } else if (st === 'lost') {
         this.clearRemote();
         hud?.setStatus("Your friend's walk has ended.", back);
@@ -212,7 +215,9 @@ export class Game {
       this.S = createAll(m.seed);
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
-      respawn(this.player, m.solved, this.idx);
+      // only the first welcome spawns; one after a reconnect keeps position, distance, camera
+      if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);
+      this.welcomedOnce = true;
     }
   }
 
