@@ -231,11 +231,15 @@ export class Game {
     if (n > this.solved) { this.hud?.flash(solvedLine(n - 1)); this.audio.riff(n - 1, !!this.S.ended); flashed = true; }
     this.solved = n;
     // an owl found (host or joiner alike); the first state after a welcome only sets the baseline.
-    // Its line waits for a "solved" flash from the same update to finish (that one lasts 3 s).
+    // Its line waits for a "solved" flash from the same update to finish (that one lasts 3 s),
+    // unless the walk has ended by then: nothing is flashed over the ending.
     const owl = owlNews(this.owlPrev, owlCount(this.S.owls | 0));
     if (owl.line) {
       if (!flashed) this.hud?.flash(owl.line);
-      else setTimeout(() => this.hud?.flash(owl.line), 3200);
+      else {
+        clearTimeout(this.owlLater);
+        this.owlLater = setTimeout(() => { if (!this.S.ended) this.hud?.flash(owl.line); }, 3200);
+      }
       this.audio.hoot();
     }
     this.owlPrev = owl.next;
