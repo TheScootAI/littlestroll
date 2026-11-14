@@ -310,3 +310,16 @@ describe('Lantern Isle scenery', () => {
     });
   });
 });
+
+describe('owls stand clear of scenery', () => {
+  test('every owl is 2.5 m from every tree, boulder and rock (the tor\'s crag too) and 1 m from every tuft', () => {
+    const lan = placeLanternScenery();
+    const sets = [placeScenery(), placeFarScenery(), lan];
+    const solid = [...sets.flatMap((s) => [...s.trees, ...s.boulders, ...s.rocks]), ...lan.crag];
+    const tufts = sets.flatMap((s) => s.tufts);
+    SITES.owls.forEach((o, i) => {
+      for (const it of solid) expect(Math.hypot(o[0] - it.x, o[1] - it.z), `owl ${i}`).toBeGreaterThanOrEqual(2.5);
+      for (const it of tufts) expect(Math.hypot(o[0] - it.x, o[1] - it.z), `owl ${i}`).toBeGreaterThanOrEqual(1);
+    });
+  });
+});

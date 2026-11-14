@@ -267,13 +267,14 @@ function marshHeight(u, v, bits) {
 
 // ------------------------------------------------------------------ pillars
 
-// Which pillar (x, z) is over, or null. No edge margin.
-export function pillarAt(x, z) {
+// Which pillar (x, z) is over, or null. With `margin`, a point up to that far outside a line's
+// rectangle (its sides or ends) maps to the nearest pillar of that line.
+export function pillarAt(x, z, margin = 0) {
   const t = PILLARS.tile;
   for (let line = 0; line < 2; line++) {
     const dx = x - P_LINES[line][0], dz = z - P_LINES[line][1];
     const u = dx * P_RIGHT[0] + dz * P_RIGHT[1], v = dx * PILLARS.fwd[0] + dz * PILLARS.fwd[1];
-    if (Math.abs(u) <= t / 2 && v >= 0 && v <= P_LEN) return { line, r: Math.min(PILLARS.n - 1, Math.floor(v / t)) };
+    if (Math.abs(u) <= t / 2 + margin && v >= -margin && v <= P_LEN + margin) return { line, r: clamp(Math.floor(v / t), 0, PILLARS.n - 1) };
   }
   return null;
 }
@@ -400,8 +401,8 @@ const STANDING_R = 0.6, SEEING_R = 0.7, LANTERN_R = 0.3, TALLY_R = 0.8;
 
 // Owls: 0-2 on the first island, 3-4 on the Far Isle, 5-7 on the Lantern Isle.
 const OWLS = [
-  [-37, 73], [-13, 121], [12, -75],          // behind the lookout, up the beach, the summit's north rim
-  [95, -48], [78, -65],                      // H's south rim, the neck to bell a
+  [-34.5, 79.5], [-14.5, 125.25], [15, -75],     // behind the lookout, up the beach, the summit's north rim
+  [80.75, -43.25], [76.75, -72.75],              // G's western rim, the neck to bell a (each 2.5 m clear of scenery)
   [142, -88], toward(TOR_C, 90 * deg, 42), toward(TOR_C, 270 * deg, 42),   // K's nook, L's east and west spurs
 ];
 

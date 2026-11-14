@@ -61,11 +61,11 @@ Checkpoints continue: 9 on K where the pillars arrive (after The Pillars), 10 on
     - One walker alone cannot: no face ever shows to them and no touch ever counts.
     - Prompt beside a standing stone while both are inside the ring: "E — touch the stone".
 
-11. **The Lanterns** — split up and cover ground. Six lantern posts stand around L, spread right round the tor, most of them out of sight of the head of the steps. By the head of the steps is a tally stone: a plain row of six small niches, one per lantern, each glowing while its lantern burns. The niches are in no meaningful order.
-    - E beside a lantern lights it, or tops it up if it is already burning. A lit lantern burns for **25 s**, its flame visibly sinking as it goes.
+11. **The Lanterns** — split up and cover ground. Six lantern posts stand around L, spread right round the tor, half of them out of sight of the head of the steps. By the head of the steps is a tally stone: a plain row of six small niches, one per lantern, each glowing while its lantern burns. The niches are in no meaningful order.
+    - E beside a lantern lights it, or tops it up if it is already burning. A lit lantern burns for **28 s**, its flame visibly sinking as it goes.
     - All six burning at the same moment: solved. They then burn for good, a great lamp on the tor catches, and the walk ends.
-    - One walker alone cannot: at a run, the shortest possible way through all six (an open path, starting at whichever lantern they like) takes longer than 25 s (tested with straight-line distances, with a margin of at least 10%).
-    - Two walkers who split the six between them can, with room to spare: some split lets each walker run their share, first lantern to last, in at most 15 s (tested on walked routes).
+    - One walker alone cannot: at a run, the shortest possible way through all six (an open path, starting at whichever lantern they like) takes longer than 28 s (tested with straight-line distances, with a margin of at least 10%).
+    - Two walkers who split the six between them can, with room to spare: some split lets each walker run their share, first lantern to last, in at most 16.8 s (tested on walked routes).
     - Nothing is lost when one goes out. The pair try again.
     - Prompt beside a lantern: "E — light the lantern".
 
@@ -88,7 +88,7 @@ Eight small stone owls sit off the trail: three on the first island, two on the 
 ## Anti-goals (unchanged, restated for these three)
 
 - No puzzle one walker can finish alone by any trick — tested: no pillar rises for one walker; no ring touch counts for one walker; the lantern round is too long.
-- No puzzle whose difficulty is the controls — the pillar margin and 0.4 s grace, the reach of a touch, and the 25 s burn are generous.
+- No puzzle whose difficulty is the controls — the pillar margin and 0.4 s grace, the reach of a touch, and the 28 s burn are generous.
 - Nothing that leaves the pair stuck for good.
 - No text that explains a solution.
 

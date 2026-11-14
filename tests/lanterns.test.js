@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { BURN, REACH, POSTS, tallyYaw, create, step, prompt, valid, forceSolve } from '../src/puzzles/lanterns.js';
+import { BURN, REACH, POSTS, TALLY_SLOT, tallyYaw, create, step, prompt, valid, forceSolve } from '../src/puzzles/lanterns.js';
 import { createAll, stepAll, solvedCount, dynOf, promptFor, forceSolved, validState, solvedLine } from '../src/puzzles/index.js';
 import { SITES, DYN_NONE, PILLAR_BITS } from '../src/world/layout.js';
 import { walkDistance } from './helpers/reach.js';
@@ -13,7 +13,7 @@ const at = (i, d = 0.5, o = {}) => P([posts[i][0] + d, posts[i][1]], o);
 const press = (s, i, who = 0, d = 0.5) => { const pl = [P(far), P(far)]; pl[who] = at(i, d, { pressed: true }); step(s, pl, 0.05); };
 const idle = (s, secs, pl = [P(far), P(far)]) => { for (let t = 0; t < secs - 1e-9; t += 0.05) step(s, pl, 0.05); };
 
-test('constants', () => { expect([BURN, REACH, POSTS]).toEqual([25, 1.5, 6]); expect(posts).toHaveLength(POSTS); });
+test('constants', () => { expect([BURN, REACH, POSTS]).toEqual([28, 1.5, 6]); expect(posts).toHaveLength(POSTS); });
 
 test('create: six dark lanterns, not solved', () => {
   expect(create()).toEqual({ t: [0, 0, 0, 0, 0, 0], solved: false });
@@ -44,7 +44,7 @@ test('a lit lantern is dark again after BURN seconds and not before', () => {
 
 test('a press on a burning lantern tops it up to BURN', () => {
   const s = create(); press(s, 4);
-  idle(s, 15);
+  idle(s, BURN - 10);
   expect(s.t[4]).toBeLessThan(11);
   press(s, 4);
   expect(s.t[4]).toBe(BURN);
@@ -65,7 +65,7 @@ test('six lit by two walkers within the burn: solved, and all stay at BURN for a
 
 test('five lit, the first goes out before the sixth is lit: not solved', () => {
   const s = create();
-  press(s, 0); idle(s, 6);
+  press(s, 0); idle(s, BURN - 19);   // the first has burned BURN + 1 s by the time the fifth is lit
   for (const i of [1, 2, 3, 4]) { press(s, i); idle(s, 5); }
   expect(s.t[0]).toBe(0);
   press(s, 5);
@@ -170,4 +170,13 @@ test('tallyYaw: the tally stone faces the middle of checkpoint 10 (the head of t
   const to = [(a[0] + b[0]) / 2 - tx, (a[1] + b[1]) / 2 - tz], l = Math.hypot(...to);
   expect(face[0]).toBeCloseTo(to[0] / l, 6);
   expect(face[1]).toBeCloseTo(to[1] / l, 6);
+});
+
+test('TALLY_SLOT: a permutation of 0-5; neighbouring niches never belong to neighbouring posts', () => {
+  expect([...TALLY_SLOT].sort()).toEqual([0, 1, 2, 3, 4, 5]);
+  const at = []; TALLY_SLOT.forEach((slot, post) => { at[slot] = post; });
+  for (let k = 0; k + 1 < POSTS; k++) {
+    const d = Math.abs(at[k] - at[k + 1]);
+    expect(Math.min(d, POSTS - d)).toBeGreaterThan(1);
+  }
 });

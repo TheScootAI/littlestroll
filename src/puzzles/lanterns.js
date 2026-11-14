@@ -5,7 +5,10 @@
 import { SITES } from '../world/layout.js';
 import { MAX_DT } from '../config.js';
 
-export const BURN = 25, REACH = 1.5, POSTS = 6;
+export const BURN = 28, REACH = 1.5, POSTS = 6;
+// The tally stone's niche slot (left to right) for each lantern: no two neighbouring slots hold
+// posts that are neighbours round the tor, so the row does not read as a map.
+export const TALLY_SLOT = [0, 5, 3, 1, 4, 2];
 export const LAMP_H = 8;      // the great lamp's flame centre above the tor's top (the ending shot frames it)
 
 const posts = SITES.lanterns.posts;

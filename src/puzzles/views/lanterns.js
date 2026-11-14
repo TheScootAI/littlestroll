@@ -1,6 +1,6 @@
 // The Lanterns on screen: six lantern posts round the tor (a post, a small cage, a flame that
 // shrinks with the time left, and an additive halo so a lit one reads from 60 m); a tally stone
-// by the head of the steps, a low slab with a straight row of six niches in index order, niche i
+// by the head of the steps, a low slab with a straight row of six niches in a scrambled order (TALLY_SLOT), niche i
 // glowing while lantern i burns; and the great lamp on the tor: a stone bowl, dark until the
 // lanterns are all alight, then a large steady flame (no point lights: emissive meshes and
 // halos only), the brightest thing in the ending shot. Never writes to S.
@@ -10,7 +10,7 @@ import {
 } from 'three';
 import { SITES, heightAt } from '../../world/layout.js';
 import { clamp, rng } from '../../core/math.js';
-import { BURN, POSTS, LAMP_H, tallyYaw } from '../lanterns.js';
+import { BURN, POSTS, LAMP_H, TALLY_SLOT, tallyYaw } from '../lanterns.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 const STONE = 0xb9b0bf, STONE_DARK = 0x9d93a8, IRON = 0x4a4350, ACCENT = 0xf08a3c, NICHE_OFF = 0x2c2733;
@@ -87,7 +87,7 @@ export function createView(scene) {
     return { flame, outer, core, halo };
   });
 
-  // ---- the tally stone: faces the head of the steps; a straight row of six niches, index order
+  // ---- the tally stone: faces the head of the steps; a straight row of six niches, scrambled (TALLY_SLOT)
   const [tx, tz] = SITES.lanterns.tally, ty = heightAt(tx, tz);
     const tally = new Group();
   tally.position.set(tx, ty, tz);
@@ -100,7 +100,7 @@ export function createView(scene) {
   const niches = Array.from({ length: POSTS }, (_, i) => {
     const m = new MeshBasicMaterial({ color: NICHE_OFF, fog: false, toneMapped: false });
     const n = new Mesh(new BoxGeometry(0.17, 0.3, 0.06), m);
-    n.position.set((i - (POSTS - 1) / 2) * 0.24, 0.62, 0.25);
+    n.position.set((TALLY_SLOT[i] - (POSTS - 1) / 2) * 0.24, 0.62, 0.25);
     tally.add(n);
     return m;
   });

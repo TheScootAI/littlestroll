@@ -147,3 +147,22 @@ test('a huge dt is clamped', () => {
   const t = create(); step(t, [P(land), P(land)], 3600);
   expect(t.t[0]).toBe(LINGER);
 });
+
+test('a walker on a pillar\'s side margin (0.25 m outside the line) is on that pillar; 0.4 m outside is nowhere', () => {
+  for (let line = 0; line < 2; line++) for (let r = 0; r < PL.n; r++) for (const side of [-1, 1]) {
+    const [cx, cz] = pillarCentre(line, r);
+    const half = PL.tile / 2;
+    expect(placeOf(P([cx + side * (half + 0.25), cz]))).toEqual({ line, r });
+    expect(placeOf(P([cx + side * (half + 0.4), cz]))?.line ?? null).toBeNull();   // pillar 0's flank is still the landing's padding
+  }
+});
+
+test('two walkers abreast, one on the side margin, keep each other\'s pillars up indefinitely', () => {
+  const [cx, cz] = pillarCentre(0, 4);
+  const s = create();
+  for (let t = 0; t < 10; t += 0.05) {
+    step(s, [P([cx - PL.tile / 2 - 0.25, cz]), on(1, 4)], 0.05);
+    expect(maskOf(s) & bits(1, [3, 4, 5])).toBe(bits(1, [3, 4, 5]));
+    expect(maskOf(s) & bits(0, [3, 4, 5])).toBe(bits(0, [3, 4, 5]));
+  }
+});

@@ -92,7 +92,7 @@ export function createPilot(game) {
 
   const api = {
     sites: () => SITES,
-    pillar: (line, r) => { try { return pillarCentre(line, r).map(r2); } catch { return null; } },   // [x, z] centre of pillar r (0 = nearest) on line 0 (west) or 1 (east)
+    pillar: (line, r) => (line === 0 || line === 1) && Number.isInteger(r) && r >= 0 && r < SITES.pillars.n ? pillarCentre(line, r).map(r2) : null,   // [x, z] centre of pillar r (0 = nearest) on line 0 (west) or 1 (east)
     tile: (i) => { try { return marshTileCentre(i).map(r2); } catch { return null; } },   // [x, z] centre of marsh tile i
 
     state() {

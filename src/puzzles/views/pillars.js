@@ -1,18 +1,22 @@
 // The Pillars on screen: two lines of nine square stone columns standing in the sea from the
-// sea floor. A column rests with its top 2.2 m under the deck level and, while its bit is set
-// in ctx.dyn.pillars (bit line*9 + r), rises in about 0.3 s until its top face is exactly at
-// PILLAR_SURFACE (a walker's feet are there; the terrain mesh has no ground over the lines),
-// and sinks the same way when the bit clears. A raised column has a lighter cap. Never writes to S.
+// sea floor. A column rests with its top REST_DEPTH under the sea surface (so it plainly cannot
+// be stood on) and, while its bit is set in ctx.dyn.pillars (bit line*9 + r), rises in about
+// 0.5 s (ease-out) until its top face is exactly at PILLAR_SURFACE (a walker's feet are there;
+// the terrain mesh has no ground over the lines), and sinks at the same speed when the bit
+// clears. A raised column has a lighter cap that covers all the solid ground: the tile plus the
+// ground margin across the line, the tile along it. Never writes to S.
 import { Group, Mesh, MeshLambertMaterial, BoxGeometry, Color } from 'three';
 import { SITES, PILLAR_SURFACE, PILLAR_BITS, pillarCentre } from '../../world/layout.js';
 import { clamp } from '../../core/math.js';
+import { WATER_Y } from '../../config.js';
 
 const SEA_FLOOR = -4;
-const DROP = 2.2;            // how far under the deck level a resting column's top sits
-const RISE_TIME = 0.3;
+const REST_DEPTH = 0.8;      // a resting column's top sits this far under the sea surface
+const DROP = PILLAR_SURFACE - (WATER_Y - REST_DEPTH);
+const RISE_TIME = 0.5;
 const CAP = 0.14;            // cap thickness; the body ends inside it so no faces share a plane
 const WIDTH = SITES.pillars.tile - 0.3;
-const smooth = (t) => t * t * (3 - 2 * t);
+const easeOut = (t) => 1 - (1 - t) * (1 - t);
 
 export function createView(scene) {
   const root = new Group();
@@ -23,7 +27,7 @@ export function createView(scene) {
   const capDark = new Color(0x9aa3aa), capLight = new Color(0xe3dccb);
   const height = PILLAR_SURFACE - SEA_FLOOR;
   const bodyGeo = new BoxGeometry(WIDTH, height - CAP, WIDTH);
-  const capGeo = new BoxGeometry(WIDTH + 0.1, CAP, WIDTH + 0.1);
+  const capGeo = new BoxGeometry(SITES.pillars.tile + 2 * SITES.pillars.edge, CAP, SITES.pillars.tile);
 
   const cols = [];
   for (let i = 0; i < PILLAR_BITS; i++) {
@@ -40,7 +44,7 @@ export function createView(scene) {
   }
 
   const place = (c) => {
-    const top = PILLAR_SURFACE - DROP * (1 - smooth(clamp(c.amt, 0, 1)));
+    const top = PILLAR_SURFACE - DROP * (1 - easeOut(clamp(c.amt, 0, 1)));
     c.cap.position.y = top - CAP / 2;
     c.body.position.y = top - CAP - (height - CAP) / 2;   // the body's top is the cap's underside
     c.capM.color.copy(capDark).lerp(capLight, clamp(c.amt, 0, 1));

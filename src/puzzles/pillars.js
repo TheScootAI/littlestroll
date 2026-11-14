@@ -17,7 +17,7 @@ export const create = () => ({ t: Array(PILLAR_BITS).fill(0), solved: false });
 // Where a walker is: on a pillar { line, r }, on the near landing { line: null, r: -1 }, or null.
 export function placeOf(p) {
   if (!p?.present) return null;
-  const at = pillarAt(p.x, p.z);
+  const at = pillarAt(p.x, p.z) || pillarAt(p.x, p.z, SITES.pillars.edge);
   if (at) return { line: at.line, r: at.r };
   const n = SITES.pillars.near;
   return Math.hypot(p.x - n.x, p.z - n.z) <= LANDING_R ? { line: null, r: -1 } : null;

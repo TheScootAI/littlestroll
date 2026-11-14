@@ -8,6 +8,7 @@ import { reachable, walkDistance, GRID } from './helpers/reach.js';
 import { GRID as PATH_GRID } from '../src/debug/path.js';
 import { DROWN_Y, STEP_UP, PLAYER_R, RUN } from '../src/config.js';
 import { pointSegDist } from '../src/core/math.js';
+import { BURN } from '../src/puzzles/lanterns.js';
 
 const D = (o) => ({ ...DYN_NONE, ...o });
 const FAR = D({ gateOpen: true, bridge: true, plank: true, ladder: true, causeway: true, bells: true, marsh: (1 << 30) - 1 });
@@ -19,7 +20,6 @@ const cp8 = checkpoints[8][0];
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const xz = (d) => [d.x, d.z];
 const ringCentre = ring.centre;
-const BURN = 25;
 
 const clearOf = (x, z, dyn, margin = PLAYER_R) => {
   const { circles, segments } = blockers(dyn);
@@ -236,7 +236,7 @@ test('lanterns, one walker: the shortest straight way through all six outlasts a
   expect(best).toBeGreaterThanOrEqual(1.1 * BURN * RUN);
 });
 
-test('lanterns, two walkers: some split lets each run their share in 15 s', () => {
+test('lanterns, two walkers: some split lets each run their share in 0.6 of a burn', () => {
   const { posts } = lanterns;
   const W = posts.map((p) => walkDistance(p, ALL));
   const M = posts.map((_, i) => posts.map((q) => W[i](...q)));
@@ -246,7 +246,7 @@ test('lanterns, two walkers: some split lets each run their share in 15 s', () =
     const a = [0, 1, 2, 3, 4, 5].filter((i) => m & (1 << i)), b = [0, 1, 2, 3, 4, 5].filter((i) => !(m & (1 << i)));
     best = Math.min(best, Math.max(shareLen(a), shareLen(b)));
   }
-  expect(best).toBeLessThanOrEqual(15 * RUN);
+  expect(best).toBeLessThanOrEqual(0.6 * BURN * RUN);
 });
 
 test('lanterns, hidden: the tor stands between the head of the steps and at least three posts', () => {
