@@ -6,7 +6,7 @@ import { SITES } from '../world/layout.js';
 import { MAX_DT } from '../config.js';
 
 export const BURN = 25, REACH = 1.5, POSTS = 6;
-export const LAMP_H = 6;      // the great lamp's flame centre above the tor's top (the ending shot frames it)
+export const LAMP_H = 8;      // the great lamp's flame centre above the tor's top (the ending shot frames it)
 
 const posts = SITES.lanterns.posts;
 
@@ -41,3 +41,11 @@ export const valid = (s) => !!s && typeof s === 'object' && Array.isArray(s.t) &
   s.t.every((v) => Number.isFinite(v) && v >= 0 && v <= BURN) && typeof s.solved === 'boolean';
 
 export function forceSolve(s) { s.t.fill(BURN); s.solved = true; }
+
+// The tally stone's yaw, in the layout's convention (facing = (-sin yaw, -cos yaw), as SITES.signal.wall.yaw):
+// it faces the middle of checkpoint 10, the head of the steps.
+export function tallyYaw() {
+  const [a, b] = SITES.checkpoints[10], [tx, tz] = SITES.lanterns.tally;
+  const fx = (a[0] + b[0]) / 2 - tx, fz = (a[1] + b[1]) / 2 - tz;
+  return Math.atan2(-fx, -fz);
+}

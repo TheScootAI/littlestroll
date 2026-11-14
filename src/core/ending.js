@@ -22,9 +22,11 @@ export function endShot(focus, behind) {
   const span = Math.hypot(dx, dz);
   if (span < 1e-6) { dx = 0; dz = 1; } else { dx /= span; dz /= span; }
   const sx = -dz, sz = dx;                                   // a quarter turn from it
-  const back = 26, up = 8, lateral = 7;
-  return {
-    pos: [fx - dx * back + sx * lateral, fy + up, fz - dz * back + sz * lateral],
-    look: [fx + dx * 40, fy - 12, fz + dz * 40],
-  };
+  const back = 26, up = 8, lateral = 7, ahead = 40;
+  const pos = [fx - dx * back + sx * lateral, fy + up, fz - dz * back + sz * lateral];
+  const lx = fx + dx * ahead, lz = fz + dz * ahead;
+  // the axis points below the focus so that, in a 60-degree-tall frame, the focus lands about 37.5%
+  // of the way down (clear of the card, which covers the lower half): its own dip plus 8.2 degrees
+  const dip = Math.atan2(up, Math.hypot(fx - pos[0], fz - pos[2])) + Math.atan(0.125 * 2 * Math.tan(Math.PI / 6));
+  return { pos, look: [lx, pos[1] - Math.tan(dip) * Math.hypot(lx - pos[0], lz - pos[2]), lz] };
 }

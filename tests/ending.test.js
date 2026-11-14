@@ -52,3 +52,20 @@ test('endShot: a focus on top of `behind` still gives a finite shot', () => {
   const { pos, look } = endShot([1, 2, 3], [1, 3]);
   expect([...pos, ...look].every(Number.isFinite)).toBe(true);
 });
+
+// Where the focus lands in a 60-degree-vertical-FOV frame: 0 = top edge, 1 = bottom edge.
+const frameY = (pos, look, focus) => {
+  const sub = (a, b) => a.map((v, i) => v - b[i]), dot = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0);
+  const n = (a) => { const l = Math.hypot(...a); return a.map((v) => v / l); };
+  const f = n(sub(look, pos)), r = n([f[2], 0, -f[0]]), u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+  const v = sub(focus, pos), up = Math.abs(u[1]) > 0 ? (u[1] < 0 ? u.map((x) => -x) : u) : u;
+  return 0.5 - (dot(v, up) / dot(v, f)) / (2 * Math.tan(Math.PI / 6));
+};
+
+test('endShot: the focus lands 35-40% of the way down the frame, clear of the card in the lower half', () => {
+  for (const [focus, behind] of [[[152.5, 32, -162], [144, -37]], [[0, 5, 0], [0, 100]], [[10, 12, 10], [-90, 10]]]) {
+    const { pos, look } = endShot(focus, behind);
+    const y = frameY(pos, look, focus);
+    expect(y).toBeGreaterThan(0.33); expect(y).toBeLessThan(0.42);
+  }
+});

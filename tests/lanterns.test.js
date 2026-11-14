@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { BURN, REACH, POSTS, create, step, prompt, valid, forceSolve } from '../src/puzzles/lanterns.js';
+import { BURN, REACH, POSTS, tallyYaw, create, step, prompt, valid, forceSolve } from '../src/puzzles/lanterns.js';
 import { createAll, stepAll, solvedCount, dynOf, promptFor, forceSolved, validState, solvedLine } from '../src/puzzles/index.js';
 import { SITES, DYN_NONE, PILLAR_BITS } from '../src/world/layout.js';
 import { walkDistance } from './helpers/reach.js';
@@ -163,3 +163,11 @@ test('wired: a lanterns slice in createAll, stepped by stepAll; the prompt comes
 });
 
 test('solvedLine for the last puzzle', () => { expect(solvedLine(10)).toBe('The Lantern Isle is lit'); });
+
+test('tallyYaw: the tally stone faces the middle of checkpoint 10 (the head of the steps), in the layout yaw convention', () => {
+  const y = tallyYaw(), [a, b] = SITES.checkpoints[10], [tx, tz] = SITES.lanterns.tally;
+  const face = [-Math.sin(y), -Math.cos(y)];
+  const to = [(a[0] + b[0]) / 2 - tx, (a[1] + b[1]) / 2 - tz], l = Math.hypot(...to);
+  expect(face[0]).toBeCloseTo(to[0] / l, 6);
+  expect(face[1]).toBeCloseTo(to[1] / l, 6);
+});

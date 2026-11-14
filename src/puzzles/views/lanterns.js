@@ -10,7 +10,7 @@ import {
 } from 'three';
 import { SITES, heightAt } from '../../world/layout.js';
 import { clamp, rng } from '../../core/math.js';
-import { BURN, POSTS, LAMP_H } from '../lanterns.js';
+import { BURN, POSTS, LAMP_H, tallyYaw } from '../lanterns.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 const STONE = 0xb9b0bf, STONE_DARK = 0x9d93a8, IRON = 0x4a4350, ACCENT = 0xf08a3c, NICHE_OFF = 0x2c2733;
@@ -44,10 +44,10 @@ export function createView(scene) {
     parent.add(s);
     return s;
   };
-  const tongue = (parent, hex, r, h, opacity, x = 0, z = 0) => {
+  const tongue = (parent, hex, r, h, opacity, x = 0, z = 0, solid = false) => {
     const geo = new ConeGeometry(r, h, 7, 1, true);
     geo.translate(0, h / 2, 0);
-    const m = new Mesh(geo, new MeshBasicMaterial({ color: hex, transparent: true, opacity, depthWrite: false, fog: false, toneMapped: false, side: DoubleSide }));
+    const m = new Mesh(geo, new MeshBasicMaterial({ color: hex, transparent: !solid, opacity, depthWrite: solid, fog: false, toneMapped: false, side: DoubleSide }));
     m.position.set(x, 0, z);
     parent.add(m);
     return m;
@@ -89,10 +89,9 @@ export function createView(scene) {
 
   // ---- the tally stone: faces the head of the steps; a straight row of six niches, index order
   const [tx, tz] = SITES.lanterns.tally, ty = heightAt(tx, tz);
-  const [hx, hz] = SITES.checkpoints[9][0];
-  const tally = new Group();
+    const tally = new Group();
   tally.position.set(tx, ty, tz);
-  tally.rotation.y = Math.atan2(hx - tx, hz - tz);            // its local +z faces the head of the steps
+  tally.rotation.y = tallyYaw() + Math.PI;                    // its local +z faces the head of the steps (checkpoint 10)
   const slab = new Mesh(new BoxGeometry(1.5, 0.95, 0.5), stoneM);
   slab.position.y = 0.475;
   const capS = new Mesh(new BoxGeometry(1.62, 0.12, 0.62), darkM);
@@ -125,17 +124,18 @@ export function createView(scene) {
   root.add(bowl);
   const fire = new Group();
   fire.position.y = 1.7 * LAMP_S;
-  fire.scale.setScalar(1.3);
+  fire.scale.setScalar(2.1);
   bowl.add(fire);
   const r = rng(1117), N = 9, tongues = [];
   for (let i = 0; i < N; i++) {
     const a = (i / N) * Math.PI * 2, d = i ? 0.5 + 0.35 * r() : 0;
     const h = i ? 2.8 + 2.2 * r() : 5.0;
-    tongues.push({ t: tongue(fire, i % 2 ? FLAME : FLAME_MID, i ? 0.7 : 1.05, h, i ? 0.8 : 0.85, Math.cos(a) * d, Math.sin(a) * d), ph: r() * 6.28, sp: 2 + r() * 2, base: i ? 0.8 : 0.85 });
+    tongues.push({ t: tongue(fire, i % 2 ? FLAME : FLAME_MID, i ? 0.7 : 1.05, h, i ? 0.6 : 0.6, Math.cos(a) * d, Math.sin(a) * d), ph: r() * 6.28, sp: 2 + r() * 2, base: 0.6 });
   }
-  const gCore = tongue(fire, FLAME_CORE, 0.45, 3.6, 0.95);
-  const halo = sprite(fire, FLAME, 34, 0), halo2 = sprite(fire, 0xffe2a0, 11, 0);
-  halo.position.y = 2.8; halo2.position.y = 1.8;
+  // a solid, saturated orange core inside the softer outer flame, and a hot yellow heart
+  const gCore = tongue(fire, 0xff6a0a, 0.8, 4.4, 1, 0, 0, true), gHeart = tongue(fire, 0xffb020, 0.42, 3.2, 1, 0, 0, true);
+  const halo = sprite(fire, FLAME, 34, 0), halo2 = sprite(fire, 0xffc060, 11, 0);
+  halo.position.y = 2.2; halo2.position.y = 1.6;
   const colGeo = new CylinderGeometry(0.5, 1.8, 90, 14, 1, true);
   colGeo.translate(0, 45, 0);
   const colM = new MeshBasicMaterial({ color: 0xffd890, transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false, fog: false, toneMapped: false, side: DoubleSide });
@@ -173,8 +173,9 @@ export function createView(scene) {
         q.t.material.opacity = q.base * Math.min(1, lit * 1.5);
       }
       gCore.scale.set(lit * flick, lit * (0.92 + 0.16 * Math.sin(clock * 9)), lit * flick);
-      halo.material.opacity = 0.6 * lit; halo.scale.setScalar(22 + 12 * lit);
-      halo2.material.opacity = 0.9 * lit; halo2.scale.setScalar(8 + 3 * lit + Math.sin(clock * 6));
+      gHeart.scale.set(lit * flick, lit * (0.9 + 0.2 * Math.sin(clock * 12 + 1)), lit * flick);
+      halo.material.opacity = 0.9 * lit; halo.scale.setScalar(14 + 8 * lit);
+      halo2.material.opacity = 1 * lit; halo2.scale.setScalar(6 + 2 * lit + 0.4 * Math.sin(clock * 6));
       column.visible = lit > 0.01;
       colM.opacity = 0.08 * lit * (0.9 + 0.1 * Math.sin(clock * 4));
     },
