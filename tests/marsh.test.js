@@ -205,3 +205,44 @@ test('index: slice, dyn, prompt, flash, forceSolved, validity', () => {
   const T = createAll(9); forceSolved(T, 7); expect(T.marsh.solved).toBe(true);
   const U = JSON.parse(JSON.stringify(S)); U.marsh.path = [1, 2]; expect(validState(U)).toBe(false);
 });
+
+// ---- Fix round 1: what only LOOKS at the world must not read the live marsh mask
+import { lookDyn } from '../src/world/layout.js';
+import { aimPoint } from '../src/world/sight.js';
+
+test('lookDyn: every marsh tile solid, other keys untouched, argument not mutated', () => {
+  const dyn = { gateOpen: true, bridge: false, plank: true, lift: 0.4, ladder: false, causeway: true, bells: false, marsh: 5 };
+  const copy = { ...dyn };
+  const l = lookDyn(dyn);
+  expect(dyn).toEqual(copy);
+  expect(l).not.toBe(dyn);
+  expect(l.marsh).toBe((1 << (COLS * ROWS)) - 1);
+  expect({ ...l, marsh: 5 }).toEqual(dyn);
+  expect(lookDyn({}).marsh).toBe((1 << 30) - 1);
+});
+test('the pointer lands on the same surface for path and non-path tiles through lookDyn; the raw dyn leaks the path', () => {
+  const s = create(4); s.held = true;
+  const dyn = { marsh: maskOf(s) };
+  const off = [...Array(30).keys()].filter((i) => !s.path.includes(i));
+  const down = [0, -1, 0];
+  const land = (i, d) => aimPoint([marshTileCentre(i)[0], MARSH_SURFACE + 8, marshTileCentre(i)[1]], down, d)[1];
+  for (const i of [...s.path, ...off]) expect(Math.abs(land(i, lookDyn(dyn)) - MARSH_SURFACE)).toBeLessThan(0.1);
+  expect(off.some((i) => Math.abs(land(i, dyn) - MARSH_SURFACE) > 0.1)).toBe(true);   // the leak
+});
+test('one logic tick with the mask dropped does not drown a walker on a path tile; three seconds does', () => {
+  const s = create(4); s.held = true;
+  const on = maskOf(s), tile = marshTileCentre(s.path[2]);
+  const idle = { camYaw: 0, mx: 0, mz: 0 };
+  const p = createPlayer(tile[0], tile[1]);
+  stepPlayer(p, idle, 1 / 30, { marsh: on });
+  expect(p.y).toBe(MARSH_SURFACE);
+  stepPlayer(p, idle, 1 / 30, { marsh: 0 });
+  expect(needsRespawn(p, { marsh: 0 })).toBe(false);
+  stepPlayer(p, idle, 1 / 30, { marsh: on });
+  expect(needsRespawn(p, { marsh: on })).toBe(false);
+  expect(p.y).toBe(MARSH_SURFACE);
+  const q = createPlayer(tile[0], tile[1]);
+  let sank = false;
+  for (let i = 0; i < 90; i++) { stepPlayer(q, idle, 1 / 30, { marsh: 0 }); if (needsRespawn(q, { marsh: 0 })) sank = true; }
+  expect(sank).toBe(true);
+});

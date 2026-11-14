@@ -182,6 +182,10 @@ export function marshTileAt(x, z) {
   const c = Math.min(MARSH.cols - 1, Math.floor(u / MARSH.tile)), r = Math.min(MARSH.rows - 1, Math.floor(v / MARSH.tile));
   return r * MARSH.cols + c;
 }
+// The dyn for anything that only LOOKS at the world (pointer rays, the camera boom): every
+// marsh tile solid, so the live mask never shows which tiles are safe. Only a walker's own
+// footing (stepPlayer, needsRespawn) reads the real dyn. Returns a copy.
+export const lookDyn = (dyn) => ({ ...dyn, marsh: (1 << (MARSH.cols * MARSH.rows)) - 1 });
 export function marshTileCentre(i) {
   const c = i % MARSH.cols, r = Math.floor(i / MARSH.cols);
   return marshAt((c + 0.5) * MARSH.tile, (r + 0.5) * MARSH.tile);

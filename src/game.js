@@ -7,7 +7,7 @@ import { MAX_DT, LOGIC_HZ } from './config.js';
 import { dirFromYawPitch, lerpAngle } from './core/math.js';
 import { createTicker, tickerDrives } from './core/ticker.js';
 import { netSnapshot, toPIn, pressTracker } from './net/protocol.js';
-import { SITES, heightAt } from './world/layout.js';
+import { SITES, heightAt, lookDyn } from './world/layout.js';
 import { aimPoint, edgeArrow } from './world/sight.js';
 import { createAudio } from './audio.js';
 import { CHEST } from './puzzles/beam.js';
@@ -329,7 +329,7 @@ export class Game {
     ptr.marker.visible = ptr.line.visible = on;
     if (!on) return;
     const chest = [pos[0], pos[1] + CHEST, pos[2]];
-    const hit = aimPoint(chest, aim, this.dyn);
+    const hit = aimPoint(chest, aim, lookDyn(this.dyn));   // looking, not standing: never the live marsh mask
     const hand = avatar.group.getObjectByName('armR').getWorldPosition(new Vector3());
     hand.x += aim[0] * 0.5; hand.y += aim[1] * 0.5; hand.z += aim[2] * 0.5;
     ptr.marker.position.set(hit[0], hit[1] + 0.1, hit[2]);
@@ -475,7 +475,7 @@ export class Game {
     this.updateRemote(dt);
     this.syncPuzzles(pins, inp, dt);
     if (this.ending) this.updateEnding(dt);
-    else this.cam.update(p, inp, this.dyn, dt);
+    else this.cam.update(p, inp, lookDyn(this.dyn), dt);   // the camera only looks
     this.updateComms(inp, dt, p.dist - before);
     if (this.sun) followSun(this.sun, p.x, p.y, p.z);
 
