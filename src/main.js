@@ -26,6 +26,15 @@ const firstStatus = (s) => new Promise((res) => {
   s.onStatus = (st) => { s.onStatus = prev; res(st); };
 });
 
+// Dev server only: a console handle on the game, for testing (never in a build).
+const devHandle = (game) => ({
+  game, input: game.input, S: () => game.S,
+  teleport(x, z) {
+    const p = game.player;
+    p.x = x; p.z = z; p.y = heightAt(x, z, game.dyn); p.vy = 0;
+  },
+});
+
 async function startHost(hud) {
   for (let i = 0; i < 3; i++) {
     const code = makeCode();
@@ -44,13 +53,7 @@ async function main() {
     const standin = createStandin(game);
     game.standin = standin;
     if (pilotMode) await attachPilot(game);
-    window.__lr = {
-      game, input: game.input, S: () => game.S, standin,
-      teleport(x, z) {
-        const p = game.player;
-        p.x = x; p.z = z; p.y = heightAt(x, z, game.dyn); p.vy = 0;
-      },
-    };
+    window.__lr = { ...devHandle(game), standin };
     game.start();
     return;
   }
@@ -74,6 +77,8 @@ async function main() {
     game = new Game(canvas, { role: 'join', session: Session.join(choice.code), hud });
   }
   if (pilotMode) await attachPilot(game);
+  // ?handle on the dev server: the ?debug handle on a real two-browser walk
+  if (import.meta.env.DEV && params.has('handle')) window.__lr = devHandle(game);
   game.start();
 }
 
