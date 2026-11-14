@@ -166,5 +166,6 @@ test('validState rejects a bad pillars slice', () => {
   const S = createAll(1); S.pillars.t[3] = NaN; expect(validState(S)).toBe(false);
   const T = createAll(1); delete T.pillars; expect(validState(T)).toBe(false);
   const U = createAll(1); U.pillars.solved = 'yes'; expect(validState(U)).toBe(false);
+  const W = createAll(1); W.pillars.t.pop(); expect(validState(W)).toBe(false);
   expect(validState(JSON.parse(JSON.stringify(createAll(1))))).toBe(true);
 });

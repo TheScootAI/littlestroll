@@ -54,6 +54,11 @@ test('A on pillar 0, B on the landing: A\'s line has 0 only, B\'s has 0 and 1', 
   expect(maskOf(s)).toBe(bits(0, [0]) | bits(1, [0, 1]));
 });
 
+test('present but nowhere friend: the walker on a pillar still raises the other line', () => {
+  const s = create(); run(s, on(0, 3), P(SITES.spawn[0]), 0.5);
+  expect(maskOf(s)).toBe(bits(1, [2, 3, 4]));
+});
+
 test('both on the same line raise the other line, not their own', () => {
   const s = create(); run(s, on(0, 2), on(0, 5), 0.5);
   expect(maskOf(s)).toBe(bits(1, [1, 2, 3, 4, 5, 6]));

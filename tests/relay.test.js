@@ -151,7 +151,7 @@ test('valid / forceSolve', () => {
   expect(s.solved).toBe(true); expect(valid(s)).toBe(true);
 });
 
-// ---- index wiring: the relay is the last puzzle and ends the walk
+// ---- index wiring: lighting the relay solves the eighth puzzle; the walk goes on to the pillars
 test('index: lighting the relay is the eighth puzzle; the walk goes on to the pillars', () => {
   const S = createAll(1); forceSolved(S, 7);
   expect(solvedCount(S)).toBe(7); expect(S.ended).toBe(null);

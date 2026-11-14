@@ -28,9 +28,10 @@ export function step(s, players, dt, open = true) {
   const up = new Set();
   if (open) {
     const places = players.map(placeOf);
-    // a raising walker needs a present friend (the pillars hold while two are here)
-    if (players.length === 2 && places[0] && places[1]) {
+    // a walker's place raises pillars only while the other walker is present too
+    if (players.length === 2 && players[0]?.present && players[1]?.present) {
       for (const pl of places) {
+        if (!pl) continue;
         if (pl.line === null) { up.add(0); up.add(N); continue; }
         for (let r = pl.r - 1; r <= pl.r + 1; r++) if (r >= 0 && r < N) up.add((1 - pl.line) * N + r);
       }
