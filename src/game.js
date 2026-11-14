@@ -17,7 +17,7 @@ import { createPlayer, stepPlayer, needsRespawn, respawn } from './player/contro
 import { createInput, readInput } from './player/input.js';
 import { createCamera } from './player/camera.js';
 import { createAvatar } from './player/avatar.js';
-import { endingProgress } from './core/ending.js';
+import { endingProgress, endShot } from './core/ending.js';
 import { createAll, validState, stepAll, solvedCount, solvedLine, dynOf, promptFor, constraintFor } from './puzzles/index.js';
 import { createView as createGateView } from './puzzles/views/gate.js';
 import { createView as createSignalView } from './puzzles/views/signal.js';
@@ -29,26 +29,20 @@ import { createView as createBellsView } from './puzzles/views/bells.js';
 import { createView as createMarshView } from './puzzles/views/marsh.js';
 import { createView as createPillarsView } from './puzzles/views/pillars.js';
 import { createView as createRingView } from './puzzles/views/ring.js';
+import { createView as createLanternsView } from './puzzles/views/lanterns.js';
+import { LAMP_H } from './puzzles/lanterns.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
 
 export const SCARF = [0xf08a3c, 0x2fb5a6];   // host orange, joiner teal
 
-// The ending shot: derived from the layout, not hard-coded. The camera stands off the summit's
-// far side, a little above and to the side, looking back west over the lit great brazier, so
-// the roaring flame fills the upper half of the frame (the card takes the lower half) with the
-// Far Isle's summit under it and the causeway, the first island and its beacon strung out
-// behind. The look point sits below the brazier so the flame rides high in the frame.
-const endShot = () => {
-  const [gx, gz] = SITES.relay.great, gy = heightAt(gx, gz);
-  const [bx, bz] = SITES.beacon;
-  const span = Math.hypot(gx - bx, gz - bz);                    // summit to the first island
-  const to = [(bx - gx) / span, (bz - gz) / span];               // unit vector, summit -> beacon
-  const side = [-to[1], to[0]];                                  // a quarter turn from it
-  const back = 26, up = 8, lateral = 7;
-  const pos = [gx - to[0] * back + side[0] * lateral, gy + up, gz - to[1] * back + side[1] * lateral];
-  const look = [gx + to[0] * 40, gy - 12, gz + to[1] * 40];
-  return { pos, look };
+// The ending shot: derived from the layout (see core/ending.js). The camera stands off the tor's
+// far side from the Far Isle, a little above and to the side, looking back south over the lit
+// great lamp, so the flame fills the upper half of the frame (the card takes the lower half) with
+// the Far Isle's summit and the string of islands behind it.
+const lampShot = () => {
+  const [lx, lz] = SITES.lanterns.lamp;
+  return endShot([lx, heightAt(lx, lz) + LAMP_H, lz], SITES.relay.great);
 };
 const smooth = (t) => t * t * (3 - 2 * t);
 
@@ -116,6 +110,7 @@ export class Game {
       { key: 'relay', view: createRelayView(this.scene) },
       { key: 'pillars', view: createPillarsView(this.scene) },
       { key: 'ring', view: createRingView(this.scene) },
+      { key: 'lanterns', view: createLanternsView(this.scene) },
     ];
     this.input = createInput(canvas);
     // carrying the relay's flame: no running, whoever asks (see readInput)
@@ -266,6 +261,15 @@ export class Game {
       }
       this.relayPrev = { holder: rl.holder, solved: rl.solved };
     }
+    // a lantern catching or being topped up (its time jumps up): a whoosh; all six alight: the roar
+    const ln = this.S.lanterns;
+    if (ln) {
+      if (this.lanternPrev) {
+        if (ln.t.some((v, i) => v > this.lanternPrev.t[i] + 1e-6) && !ln.solved) this.audio.pass();
+        if (ln.solved && !this.lanternPrev.solved) this.audio.roar();
+      }
+      this.lanternPrev = { t: [...ln.t], solved: ln.solved };
+    }
   }
 
   // One chat line from this walker (the box or the pilot). True when it was sent / shown.
@@ -307,7 +311,7 @@ export class Game {
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
       this.bellPrev = null; this.pillarPrev = 0; this.ringPrev = null;
-      this.relayPrev = null;
+      this.relayPrev = null; this.lanternPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);
       this.welcomedOnce = true;
@@ -545,7 +549,7 @@ export class Game {
     const c = this.cam.camera, p = this.player;
     this.ending = {
       started: performance.now(), time: this.S.ended.time, shown: false,
-      shot: (() => { const s = endShot(); return { pos: new Vector3(...s.pos), look: new Vector3(...s.look) }; })(),
+      shot: (() => { const s = lampShot(); return { pos: new Vector3(...s.pos), look: new Vector3(...s.look) }; })(),
       from: c.position.clone(),
       fromLook: new Vector3(p.x, p.y + 1.3, p.z),
       look: new Vector3(),
@@ -565,8 +569,8 @@ export class Game {
     e.look.copy(e.fromLook).lerp(e.shot.look, k);
     c.lookAt(e.look);
     if (e.fog) {                            // let the haze fall back so the whole island shows
-      this.scene.fog.near = e.fog[0] + (160 - e.fog[0]) * k;
-      this.scene.fog.far = e.fog[1] + (520 - e.fog[1]) * k;
+      this.scene.fog.near = e.fog[0] + (200 - e.fog[0]) * k;
+      this.scene.fog.far = e.fog[1] + (560 - e.fog[1]) * k;
     }
     if (!e.shown && card) {
       const mine = this.player.dist, theirs = this.remote?.dist ?? 0;

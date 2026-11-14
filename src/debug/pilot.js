@@ -108,6 +108,7 @@ export function createPilot(game) {
           relay: { holder: S.relay.holder, t: r2(S.relay.t), solved: !!S.relay.solved },
           pillars: { mask: game.dyn?.pillars | 0, solved: !!S.pillars?.solved },
           ring: S.ring ? { touched: [...S.ring.touched], both: bothInside(game.pins ? game.pins(false) : []), steps: r2(S.ring.steps), solved: !!S.ring.solved } : null,   // never signs or order
+          lanterns: S.lanterns ? { t: S.lanterns.t.map(r2), solved: !!S.lanterns.solved } : null,
         } : null;
         return {
           me: p ? { x: r2(p.x), y: r2(p.y), z: r2(p.z), yaw: r2(p.yaw), zone: zoneAt(p.x, p.z) } : null,
@@ -184,6 +185,7 @@ export function createPilot(game) {
       '__pilot.pillar(line, r)            [x, z] centre of pillar r (0 = nearest) on line 0 (west) or 1 (east)',
       'pillars: mask bit line*9+r = raised',
       'ring: touched = stones lit so far (in order), both = both walkers inside the ring, steps 0..1',
+      'lanterns: t = seconds each lantern has left (0 = dark), solved',
       '__pilot.state()                    me, friend, solved, prompt, ended, busy, puzzles (no signal answer)',
       '__pilot.goTo(x, z, {run, within, timeoutMs})  walk there -> Promise {arrived, reason?, x, z}',
       '__pilot.follow(dist) / stop()      keep within dist of the friend / cancel and stand still',

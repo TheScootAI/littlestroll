@@ -14,6 +14,7 @@ import * as marsh from './marsh.js';
 import * as relay from './relay.js';
 import * as pillars from './pillars.js';
 import * as ring from './ring.js';
+import * as lanterns from './lanterns.js';
 
 // Trail order. `solved(S)` says whether that puzzle is done.
 const ORDER = [
@@ -27,9 +28,10 @@ const ORDER = [
   { key: 'relay', mod: relay, valid: relay.valid, solved: (S) => S.relay.solved, done: 'The Far Isle is lit' },
   { key: 'pillars', mod: pillars, valid: pillars.valid, solved: (S) => S.pillars.solved, done: 'The pillars stand' },
   { key: 'ring', mod: ring, valid: ring.valid, solved: (S) => S.ring.solved, done: 'The steps rise again' },
+  { key: 'lanterns', mod: lanterns, valid: lanterns.valid, solved: (S) => S.lanterns.solved, done: 'The Lantern Isle is lit' },
 ];
 
-export const createAll = (seed) => ({ time: 0, gate: gate.create(seed), signal: signal.create(seed), plank: plank.create(), lift: lift.create(), beam: beam.create(), bells: bells.create(), marsh: marsh.create(seed), relay: relay.create(), pillars: pillars.create(), ring: ring.create(seed), ended: null });
+export const createAll = (seed) => ({ time: 0, gate: gate.create(seed), signal: signal.create(seed), plank: plank.create(), lift: lift.create(), beam: beam.create(), bells: bells.create(), marsh: marsh.create(seed), relay: relay.create(), pillars: pillars.create(), ring: ring.create(seed), lanterns: lanterns.create(), ended: null });
 
 export function stepAll(S, players, dt) {
   dt = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), MAX_DT) : 0;
@@ -44,6 +46,7 @@ export function stepAll(S, players, dt) {
   relay.step(S.relay, players, dt);
   pillars.step(S.pillars, players, dt, S.relay.solved);   // dormant until the Relay is solved
   ring.step(S.ring, players, dt);
+  lanterns.step(S.lanterns, players, dt);
   // the walk ends the moment the last puzzle in the order is solved
   if (!S.ended && ORDER.at(-1).solved(S)) S.ended = { time: S.time };
 }
