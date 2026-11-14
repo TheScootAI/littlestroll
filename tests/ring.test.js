@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { STONES, LEN, REACH, deal, create, inside, bothInside, atSpot, seesFace, step, prompt, valid, forceSolve } from '../src/puzzles/ring.js';
+import { STONES, LEN, REACH, facePos, deal, create, inside, bothInside, atSpot, seesFace, step, prompt, valid, forceSolve } from '../src/puzzles/ring.js';
 import { createAll, stepAll, dynOf } from '../src/puzzles/index.js';
 import { SITES } from '../src/world/layout.js';
 
@@ -215,4 +215,17 @@ test('wired: a ring slice in createAll is stepped by stepAll', () => {
   const k = S.ring.order[0], [sx, sz] = R.stones[k];
   stepAll(S, [P([sx, sz + 0.9], { pressed: true }), P(centre)], 0.05);
   expect(S.ring.touched).toEqual([k]);
+});
+
+test('facePos: the ring picture, x right, y up, entrance at the bottom, matches where the stones stand', () => {
+  const [x0, y0] = facePos(0), [x7, y7] = facePos(7);
+  expect(x0).toBeLessThan(0); expect(y0).toBeLessThan(0);
+  expect(x7).toBeGreaterThan(0); expect(y7).toBeLessThan(0);
+  expect(facePos(3)[1]).toBeGreaterThan(0); expect(facePos(4)[1]).toBeGreaterThan(0);
+  for (let i = 0; i < STONES; i++) {
+    const [x, y] = facePos(i);
+    expect(Math.hypot(x, y)).toBeCloseTo(1, 6);
+    expect(Math.sign(x)).toBe(Math.sign(R.stones[i][0] - R.centre[0]));
+    expect(Math.sign(y)).toBe(Math.sign(R.centre[1] - R.stones[i][1]));
+  }
 });

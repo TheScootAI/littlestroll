@@ -13,12 +13,12 @@ import {
 } from 'three';
 import { SITES, RAMPS, heightAt } from '../../world/layout.js';
 import { clamp } from '../../core/math.js';
-import { STONES, LEN, bothInside, seesFace } from '../ring.js';
+import { STONES, LEN, facePos, bothInside, seesFace } from '../ring.js';
 import { signTexture, SIGN_COUNT } from './signs.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 const STONE = 0x9a948c, STONE_DARK = 0x7d776f, SLAB = 0xb9b0a4, GLOW = 0xffe3a0, TREAD = 0xb9b0bf, TREAD_DARK = 0x9d93a8;
-const SEA_FLOOR = -4, STONE_H = 3.4, SEEN_H = 3.8, SEEN_W = 3.6, SEEN_T = 0.5;
+const SEA_FLOOR = -4, STONE_H = 3.4, SEEN_H = 5.1, FACE_LIFT = 1.2, SEEN_W = 3.6, SEEN_T = 0.5;
 const FLASH_S = 0.6;
 const smooth = (t) => t * t * (3 - 2 * t);
 
@@ -94,6 +94,7 @@ export function createView(scene) {
     g.add(slab, capM);
     const face_ = new Group();
     face_.visible = false;
+    face_.position.y = FACE_LIFT;     // up out of the walker's own avatar's way
     g.add(face_);
     const signMats = [];
     if (face === 0) {
@@ -118,8 +119,8 @@ export function createView(scene) {
       guide.position.set(0, cy, FZ + 0.005);
       face_.add(guide);
       for (let i = 0; i < STONES; i++) {
-        const b = Math.PI + (i + 0.5) * Math.PI / 4;       // bearing from north, clockwise, as stones[i] stands
-        const px = Math.sin(b) * RR, py = cy + Math.cos(b) * RR;
+        const [ux, uy] = facePos(i);
+        const px = ux * RR, py = cy + uy * RR;
         face_.add(tile(0.66, px, py, FZ + 0.01));
         const sg = sign(0, 0.52, px, py, FZ + 0.03);
         face_.add(sg.mesh); signMats.push(sg.m);

@@ -23,6 +23,10 @@ export function deal(seed) {
   return { signs: shuffle([...ids]), order: shuffle([...ids]).slice(0, LEN) };
 }
 
+// Where stone i sits in the ring picture (unit circle: x right/east, y up/north, entrance at the
+// bottom). Stone i stands at bearing PI + (i + 0.5) * 45 degrees clockwise from north.
+export const facePos = (i) => { const b = Math.PI + (i + 0.5) * Math.PI / 4; return [Math.sin(b), Math.cos(b)]; };
+
 export const create = (seed = 0) => ({ ...deal(seed), touched: [], miss: 999, steps: 0, solved: false });
 
 export const inside = (p) => !!p?.present && dist(p, R.centre[0], R.centre[1]) <= R.r;
