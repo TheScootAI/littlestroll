@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
-import { makePath, create, step, prompt, maskOf, seesPath, valid, forceSolve } from '../src/puzzles/marsh.js';
+import { sinksUnder, makePath, create, step, prompt, maskOf, seesPath, valid, forceSolve } from '../src/puzzles/marsh.js';
 import { createAll, stepAll, solvedCount, dynOf, promptFor, forceSolved, validState, solvedLine } from '../src/puzzles/index.js';
-import { SITES, heightAt, zoneAt, marshTileCentre, MARSH_SURFACE } from '../src/world/layout.js';
+import { SITES, heightAt, zoneAt, marshTileCentre, marshTileAt, MARSH_SURFACE } from '../src/world/layout.js';
 import { createPlayer, stepPlayer, needsRespawn, respawn } from '../src/player/controller.js';
 import { DROWN_Y } from '../src/config.js';
 
@@ -245,4 +245,30 @@ test('one logic tick with the mask dropped does not drown a walker on a path til
   let sank = false;
   for (let i = 0; i < 90; i++) { stepPlayer(q, idle, 1 / 30, { marsh: 0 }); if (needsRespawn(q, { marsh: 0 })) sank = true; }
   expect(sank).toBe(true);
+});
+
+test('sinksUnder: only a walker who is actually unsupported sinks a slab', () => {
+  const s = create(4); s.held = true;
+  const dyn = { marsh: maskOf(s) };
+  const safe = s.path[1], unsafe = [...Array(30).keys()].find((i) => !s.path.includes(i));
+  const W = (xz) => ({ present: true, x: xz[0], z: xz[1] });
+  // on a safe tile
+  expect(sinksUnder(W(marshTileCentre(safe)), safe, dyn)).toBe(false);
+  // an unsafe tile with its centre far from any safe tile, unset: sinks
+  const lone = [...Array(30).keys()].find((i) => !s.path.includes(i) &&
+    s.path.every((p) => Math.abs((p % 5) - (i % 5)) + Math.abs(Math.floor(p / 5) - Math.floor(i / 5)) >= 2));
+  expect(lone).toBeDefined();
+  expect(sinksUnder(W(marshTileCentre(lone)), lone, dyn)).toBe(true);
+  // 0.2 m past a safe tile's edge, over an unsafe neighbour: still held by the margin
+  const nb = [safe - 5, safe + 5, safe - 1, safe + 1].find((i) => i >= 0 && i < 30 && !s.path.includes(i) && Math.abs((i % 5) - (safe % 5)) <= 1);
+  expect(nb).toBeDefined();
+  const c = marshTileCentre(safe), n = marshTileCentre(nb), d = [n[0] - c[0], n[1] - c[1]], dl = Math.hypot(...d);
+  const half = SITES.marsh.tile / 2;
+  const p = W([c[0] + (d[0] / dl) * (half + 0.2), c[1] + (d[1] / dl) * (half + 0.2)]);
+  expect(marshTileAt(p.x, p.z)).toBe(nb);
+  expect(sinksUnder(p, nb, dyn)).toBe(false);
+  // wrong tile, absent walker
+  expect(sinksUnder(W(marshTileCentre(lone)), safe, dyn)).toBe(false);
+  expect(sinksUnder({ present: false }, lone, dyn)).toBe(false);
+  expect(sinksUnder(null, lone, dyn)).toBe(false);
 });

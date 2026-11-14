@@ -1,6 +1,8 @@
 import { describe, test, expect } from 'vitest';
 import { Scene, Box3 } from 'three';
-import { placeScenery, featureClearance, trailDistance, siteAnchors, terrainExtent, buildTerrain, mulberry32 } from '../src/world/terrain.js';
+import { placeScenery, placeFarScenery, featureClearance, trailDistance, siteAnchors, terrainExtent, buildTerrain, mulberry32 } from '../src/world/terrain.js';
+import { marshTileAt, WATCH_STONE } from '../src/world/layout.js';
+import island1 from './helpers/scenery-island1.json';
 import { SITES, RAMPS, ZONES, TRAIL, PLANK_CORRIDOR, heightAt, zoneAt, DYN_NONE } from '../src/world/layout.js';
 import { pointSegDist } from '../src/core/math.js';
 import { WATER_Y } from '../src/config.js';
@@ -134,5 +136,56 @@ describe('terrainExtent covers the Far Isle', () => {
   test('the bells are kept clear of scenery', () => {
     const pts = siteAnchors();
     for (const b of [SITES.bells.a, SITES.bells.b]) expect(pts.some((p) => Math.hypot(p[0] - b[0], p[1] - b[1]) < 1e-6)).toBe(true);
+  });
+});
+
+describe('Far Isle scenery', () => {
+  const far = placeFarScenery();
+  const farAll = all(far);
+  const tileDist = (x, z) => {
+    let d = Infinity;
+    const { origin, tile, cols, rows } = SITES.marsh;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const x0 = origin[0] + r * tile, z0 = origin[1] + c * tile;
+      d = Math.min(d, Math.hypot(Math.max(x0 - x, 0, x - x0 - tile), Math.max(z0 - z, 0, z - z0 - tile)));
+    }
+    return d;
+  };
+  test('the first island is placed exactly as before (first 20 of each kind, and the counts)', () => {
+    const s = placeScenery();
+    const r6 = (v) => Math.round(v * 1e6) / 1e6;
+    for (const k of Object.keys(island1)) {
+      expect(s[k].length).toBe(island1[k].n);
+      expect(s[k].slice(0, 20).map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island1[k].first);
+    }
+  });
+  test('is deterministic, covers trees, boulders, rocks and tufts, all on zones G to J', () => {
+    expect(placeFarScenery()).toEqual(far);
+    expect(far.trees.length).toBeGreaterThan(8);
+    expect(far.rocks.length).toBeGreaterThan(8);
+    expect(far.tufts.length).toBeGreaterThan(40);
+    for (const it of [...far.trees, ...far.tufts]) expect(['G', 'H', 'I', 'J']).toContain(zoneAt(it.x, it.z));
+    for (const it of farAll) expect(it.x).toBeGreaterThan(60);
+  });
+  test('nothing within 3 m of a site, ramp, trail or marsh tile; none on a ramp', () => {
+    const anchors = [...siteAnchors(), SITES.marsh.lever, [SITES.marsh.plate.x, SITES.marsh.plate.z], SITES.relay.small, SITES.relay.great];
+    for (const it of farAll) {
+      for (const [ax, az] of anchors) expect(Math.hypot(it.x - ax, it.z - az)).toBeGreaterThanOrEqual(3);
+      expect(featureClearance(it.x, it.z)).toBeGreaterThanOrEqual(3);
+      expect(tileDist(it.x, it.z)).toBeGreaterThanOrEqual(3);
+      expect(marshTileAt(it.x, it.z)).toBe(-1);
+      for (const r of RAMPS) {
+        const len = Math.hypot(r.bx - r.ax, r.bz - r.az), ux = (r.bx - r.ax) / len, uz = (r.bz - r.az) / len;
+        const dx = it.x - r.ax, dz = it.z - r.az, s = dx * ux + dz * uz, c = Math.abs(-dx * uz + dz * ux);
+        expect(Math.hypot(Math.max(0, -s, s - len), Math.max(0, c - r.hw))).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+  test('the watch-stone keeps its sight line to the grid clear', () => {
+    const cx = SITES.marsh.origin[0] + 6, cz = SITES.marsh.origin[1] + 6;
+    for (const it of farAll) expect(pointSegDist(it.x, it.z, WATCH_STONE.x, WATCH_STONE.z, cx, cz).d).toBeGreaterThanOrEqual(3);
+  });
+  test('everything sits on the ground', () => {
+    for (const it of farAll) expect(Math.abs(it.y - heightAt(it.x, it.z, DYN_NONE))).toBeLessThan(0.6);
   });
 });

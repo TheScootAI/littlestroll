@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { findPath, clearanceAt, steer } from '../src/debug/path.js';
-import { SITES, DYN_NONE, RAMPS, heightAt, blockers } from '../src/world/layout.js';
+import { findPath, clearanceAt, steer, planningDyn } from '../src/debug/path.js';
+import { SITES, DYN_NONE, RAMPS, heightAt, blockers, marshTileAt } from '../src/world/layout.js';
+import * as marshRules from '../src/puzzles/marsh.js';
 import { createPlayer, stepPlayer, needsRespawn } from '../src/player/controller.js';
 import { DROWN_Y, STEP_UP, PLAYER_R } from '../src/config.js';
 import { pointSegDist } from '../src/core/math.js';
@@ -221,5 +222,43 @@ describe('the Far Isle dyn keys', () => {
     const c = { ...DYN_NONE, causeway: true };
     expect(findPath(SITES.bells.a, SITES.checkpoints[6][0], c)).toBeNull();
     expect(findPath(SITES.bells.a, SITES.checkpoints[6][0], { ...c, bells: true })).not.toBeNull();
+  });
+});
+
+describe('the pilot plans on what a player sees', () => {
+  const { maskOf, create } = marshRules;
+  const ALL = (1 << 30) - 1;
+  const from = SITES.checkpoints[6][0], to = SITES.marsh.lever;
+  // every 0.25 m along the route lies off the grid or on a solid tile of `mask`
+  const inPath = (p, mask) => p.slice(1).every(([bx, bz], k) => {
+    const [ax, az] = p[k], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.25));
+    for (let q = 0; q <= n; q++) {
+      const i = marshTileAt(ax + ((bx - ax) * q) / n, az + ((bz - az) * q) / n);
+      if (i >= 0 && !((mask >> i) & 1)) return false;
+    }
+    return true;
+  });
+  it('while unsolved, planningDyn makes every marsh tile solid whatever the live mask is', () => {
+    const s = create(4); s.held = true;
+    const live = { ...DYN_NONE, causeway: true, bells: true, marsh: maskOf(s) };
+    expect(live.marsh).not.toBe(ALL);
+    expect(planningDyn(live, false).marsh).toBe(ALL);
+    expect(planningDyn(live, true).marsh).toBe(live.marsh);
+    expect(planningDyn(live, false).causeway).toBe(true);
+  });
+  it('the route from the near edge to the lever is not confined to the path tiles', () => {
+    // a seed whose secret path is not where the plain route across would go anyway
+    const plain = findPath(from, to, { ...DYN_NONE, causeway: true, bells: true, marsh: ALL });
+    const seed = [...Array(60).keys()].find((k) => !inPath(plain, maskOf({ held: true, solved: false, path: create(k).path })));
+    expect(seed).toBeDefined();
+    const s = create(seed); s.held = true;
+    const live = { ...DYN_NONE, causeway: true, bells: true, marsh: maskOf(s) };
+    const seen = findPath(from, to, planningDyn(live, false));
+    const allSolid = findPath(from, to, { ...live, marsh: ALL });
+    expect(seen).not.toBeNull();
+    expect(seen).toEqual(allSolid);
+    expect(inPath(seen, live.marsh)).toBe(false);          // it does leave the secret path
+    const cheat = findPath(from, to, live);                 // the live mask is what leaked
+    expect(cheat === null || inPath(cheat, live.marsh)).toBe(true);
   });
 });

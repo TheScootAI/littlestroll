@@ -16,6 +16,7 @@ import { createPlayer, stepPlayer, needsRespawn, respawn } from './player/contro
 import { createInput, readInput } from './player/input.js';
 import { createCamera } from './player/camera.js';
 import { createAvatar } from './player/avatar.js';
+import { endingProgress } from './core/ending.js';
 import { createAll, validState, stepAll, solvedCount, solvedLine, dynOf, promptFor, constraintFor } from './puzzles/index.js';
 import { createView as createGateView } from './puzzles/views/gate.js';
 import { createView as createSignalView } from './puzzles/views/signal.js';
@@ -35,8 +36,6 @@ export const SCARF = [0xf08a3c, 0x2fb5a6];   // host orange, joiner teal
 // the roaring flame fills the upper half of the frame (the card takes the lower half) with the
 // Far Isle's summit under it and the causeway, the first island and its beacon strung out
 // behind. The look point sits below the brazier so the flame rides high in the frame.
-const END_SECS = 4;                       // camera ease
-const END_CARD = END_SECS + 0.4;          // then the card
 const endShot = () => {
   const [gx, gz] = SITES.relay.great, gy = heightAt(gx, gz);
   const [bx, bz] = SITES.beacon;
@@ -160,6 +159,9 @@ export class Game {
         hud?.setStatus("Your friend's walk has ended.", back);
       } else if (st === 'failed') {
         hud?.setStatus("Couldn't connect. Check the code — and some home networks block direct connections.", back);
+      } else if (st === 'version') {
+        if (this.role === 'host') hud?.setCode(this.code);
+        hud?.setStatus('You and your friend are on different versions — both refresh the page.', back);
       } else if (st === 'full') {
         hud?.setStatus('This walk already has two walkers.', back);
       }
@@ -491,7 +493,7 @@ export class Game {
   beginEnding() {
     const c = this.cam.camera, p = this.player;
     this.ending = {
-      t: 0, shown: false,
+      started: performance.now(), time: this.S.ended.time, shown: false,
       shot: (() => { const s = endShot(); return { pos: new Vector3(...s.pos), look: new Vector3(...s.look) }; })(),
       from: c.position.clone(),
       fromLook: new Vector3(p.x, p.y + 1.3, p.z),
@@ -507,8 +509,7 @@ export class Game {
   // Ease the camera to the wide shot over END_SECS, then show the card.
   updateEnding(dt) {
     const e = this.ending, c = this.cam.camera;
-    e.t += dt;
-    const k = smooth(Math.min(1, e.t / END_SECS));
+    const { k, card } = endingProgress((performance.now() - e.started) / 1000);   // wall time, not summed dt
     c.position.copy(e.from).lerp(e.shot.pos, k);
     e.look.copy(e.fromLook).lerp(e.shot.look, k);
     c.lookAt(e.look);
@@ -516,10 +517,10 @@ export class Game {
       this.scene.fog.near = e.fog[0] + (160 - e.fog[0]) * k;
       this.scene.fog.far = e.fog[1] + (520 - e.fog[1]) * k;
     }
-    if (!e.shown && e.t >= END_CARD) {
-      e.shown = true;
+    if (!e.shown && card) {
       const mine = this.player.dist, theirs = this.remote?.dist ?? 0;
-      this.hud?.showEnding({ time: this.S.ended.time, dist: this.idx === 0 ? [mine, theirs] : [theirs, mine] });
+      this.hud?.showEnding({ time: e.time, dist: this.idx === 0 ? [mine, theirs] : [theirs, mine] });
+      e.shown = true;
     }
   }
 

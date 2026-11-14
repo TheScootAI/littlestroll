@@ -3,8 +3,8 @@
 // sets the input fields (mx, mz, run, hold, eN, q, shoutN, waveN, camYaw, camPitch) through
 // input.forced, so stepPlayer, the plank veto and the blockers all still apply. It never
 // writes to S and never moves the walker directly. main.js imports this only under ?pilot.
-import { SITES, zoneAt } from '../world/layout.js';
-import { findPath, steer } from './path.js';
+import { SITES, zoneAt, marshTileCentre } from '../world/layout.js';
+import { findPath, steer, planningDyn } from './path.js';
 import { PITCH_MIN, PITCH_MAX } from '../player/input.js';
 import { clamp } from '../core/math.js';
 import { CHEST } from '../puzzles/beam.js';
@@ -55,7 +55,8 @@ export function createPilot(game) {
     if (!j.path) {
       // steer measures clearance on the world it was planned for (a moving lift would
       // otherwise make a new clearance grid every update)
-      j.dyn = { ...game.dyn };
+      // plan on what a player sees: until the marsh is solved every tile looks solid
+      j.dyn = planningDyn(game.dyn, !!game.S?.marsh?.solved);
       j.path = findPath([p.x, p.z], j.to, j.dyn);
       j.i = 1;
       if (!j.path) return finish({ arrived: false, reason: 'no-path' });
@@ -88,6 +89,7 @@ export function createPilot(game) {
 
   const api = {
     sites: () => SITES,
+    tile: (i) => { try { return marshTileCentre(i).map(r2); } catch { return null; } },   // [x, z] centre of marsh tile i
 
     state() {
       try {
@@ -163,6 +165,7 @@ export function createPilot(game) {
 
     help: () => [
       '__pilot.sites()                    SITES (where everything is)',
+      '__pilot.tile(i)                    [x, z] centre of marsh tile i; tiles are numbered row*5+col from the near-left corner',
       '__pilot.state()                    me, friend, solved, prompt, ended, busy, puzzles (no signal answer)',
       '__pilot.goTo(x, z, {run, within, timeoutMs})  walk there -> Promise {arrived, reason?, x, z}',
       '__pilot.follow(dist) / stop()      keep within dist of the friend / cancel and stand still',

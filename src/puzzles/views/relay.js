@@ -19,9 +19,10 @@ const glowMat = (hex, opacity = 1) => new MeshBasicMaterial({
   color: hex, transparent: true, opacity, blending: AdditiveBlending, depthWrite: false, fog: false, toneMapped: false, side: DoubleSide,
 });
 const STONE = 0xb9b0bf, STONE_DARK = 0x9d93a8, ACCENT = 0xf08a3c, COAL = 0x3a312e;
+const TMP_YELLOW = new Color(), TMP_RED = new Color();
 const FLAME = 0xff8a2a, FLAME_MID = 0xffb23c, FLAME_CORE = 0xffe9a8, YELLOW = 0xffd24a, RED = 0xff4a30;
 const RING_R = 1.5;                 // the carrier's ring at full burn
-const HAND = new Vector3(0.46, 1.22, -0.1);   // above the raised right hand, in the avatar's local frame
+const HAND = new Vector3(0.46, 1.17, -0.1);   // above the raised right hand, in the avatar's local frame
 
 function glowTexture() {
   const c = document.createElement('canvas');
@@ -34,6 +35,26 @@ function glowTexture() {
   grad.addColorStop(1, 'rgba(255,150,70,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  return t;
+}
+
+// A teardrop flame shape, opaque inside (so it reads against grass, sky and stone alike), with a
+// soft 2 px edge. `inner` shrinks it towards its base for the core.
+function flameTexture(fill, inner = 1) {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 128;
+  const g = c.getContext('2d');
+  const w = 26 * inner, top = 128 - 118 * inner, base = 118;
+  g.fillStyle = fill;
+  g.beginPath();
+  g.moveTo(32, top);
+  g.bezierCurveTo(32 + w * 0.25, top + (base - top) * 0.35, 32 + w, top + (base - top) * 0.55, 32 + w, base - w * 0.9);
+  g.bezierCurveTo(32 + w, base - w * 0.2, 32 + w * 0.5, base, 32, base);
+  g.bezierCurveTo(32 - w * 0.5, base, 32 - w, base - w * 0.2, 32 - w, base - w * 0.9);
+  g.bezierCurveTo(32 - w, top + (base - top) * 0.55, 32 - w * 0.25, top + (base - top) * 0.35, 32, top);
+  g.fill();
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   return t;
@@ -54,8 +75,8 @@ export function createView(scene) {
   const stoneM = mat(STONE), darkM = mat(STONE_DARK);
 
   // a tongue of flame: a cone with its base at y = 0
-  const tongue = (parent, hex, r, h, opacity, x = 0, z = 0) => {
-    const geo = new ConeGeometry(r, h, 7, 1, true);
+  const tongue = (parent, hex, r, h, opacity, x = 0, z = 0, solid = false) => {
+    const geo = new ConeGeometry(r, h, 7, 1, !solid);
     geo.translate(0, h / 2, 0);
     // ordinary blending, not additive: a glow added to the pale sky or sand would vanish
     const m = new Mesh(geo, new MeshBasicMaterial({ color: hex, transparent: true, opacity, depthWrite: false, fog: false, toneMapped: false, side: DoubleSide }));
@@ -96,13 +117,22 @@ export function createView(scene) {
 
   // ---- the carried flame (one flame in the world: whoever holds it) and its ring
   const carried = new Group();
-  carried.visible = false;
   root.add(carried);
-  const cOuter = tongue(carried, FLAME, 0.26, 0.85, 0.92), cCore = tongue(carried, FLAME_CORE, 0.14, 0.55, 0.97);
-  const cGlow = sprite(carried, FLAME, 2.2, 0.75);
-  cGlow.position.y = 0.3;
+  // a small bright flame, about 0.4 m: an opaque orange outer with an opaque yellow-white core
+  // (opaque, so it reads as fire against grass, sky and stone alike), a faint tight glow
+  const flameSprite = (tex, order) => {
+    const m = new Sprite(new SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false, toneMapped: false }));
+    m.center.set(0.5, 0);               // base at the hand
+    m.scale.set(0.3, 0.44, 1);
+    m.renderOrder = order;
+    carried.add(m);
+    return m;
+  };
+  const cOuter = flameSprite(flameTexture('#ff6a10'), 6), cCore = flameSprite(flameTexture('#ffe98a', 0.62), 7);
+  const cGlow = sprite(carried, FLAME, 0.8, 0.45);
+  cGlow.position.y = 0.2;
   const cLight = new PointLight(0xffb060, 0, 22, 1.5);
-  cLight.position.y = 0.3;
+  cLight.position.y = 0.25;
   carried.add(cLight);
   const ringM = new MeshBasicMaterial({ color: YELLOW, transparent: true, opacity: 0.85, side: DoubleSide, depthWrite: false, fog: false, toneMapped: false });
   const ring = new Mesh(new RingGeometry(0.9, 1, 48), ringM);
@@ -169,7 +199,9 @@ export function createView(scene) {
 
       // the small brazier: steady flame at home, dark coals while the flame is out
       const home = s.holder === null && !s.solved ? 1 : 0;
-      smallFlame.visible = home > 0;
+      // lights are never hidden (that recompiles shaders): the meshes hide, the light goes to 0
+      sOuter.visible = sCore.visible = sGlow.visible = home > 0;
+      if (!home) sLight.intensity = 0;
       small.coalM.emissive.setRGB(0.25, 0.05, 0).multiplyScalar(home ? 0.2 : 0);
       if (home) {
         sOuter.scale.set(flick, 1 + 0.12 * Math.sin(clock * 9), flick);
@@ -180,7 +212,7 @@ export function createView(scene) {
       // the carried flame and its ring
       const h = s.holder, pv = h === null || s.solved ? null : ctx.players[h];
       const show = !!(pv && pv.present);
-      carried.visible = show;
+      cOuter.visible = cCore.visible = cGlow.visible = show;
       ring.visible = disc.visible = show;
       if (!show) cLight.intensity = 0;
       else {
@@ -189,15 +221,17 @@ export function createView(scene) {
         const k = clamp(s.t / BURN, 0, 1);
         const low = s.t < 2;
         const fl = 1 + 0.18 * Math.sin(clock * 17) + 0.1 * Math.sin(clock * 29);
-        const shrink = lerp(0.55, 1, Math.min(1, k * 2));      // the flame itself dwindles a little at the end
-        cOuter.scale.set(fl * shrink, (1 + 0.2 * Math.sin(clock * 12)) * shrink, fl * shrink);
-        cCore.scale.set(fl * shrink, (1 + 0.15 * Math.sin(clock * 15 + 1)) * shrink, fl * shrink);
+        const shrink = lerp(0.7, 1, Math.min(1, k * 2));      // the flame itself dwindles a little at the end
+        const wob = 0.5 * (fl - 1), tall = 1 + 0.2 * Math.sin(clock * 12) + 0.08 * Math.sin(clock * 31);
+        cOuter.scale.set(0.3 * (1 + wob) * shrink, 0.44 * tall * shrink, 1);
+        cCore.scale.set(0.3 * (1 + wob) * shrink, 0.44 * (1 + 0.15 * Math.sin(clock * 15 + 1)) * shrink, 1);
+        cOuter.material.rotation = 0.1 * Math.sin(clock * 7); cCore.material.rotation = 0.08 * Math.sin(clock * 9 + 1);
         cLight.intensity = 9 * (0.5 + 0.5 * k) * (low ? 0.8 + 0.2 * Math.sin(clock * 30) : 1);
         // the ring: full radius at 6 s, nothing at 0; yellow, then red in the last two seconds
         const rr = Math.max(0.001, RING_R * k);
         ring.position.set(pv.x, pv.y + 0.09, pv.z); ring.scale.setScalar(rr);
         disc.position.set(pv.x, pv.y + 0.08, pv.z); disc.scale.setScalar(rr);
-        const col = low ? new Color(YELLOW).lerp(new Color(RED), clamp(1 - s.t / 2, 0, 1)) : null;
+        const col = low ? TMP_YELLOW.setHex(YELLOW).lerp(TMP_RED.setHex(RED), clamp(1 - s.t / 2, 0, 1)) : null;
         if (col) { ringM.color.copy(col); discM.color.copy(col); } else { ringM.color.setHex(YELLOW); discM.color.setHex(YELLOW); }
         ringM.opacity = low ? 0.7 + 0.3 * Math.sin(clock * 24) : 0.85;
       }

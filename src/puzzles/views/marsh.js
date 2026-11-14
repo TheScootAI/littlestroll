@@ -8,7 +8,7 @@ import {
   PlaneGeometry, InstancedMesh, Object3D, Color, AdditiveBlending, DoubleSide,
 } from 'three';
 import { SITES, MARSH_SURFACE, WATCH_STONE, heightAt, marshTileAt, marshTileCentre } from '../../world/layout.js';
-import { seesPath } from '../marsh.js';
+import { seesPath, sinksUnder } from '../marsh.js';
 import { clamp, rng } from '../../core/math.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
@@ -167,11 +167,12 @@ export function createView(scene) {
       const k = dt > 0 ? 1 - Math.exp(-dt / 0.18) : 1;
       const see = seesPath(s, me);
       const onPath = new Set(s.path);
+      const real = { ...ctx?.dyn, marsh: dynMask };
       const over = new Set();
-      for (const p of players) if (p && p.present) { const i = marshTileAt(p.x, p.z); if (i >= 0) over.add(i); }
+      for (const p of players) if (p && p.present) { const i = marshTileAt(p.x, p.z); if (i >= 0 && sinksUnder(p, i, real)) over.add(i); }
       tiles.forEach((t, i) => {
         // sink while a walker is over a slab that is not solid; it comes back up after
-        const give = over.has(i) && !((dynMask >> i) & 1);
+        const give = over.has(i);
         t.sink += ((give ? SINK : 0) - t.sink) * (give ? k * 1.6 : k * 0.5);
         t.g.position.y = t.baseY - t.sink;
         const want = see && onPath.has(i) ? 1 : 0;

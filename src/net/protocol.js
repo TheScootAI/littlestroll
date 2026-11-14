@@ -2,7 +2,7 @@
 import { dirFromYawPitch } from '../core/math.js';
 import { readInput } from '../player/input.js';
 
-export const PROTOCOL_V = 1;
+export const PROTOCOL_V = 2;   // bump whenever the shape of S or dyn, or what a message means, changes
 export const MAX_BYTES = 16384;
 
 // [field, min, max]
@@ -43,6 +43,18 @@ export function decode(text) {
     default:
       return null;
   }
+}
+
+// The version a well-formed hello/welcome claims, of ANY version, else null. decode() drops a
+// wrong-version handshake as a game message; this is how a session notices that is why.
+export function versionOf(text) {
+  if (typeof text !== 'string' || text.length > MAX_BYTES) return null;
+  let m;
+  try { m = JSON.parse(text); } catch { return null; }
+  if (!isPlain(m) || (m.t !== 'hello' && m.t !== 'welcome')) return null;
+  if (!Number.isInteger(m.v)) return null;
+  if (m.t === 'welcome' && (!Number.isSafeInteger(m.seed) || !Number.isInteger(m.solved) || m.solved < 0)) return null;
+  return m.v;
 }
 
 // Which decoded message types a side acts on. The host: `hello` until it has

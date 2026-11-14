@@ -1,28 +1,28 @@
 import { describe, test, expect } from 'vitest';
-import { encode, decode, shouldAccept, accepts, toPIn, snapshot, PROTOCOL_V, MAX_BYTES } from '../src/net/protocol.js';
+import { encode, decode, versionOf, shouldAccept, accepts, toPIn, snapshot, PROTOCOL_V, MAX_BYTES } from '../src/net/protocol.js';
 
 const P = { t: 'p', x: 1, y: 2, z: 3, yaw: 0.5, ay: 0.1, ap: -0.2, speed: 3.2, hold: true, eN: 4, q: false, shoutN: 1, waveN: 0, dist: 12.5 };
 
 describe('protocol', () => {
   test('round-trips every message type', () => {
     expect(decode(encode(P))).toEqual(P);
-    expect(decode(encode({ t: 'hello', v: 1 }))).toEqual({ t: 'hello', v: 1 });
-    const w = { t: 'welcome', v: 1, seed: 12345, solved: 2 };
+    expect(decode(encode({ t: 'hello', v: PROTOCOL_V }))).toEqual({ t: 'hello', v: PROTOCOL_V });
+    const w = { t: 'welcome', v: PROTOCOL_V, seed: 12345, solved: 2 };
     expect(decode(encode(w))).toEqual(w);
     expect(decode(encode({ t: 'full' }))).toEqual({ t: 'full' });
     const s = { t: 's', S: { time: 1, gate: { a: 1 } } };
     expect(decode(encode(s))).toEqual(s);
-    expect(PROTOCOL_V).toBe(1);
+    expect(PROTOCOL_V).toBe(2);
     expect(MAX_BYTES).toBe(16384);
   });
 
   test('drops anything malformed without throwing', () => {
     const bad = ['', 'not json', '[]', 'null', '{"t":"zap"}', '{"t":"p","x":"1"}',
       JSON.stringify({ t: 'p', x: 1e400 }), JSON.stringify({ t: 'p', x: null, y: 0, z: 0 }),
-      JSON.stringify({ t: 'hello', v: 2 }), 'x'.repeat(20000),
-      JSON.stringify({ t: 'welcome', v: 2, seed: 1, solved: 0 }),
-      JSON.stringify({ t: 'welcome', v: 1, seed: 1.5, solved: 0 }),
-      JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: 9 }),
+      JSON.stringify({ t: 'hello', v: 1 }), 'x'.repeat(20000),
+      JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: 0 }),
+      JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1.5, solved: 0 }),
+      JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: 9 }),
       JSON.stringify({ t: 's', S: [] }), JSON.stringify({ t: 's', S: null }),
       JSON.stringify({ ...P, hold: 1 }), JSON.stringify({ ...P, eN: -1 }), JSON.stringify({ ...P, eN: 1.5 }),
       JSON.stringify({ ...P, q: 'no' })];
@@ -31,9 +31,9 @@ describe('protocol', () => {
   });
 
   test('welcome.solved accepts 0 to 8 and rejects 9', () => {
-    for (const n of [0, 5, 8]) expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: n }))?.solved).toBe(n);
-    expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: 9 }))).toBeNull();
-    expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 1, solved: -1 }))).toBeNull();
+    for (const n of [0, 5, 8]) expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: n }))?.solved).toBe(n);
+    expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: 9 }))).toBeNull();
+    expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 1, solved: -1 }))).toBeNull();
   });
 
   test('a message too big is dropped even if valid', () => {
@@ -89,8 +89,8 @@ describe('protocol', () => {
     for (const o of bad) expect(decode(JSON.stringify({ ...P, ...o })), JSON.stringify(o)).toBeNull();
     const edge = { ...P, x: 10000, y: -10000, z: 10000, yaw: -100, ay: 100, ap: 100, speed: 50, dist: 1e7, eN: 1e9, shoutN: 1e9, waveN: 1e9 };
     expect(decode(JSON.stringify(edge))).toEqual(edge);
-    expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 2 ** 53, solved: 0 }))).toBeNull();
-    expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 2 ** 53 - 1, solved: 0 }))).not.toBeNull();
+    expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 2 ** 53, solved: 0 }))).toBeNull();
+    expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 2 ** 53 - 1, solved: 0 }))).not.toBeNull();
   });
 });
 
@@ -108,5 +108,21 @@ describe('pressTracker', () => {
     t.seen(5); t.reset();
     expect(t.seen(0)).toBe(false);
     expect(t.seen(1)).toBe(true);
+  });
+});
+
+describe('version detection', () => {
+  test('decode rejects the old protocol version', () => {
+    expect(decode(JSON.stringify({ t: 'hello', v: 1 }))).toBeNull();
+    expect(decode(JSON.stringify({ t: 'welcome', v: 1, seed: 5, solved: 0 }))).toBeNull();
+  });
+  test('versionOf reads the version of a well-formed hello/welcome of any version, else null', () => {
+    expect(versionOf(JSON.stringify({ t: 'hello', v: 1 }))).toBe(1);
+    expect(versionOf(JSON.stringify({ t: 'hello', v: 2 }))).toBe(2);
+    expect(versionOf(JSON.stringify({ t: 'welcome', v: 1, seed: 5, solved: 3 }))).toBe(1);
+    expect(versionOf(JSON.stringify({ t: 'welcome', v: 7, seed: 5, solved: 3 }))).toBe(7);
+    for (const j of ['', 'junk', '[]', 'null', '{"t":"p","v":1}', '{"t":"hello"}', '{"t":"hello","v":"1"}', '{"t":"hello","v":1.5}',
+      '{"t":"welcome","v":1}', '{"t":"full"}', 'x'.repeat(20000)]) expect(versionOf(j)).toBeNull();
+    for (const b of [undefined, null, 5, {}]) expect(versionOf(b)).toBeNull();
   });
 });

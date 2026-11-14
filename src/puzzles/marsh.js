@@ -2,7 +2,7 @@
 // only one random path of them is solid, and only someone standing on the watch-stone can see
 // which (the view decides that, with seesPath). The tiles hold only while a walker stays on the
 // watch-stone's plate, so the watcher has to talk the other across. Pure rules, no three.js.
-import { SITES } from '../world/layout.js';
+import { SITES, MARSH_SURFACE, heightAt, marshTileAt } from '../world/layout.js';
 import { rng } from '../core/math.js';
 
 const { cols: COLS, rows: ROWS } = SITES.marsh;
@@ -83,6 +83,15 @@ export const maskOf = (s) => (s.held || s.solved ? s.path.reduce((m, i) => m | (
 
 // May this walker see which tiles are safe? On the plate, or anyone once it is solved.
 export const seesPath = (s, walker) => !!s.solved || onPlate(walker);
+
+// Does a slab visibly give way under this walker? Only when the walker over it is actually
+// unsupported (the ground at their feet is below the surface); a walker on a safe tile's 0.3 m
+// margin over an unsafe neighbour is held, so the neighbour must not move (that would show
+// which tiles are safe). `dyn` is the real one.
+export function sinksUnder(walker, tileIndex, dyn) {
+  if (!walker?.present || marshTileAt(walker.x, walker.z) !== tileIndex) return false;
+  return heightAt(walker.x, walker.z, dyn) < MARSH_SURFACE - 0.2;
+}
 
 // Distance from p to the near edge of the grid (row 0), and whether p is over a tile.
 function nearEdge(p) {

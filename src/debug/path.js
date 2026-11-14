@@ -13,7 +13,7 @@
 // clearance only costs more; it is never forbidden. The raw cell path is then string-pulled
 // into a few waypoints, and a straight cut is taken only if it keeps as much clearance as the
 // cells it replaces (up to CLEAR_KEEP), so simplification never pulls the route to an edge.
-import { heightAt, blockers, DYN_NONE } from '../world/layout.js';
+import { heightAt, blockers, lookDyn, DYN_NONE } from '../world/layout.js';
 import { DROWN_Y, STEP_UP, PLAYER_R } from '../config.js';
 import { pointSegDist } from '../core/math.js';
 
@@ -337,3 +337,7 @@ export function steer(pos, path, i, { dyn = DYN_NONE, run = true, within = 0.4, 
   if (fast && d < SLOW_NEAR && (i === last || turnAt(path[i - 1], w, path[i + 1]) > SLOW_TURN)) fast = false;
   return { i, camYaw: d > 0.02 ? yawTo(dx, dz) : camYaw, mz: 1, run: fast, done: false };
 }
+
+// The world the pilot plans and steers on: what a player sees. Until the Marsh is solved every
+// tile looks solid (the live mask would show the secret path); after, the real dyn.
+export const planningDyn = (dyn, marshSolved) => (marshSolved ? { ...dyn } : lookDyn(dyn));

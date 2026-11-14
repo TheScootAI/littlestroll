@@ -7,7 +7,7 @@ import {
   ConeGeometry, CylinderGeometry, DoubleSide,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { heightAt, zoneAt, ZONES, RAMPS, TRAIL, PLANK_CORRIDOR, SITES, DYN_NONE } from './layout.js';
+import { heightAt, zoneAt, ZONES, RAMPS, TRAIL, PLANK_CORRIDOR, SITES, WATCH_STONE, DYN_NONE } from './layout.js';
 import { pointSegDist, clamp, lerp } from '../core/math.js';
 import { WATER_Y } from '../config.js';
 
@@ -182,6 +182,63 @@ export function placeScenery(seed = 20261113) {
   return out;
 }
 
+// ---- the Far Isle's scenery: the same rules, zones G to J, from its OWN seeded stream so the
+// first island's placements (above) are never disturbed.
+const FAR_GREEN = new Set(['G', 'H', 'I', 'J']);
+const FAR_X0 = 66;                                  // west of this is the first island and the causeway
+const MARSH_KEEP = 3;                               // metres off any marsh tile
+const FAR_ANCHORS = [SITES.marsh.lever, [SITES.marsh.plate.x, SITES.marsh.plate.z], SITES.relay.small, SITES.relay.great];
+const GRID_CENTRE = (() => {
+  const { origin, right, fwd, tile, cols, rows } = SITES.marsh;
+  const u = (cols * tile) / 2, v = (rows * tile) / 2;
+  return [origin[0] + right[0] * u + fwd[0] * v, origin[1] + right[1] * u + fwd[1] * v];
+})();
+
+// Distance from (x, z) to the marsh grid's rectangle (0 over it).
+function marshDistance(x, z) {
+  const { origin, right, fwd, tile, cols, rows } = SITES.marsh;
+  const u = (x - origin[0]) * right[0] + (z - origin[1]) * right[1];
+  const v = (x - origin[0]) * fwd[0] + (z - origin[1]) * fwd[1];
+  return Math.hypot(Math.max(0, -u, u - cols * tile), Math.max(0, -v, v - rows * tile));
+}
+
+// Everything the Far Isle must keep clear: sites, ramps, trail, the marsh, the watch-stone and
+// its sight line to the grid, the lever, the plate and both braziers.
+function farClear(x, z) {
+  if (featureClearance(x, z) < 3 || marshDistance(x, z) < MARSH_KEEP) return false;
+  for (const [ax, az] of FAR_ANCHORS) if (Math.hypot(x - ax, z - az) < 3) return false;
+  if (Math.hypot(x - WATCH_STONE.x, z - WATCH_STONE.z) < WATCH_STONE.r + 3) return false;
+  return pointSegDist(x, z, WATCH_STONE.x, WATCH_STONE.z, GRID_CENTRE[0], GRID_CENTRE[1]).d >= 3;
+}
+
+const FAR_RULES = {
+  trees: { count: 26, ok: (x, z) => FAR_GREEN.has(zoneAt(x, z)) && zoneAt(x, z) !== 'J' && trailDistance(x, z) >= 6 && level(x, z, 1.2, 0.3) },
+  boulders: { count: 12, ok: (x, z) => zoneAt(x, z) !== null && zoneAt(x, z) !== 'J' && heightAt(x, z) > WATER_Y + 0.5 && trailDistance(x, z) >= 4.5 && level(x, z, 1, 0.4) },
+  rocks: { count: 30, ok: (x, z) => zoneAt(x, z) !== null && heightAt(x, z) > -0.6 && level(x, z, 0.4, 0.5) },
+  tufts: { count: 200, ok: (x, z) => FAR_GREEN.has(zoneAt(x, z)) && level(x, z, 0.3, 0.2) },
+};
+
+export function placeFarScenery(seed = 20261114) {
+  const rnd = mulberry32(seed);
+  const e = terrainExtent();
+  const out = {};
+  for (const [kind, rule] of Object.entries(FAR_RULES)) {
+    const list = [];
+    for (let tries = 0; list.length < rule.count && tries < rule.count * 400; tries++) {
+      const x = lerp(FAR_X0, e.x1, rnd()), z = lerp(e.z0, e.z1, rnd());
+      const r1 = rnd(), r2 = rnd(), r3 = rnd();
+      if (!farClear(x, z) || !rule.ok(x, z)) continue;
+      const item = { x, y: heightAt(x, z), z, rot: r1 * Math.PI * 2, s: 0.75 + r2 * 0.6, tint: r3 };
+      if (kind === 'trees') item.kind = r3 < 0.55 ? 'pine' : 'round';
+      if (kind === 'boulders') item.y -= 0.2 * item.s;
+      if (kind === 'rocks') item.y -= 0.05;
+      list.push(item);
+    }
+    out[kind] = list;
+  }
+  return out;
+}
+
 // ------------------------------------------------------------------ terrain mesh
 
 const col = (hex) => new Color(hex);   // converts sRGB hex to the linear working space
@@ -321,7 +378,8 @@ function instanced(geo, items, base, place, shadows = true) {
 }
 
 function buildScenery(scene) {
-  const s = placeScenery();
+  const a = placeScenery(), b = placeFarScenery();
+  const s = Object.fromEntries(Object.keys(a).map((k) => [k, [...a[k], ...b[k]]]));
   const trees = s.trees, pines = trees.filter((t) => t.kind === 'pine'), rounds = trees.filter((t) => t.kind === 'round');
   const put = (sy = 1, dy = 0) => (it, o) => { o.position.set(it.x, it.y + dy, it.z); o.rotation.set(0, it.rot, 0); o.scale.set(it.s, it.s * sy, it.s); };
 

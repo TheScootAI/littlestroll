@@ -2,7 +2,7 @@
 // peer id is littlerun-<CODE>. Everything on the wire goes through protocol.js.
 import { Peer } from 'peerjs';
 import { peerIdFor } from './code.js';
-import { encode, decode, accepts, PROTOCOL_V } from './protocol.js';
+import { encode, decode, versionOf, accepts, PROTOCOL_V } from './protocol.js';
 import { retryDelay, shouldReplacePartner, isSilent, SILENCE_MS } from './reconnect.js';
 
 const ATTEMPT_MS = 2500;   // one reconnect attempt that has not been welcomed by now has failed
@@ -101,7 +101,12 @@ export class Session {
   _hostData(c, d) {
     if (c !== this.conn) return;
     const m = decode(d);
-    if (!m || !accepts('host', this.welcomed, m.t)) return;
+    if (!m) {
+      // an old-build partner: free the slot so a refreshed one can come in
+      if (this._checkVersion(d)) this._drop(c);
+      return;
+    }
+    if (!accepts('host', this.welcomed, m.t)) return;
     this.lastRx = performance.now();
     if (m.t === 'hello') {
       const w = this.getWelcome();
@@ -112,6 +117,14 @@ export class Session {
       return;
     }
     this.onMessage(m);
+  }
+
+  // A hello/welcome from another version of the page: report it (the game says so). True if it was one.
+  _checkVersion(d) {
+    const v = versionOf(d);
+    if (v === null || v === PROTOCOL_V || this.status === 'connected') return false;
+    this._status('version');
+    return true;
   }
 
   static join(code, { timeoutMs = 12000 } = {}) {
@@ -219,7 +232,12 @@ export class Session {
 
   _joinData(d) {
     const m = decode(d);
-    if (!m || !accepts('join', this.welcomed, m.t)) return;
+    if (!m) {
+      // a wrong-version welcome: stop retrying, say why
+      if (this._checkVersion(d)) { clearTimeout(this.timer); this._stopRetry(); this._teardown(); }
+      return;
+    }
+    if (!accepts('join', this.welcomed, m.t)) return;
     this.lastRx = performance.now();
     if (m.t === 'full') {
       clearTimeout(this.timer);
