@@ -486,6 +486,7 @@ export const SITES = {
     posts: POSTS,
     tally: TALLY,
     lamp: [...TOR_C],
+    lampH: 8,        // the great lamp's flame centre above the tor's top (the ending shot frames it)
   },
   owls: OWLS,
 };

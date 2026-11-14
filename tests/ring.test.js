@@ -91,6 +91,22 @@ test('a wrong stone lights exactly like a right one and gives nothing away', () 
   expect(s.solved).toBe(false);
 });
 
+test('after an earlier wrong four, miss keeps counting up from 0; one touch, right or wrong, does not reset it', () => {
+  const s = create(4);
+  const wrong = [0, 1, 2, 3, 4, 5, 6, 7].filter((k) => !s.order.includes(k));
+  for (const k of [...s.order].reverse()) touch(s, k);
+  expect(s.touched).toEqual([]); expect(s.miss).toBe(0);
+  run(s, 1); expect(s.miss).toBeCloseTo(1, 1);
+  const before = s.miss;
+  touch(s, wrong[0]);
+  expect(s.touched).toEqual([wrong[0]]); expect(s.miss).toBeGreaterThan(before);
+  const mid = s.miss;
+  touch(s, s.order[0]);
+  expect(s.touched).toEqual([wrong[0], s.order[0]]); expect(s.miss).toBeGreaterThan(mid);
+  run(s, 1); expect(s.miss).toBeGreaterThan(mid + 0.9);
+  expect(s.miss).toBeLessThan(999);
+});
+
 test('four that are not the order (even the right four in the wrong order) go out; the deal stays', () => {
   const s = create(6);
   const deal0 = JSON.stringify({ signs: s.signs, order: s.order });
@@ -201,7 +217,34 @@ test('valid accepts create and its JSON round-trip; rejects bad slices', () => {
   expect(bad((t) => { t.miss = NaN; })).toBe(false);
   expect(bad((t) => { t.miss = -1; })).toBe(false);
   expect(bad((t) => { t.solved = 1; })).toBe(false);
-  expect(bad((t) => { t.touched = [0, 1, 2, 3]; })).toBe(true);
+});
+
+test('valid: four touched only when solved, solved means the order, steps only when solved', () => {
+  const s = create(9);
+  const bad = (f) => { const t = JSON.parse(JSON.stringify(s)); f(t); return valid(t); };
+  const other = [0, 1, 2, 3, 4, 5, 6, 7].filter((k) => !s.order.includes(k));
+  // four touched but not solved
+  expect(bad((t) => { t.touched = [...t.order]; })).toBe(false);
+  expect(bad((t) => { t.touched = other.slice(0, 4); })).toBe(false);
+  // solved, but not touched = order
+  expect(bad((t) => { t.solved = true; t.touched = [...t.order].reverse(); })).toBe(false);
+  expect(bad((t) => { t.solved = true; t.touched = other.slice(0, 4); })).toBe(false);
+  expect(bad((t) => { t.solved = true; t.touched = t.order.slice(0, 3); })).toBe(false);
+  expect(bad((t) => { t.solved = true; t.touched = []; })).toBe(false);
+  // steps up while not solved
+  expect(bad((t) => { t.steps = 0.5; })).toBe(false);
+  expect(bad((t) => { t.touched = [t.order[0]]; t.steps = 0.1; })).toBe(false);
+  // still fine: mid-order, solved with steps rising, solved from real play, forceSolve, and round-trips
+  expect(bad((t) => { t.touched = t.order.slice(0, 3); })).toBe(true);
+  expect(bad((t) => { t.solved = true; t.touched = [...t.order]; t.steps = 0; })).toBe(true);
+  expect(bad((t) => { t.solved = true; t.touched = [...t.order]; t.steps = 0.5; })).toBe(true);
+  const mid = create(9); touch(mid, mid.order[0]); touch(mid, mid.order[1]);
+  expect(valid(mid)).toBe(true); expect(valid(JSON.parse(JSON.stringify(mid)))).toBe(true);
+  const real = create(9); for (const k of real.order) touch(real, k); run(real, 1);
+  expect(real.solved).toBe(true); expect(real.steps).toBeGreaterThan(0);
+  expect(valid(real)).toBe(true); expect(valid(JSON.parse(JSON.stringify(real)))).toBe(true);
+  const f = create(9); forceSolve(f);
+  expect(valid(f)).toBe(true); expect(valid(JSON.parse(JSON.stringify(f)))).toBe(true);
 });
 
 test('forceSolve', () => {

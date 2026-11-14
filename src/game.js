@@ -30,8 +30,7 @@ import { createView as createMarshView } from './puzzles/views/marsh.js';
 import { createView as createPillarsView } from './puzzles/views/pillars.js';
 import { createView as createRingView } from './puzzles/views/ring.js';
 import { createView as createLanternsView } from './puzzles/views/lanterns.js';
-import { LAMP_H } from './puzzles/lanterns.js';
-import { OWLS, count as owlCount } from './puzzles/owls.js';
+import { OWLS, count as owlCount, news as owlNews } from './puzzles/owls.js';
 import { createView as createOwlsView } from './puzzles/views/owls.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
@@ -44,7 +43,7 @@ export const SCARF = [0xf08a3c, 0x2fb5a6];   // host orange, joiner teal
 // the Far Isle's summit and the string of islands behind it.
 const lampShot = () => {
   const [lx, lz] = SITES.lanterns.lamp;
-  return endShot([lx, heightAt(lx, lz) + LAMP_H, lz], SITES.relay.great);
+  return endShot([lx, heightAt(lx, lz) + SITES.lanterns.lampH, lz], SITES.relay.great);
 };
 const smooth = (t) => t * t * (3 - 2 * t);
 
@@ -231,13 +230,15 @@ export class Game {
     let flashed = false;
     if (n > this.solved) { this.hud?.flash(solvedLine(n - 1)); this.audio.riff(n - 1, !!this.S.ended); flashed = true; }
     this.solved = n;
-    // an owl found (host or joiner alike); the first state after a welcome only sets the baseline
-    const oc = owlCount(this.S.owls | 0);
-    if (this.owlPrev != null && oc > this.owlPrev) {
-      if (!flashed) this.hud?.flash(`An owl — ${oc} of ${OWLS}`);
+    // an owl found (host or joiner alike); the first state after a welcome only sets the baseline.
+    // Its line waits for a "solved" flash from the same update to finish (that one lasts 3 s).
+    const owl = owlNews(this.owlPrev, owlCount(this.S.owls | 0));
+    if (owl.line) {
+      if (!flashed) this.hud?.flash(owl.line);
+      else setTimeout(() => this.hud?.flash(owl.line), 3200);
       this.audio.hoot();
     }
-    this.owlPrev = oc;
+    this.owlPrev = owl.next;
     const amt = this.S.gate?.amt ?? 0;
     if (Math.abs(amt - this.gateAmt) > 1e-4) this.audio.creak();
     this.gateAmt = amt;

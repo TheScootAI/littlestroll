@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest';
-import { BURN, REACH, POSTS, TALLY_SLOT, tallyYaw, create, step, prompt, valid, forceSolve } from '../src/puzzles/lanterns.js';
-import { createAll, stepAll, solvedCount, dynOf, promptFor, forceSolved, validState, solvedLine } from '../src/puzzles/index.js';
+import { BURN, REACH, POSTS, TALLY_SLOT, tallyYaw, glowOf, create, step, prompt, valid, forceSolve } from '../src/puzzles/lanterns.js';
+import { createAll, stepAll, dynOf, promptFor, forceSolved, solvedLine } from '../src/puzzles/index.js';
 import { SITES, DYN_NONE, PILLAR_BITS } from '../src/world/layout.js';
 import { walkDistance } from './helpers/reach.js';
 import { RUN } from '../src/config.js';
@@ -123,6 +123,19 @@ test('forceSolve: all burning for good', () => {
   expect(valid(s)).toBe(true);
 });
 
+test('valid: solved needs every lantern burning; a real solved state and forceSolve stay valid', () => {
+  const s = create();
+  for (let i = 0; i < POSTS; i++) press(s, i);
+  expect(s.solved).toBe(true);
+  expect(valid(s)).toBe(true);
+  expect(valid(JSON.parse(JSON.stringify(s)))).toBe(true);
+  const f = create(); forceSolve(f);
+  expect(valid(JSON.parse(JSON.stringify(f)))).toBe(true);
+  expect(valid({ solved: true, t: [0, BURN, BURN, BURN, BURN, BURN] })).toBe(false);
+  expect(valid({ solved: true, t: [BURN, BURN, BURN, BURN, BURN, 0] })).toBe(false);
+  expect(valid({ solved: false, t: [0, BURN, BURN, BURN, BURN, BURN] })).toBe(true);
+});
+
 // ---- the geometry, against the real posts and this module's BURN
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 function perms(a) {
@@ -179,4 +192,14 @@ test('TALLY_SLOT: a permutation of 0-5; neighbouring niches never belong to neig
     const d = Math.abs(at[k] - at[k + 1]);
     expect(Math.min(d, POSTS - d)).toBeGreaterThan(1);
   }
+});
+
+test('glowOf: each lantern\'s remaining share of its burn, rounded up to a quarter; solved is all 1', () => {
+  expect(glowOf({ t: [0, 0.1, BURN / 2, BURN, BURN * 0.26, BURN * 0.75], solved: false })).toEqual([0, 0.25, 0.5, 1, 0.5, 0.75]);
+  expect(glowOf({ t: [0, 0, 0, 0, 0, 0], solved: false })).toEqual([0, 0, 0, 0, 0, 0]);
+  expect(glowOf({ t: [BURN / 4, BURN / 4 + 0.001, 3 * BURN / 4, BURN - 0.001, 1e-9, BURN / 100], solved: false })).toEqual([0.25, 0.5, 0.75, 1, 0.25, 0.25]);
+  const f = create(); forceSolve(f);
+  expect(glowOf(f)).toEqual([1, 1, 1, 1, 1, 1]);
+  expect(glowOf({ t: [0, 0, 0, 0, 0, 0], solved: true })).toEqual([1, 1, 1, 1, 1, 1]);
+  expect(glowOf(create())).toHaveLength(6);
 });

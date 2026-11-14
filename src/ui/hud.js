@@ -62,6 +62,13 @@ export const fmtTime = (s) => {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
 
+// "5 of 8" from [found, total]; a bad or negative number shows as 0; null unless an array of two.
+export const owlsLine = (owls) => {
+  if (!Array.isArray(owls) || owls.length !== 2) return null;
+  const n = (v) => (Number.isFinite(v) && v >= 0 ? v : 0);
+  return `${n(owls[0])} of ${n(owls[1])}`;
+};
+
 export function createHud(root) {
   injectStyles('lr-hud-css', CSS);
   const hud = el('div', 'lr-hud');
@@ -137,9 +144,10 @@ export function createHud(root) {
       const t = el('p', 'time', 'Time ');
       t.appendChild(el('b', '', fmtTime(time)));
       card.appendChild(t);
-      if (Array.isArray(owls)) {
+      const owlText = owlsLine(owls);
+      if (owlText !== null) {
         const o = el('p', 'time', 'Owls found ');
-        o.appendChild(el('b', '', `${owls[0]} of ${owls[1]}`));
+        o.appendChild(el('b', '', owlText));
         card.appendChild(o);
       }
       const walkers = el('div', 'walkers');

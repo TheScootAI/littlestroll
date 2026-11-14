@@ -143,7 +143,7 @@ export function createView(scene) {
     pad.position.set(sp.x, heightAt(sp.x, sp.z) + 0.03, sp.z);
     pad.receiveShadow = true;
     root.add(pad);
-    return { face: face_, signMats, shown: null };
+    return { face: face_, signMats, shown: signMats.map(() => -1) };   // the sign last drawn on each slot
   });
 
   // ---- steps (as the bells')
@@ -180,11 +180,13 @@ export function createView(scene) {
         const on = seesFace(s, face, players, ctx?.localIdx ?? 0);
         sd.face.visible = on;
         if (!on) return;
-        const key = face ? s.signs.join() : s.order.map((k) => s.signs[k]).join();
-        if (sd.shown === key) return;
-        sd.shown = key;
-        const list = face ? s.signs : s.order.map((k) => s.signs[k]);
-        sd.signMats.forEach((m, k) => { m.map = tex[list[k]]; m.needsUpdate = true; });
+        // redraw only when a slot's sign differs from the one drawn (compared in place: no per-frame allocation)
+        for (let k = 0; k < sd.signMats.length; k++) {
+          const v = face ? s.signs[k] : s.signs[s.order[k]];
+          if (sd.shown[k] === v) continue;
+          sd.shown[k] = v;
+          sd.signMats[k].map = tex[v]; sd.signMats[k].needsUpdate = true;
+        }
       });
       for (const q of treads) {
         const k = smooth(clamp((s.steps - q.delay) / (1 - 0.45), 0, 1));

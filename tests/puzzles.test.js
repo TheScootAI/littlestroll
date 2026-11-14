@@ -206,13 +206,13 @@ test('owls: createAll starts at 0, a walker on an owl sets its bit, finding all 
   const S = createAll(2);
   expect(S.owls).toBe(0);
   const [x, z] = SITES.owls[5];
-  stepAll(S, [P([x, z]), P(far)], 0.05);
+  stepAll(S, [P([x, z], { y: hAt(x, z) }), P(far)], 0.05);
   expect(S.owls).toBe(1 << 5);
-  for (const [ax, az] of SITES.owls) stepAll(S, [P([ax, az]), P(far)], 0.05);
+  for (const [ax, az] of SITES.owls) stepAll(S, [P([ax, az], { y: hAt(ax, az) }), P(far)], 0.05);
   expect(S.owls).toBe(255);
   expect(solvedCount(S)).toBe(0);
   expect(S.ended).toBe(null);
-  expect(promptFor(S, 0, [P([x, z]), P(far)])).toBe(promptFor(createAll(2), 0, [P([x, z]), P(far)]));
+  expect(promptFor(S, 0, [P([x, z], { y: hAt(x, z) }), P(far)])).toBe(promptFor(createAll(2), 0, [P([x, z], { y: hAt(x, z) }), P(far)]));
 });
 test('validState rejects a bad or missing owls', () => {
   for (const v of [256, -1, 1.5, NaN, '1', undefined]) {

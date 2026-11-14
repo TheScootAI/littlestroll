@@ -9,7 +9,6 @@ export const BURN = 28, REACH = 1.5, POSTS = 6;
 // The tally stone's niche slot (left to right) for each lantern: no two neighbouring slots hold
 // posts that are neighbours round the tor, so the row does not read as a map.
 export const TALLY_SLOT = [0, 5, 3, 1, 4, 2];
-export const LAMP_H = 8;      // the great lamp's flame centre above the tor's top (the ending shot frames it)
 
 const posts = SITES.lanterns.posts;
 
@@ -41,7 +40,11 @@ export function prompt(s, idx, players) {
 }
 
 export const valid = (s) => !!s && typeof s === 'object' && Array.isArray(s.t) && s.t.length === POSTS &&
-  s.t.every((v) => Number.isFinite(v) && v >= 0 && v <= BURN) && typeof s.solved === 'boolean';
+  s.t.every((v) => Number.isFinite(v) && v >= 0 && v <= BURN) && typeof s.solved === 'boolean' && (!s.solved || s.t.every((v) => v > 0));
+
+// What a player can tell of each flame: its remaining share of the burn, rounded UP to a quarter
+// (0 dark, 0.25, 0.5, 0.75, 1). Solved: all 1.
+export const glowOf = (s) => s.t.map((v) => (s.solved ? 1 : (v > 0 ? Math.min(1, Math.max(1, Math.ceil(v / BURN * 4 - 1e-9)) / 4) : 0)));
 
 export function forceSolve(s) { s.t.fill(BURN); s.solved = true; }
 

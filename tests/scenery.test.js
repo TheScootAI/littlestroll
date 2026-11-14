@@ -4,6 +4,7 @@ import { placeScenery, placeFarScenery, placeLanternScenery, featureClearance, t
 import { marshTileAt, WATCH_STONE } from '../src/world/layout.js';
 import island1 from './helpers/scenery-island1.json';
 import island2 from './helpers/scenery-island2.json';
+import island3 from './helpers/scenery-island3.json';
 import { SITES, RAMPS, ZONES, TRAIL, PLANK_CORRIDOR, heightAt, zoneAt, DYN_NONE } from '../src/world/layout.js';
 import { pointSegDist } from '../src/core/math.js';
 import { WATER_Y } from '../src/config.js';
@@ -264,6 +265,10 @@ describe('Lantern Isle scenery', () => {
   test('no tree or boulder within 2.5 m of a stone, post, tally, owl or checkpoint slot', () => {
     for (const it of [...lan.trees, ...lan.boulders]) for (const [ax, az] of keep) expect(Math.hypot(it.x - ax, it.z - az)).toBeGreaterThanOrEqual(2.5);
   });
+  test('no rock or tuft within 3 m of a stone, post, tally, lamp, owl or checkpoint slot (the same clearance as trees)', () => {
+    const anchors = [...keep, lanterns.lamp];
+    for (const it of [...lan.rocks, ...lan.tufts]) for (const [ax, az] of anchors) expect(Math.hypot(it.x - ax, it.z - az)).toBeGreaterThanOrEqual(3);
+  });
   test('nothing within 2 m of the steps or the trail, and nothing inside the ring', () => {
     for (const it of lanAll) {
       expect(trailDistance(it.x, it.z)).toBeGreaterThanOrEqual(2);
@@ -304,9 +309,13 @@ describe('Lantern Isle scenery', () => {
         expect(c.y).toBeLessThan(tor.h + 0.5);
       }
     });
-    test('placing them does not move the rest of the island', () => {
-      const { crag: _, ...rest } = lan;
-      expect(Object.keys(rest)).toEqual(['trees', 'boulders', 'rocks', 'tufts']);
+    test('the Lantern Isle is placed exactly as before (every item of every kind, the crag too)', () => {
+      const r6 = (v) => Math.round(v * 1e6) / 1e6;
+      expect(Object.keys(lan)).toEqual(Object.keys(island3));
+      for (const k of Object.keys(island3)) {
+        expect(lan[k].length).toBe(island3[k].n);
+        expect(lan[k].map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island3[k].all);
+      }
     });
   });
 });

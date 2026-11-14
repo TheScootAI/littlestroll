@@ -70,9 +70,12 @@ export function prompt(s, idx, players) {
 
 const distinct = (a, n, max) => Array.isArray(a) && a.length === n && a.every((v) => Number.isInteger(v) && v >= 0 && v < max) && new Set(a).size === n;
 
+// Four touched is only ever the solved state (a wrong four goes out at once), solved means the
+// touched four are the order, and the steps only rise once solved.
 export const valid = (s) => !!s && typeof s === 'object' && distinct(s.signs, STONES, STONES) && distinct(s.order, LEN, STONES) &&
   Array.isArray(s.touched) && s.touched.length <= LEN && distinct(s.touched, s.touched.length, STONES) &&
   Number.isFinite(s.miss) && s.miss >= 0 && s.miss <= 999 && Number.isFinite(s.steps) && s.steps >= 0 && s.steps <= 1 &&
-  typeof s.solved === 'boolean';
+  typeof s.solved === 'boolean' &&
+  (s.touched.length === LEN) === s.solved && (!s.solved || s.touched.every((v, i) => v === s.order[i])) && (s.steps === 0 || s.solved);
 
 export function forceSolve(s) { s.touched = [...s.order]; s.steps = 1; s.solved = true; }

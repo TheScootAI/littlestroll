@@ -10,7 +10,7 @@ import {
 } from 'three';
 import { SITES, heightAt } from '../../world/layout.js';
 import { clamp, rng } from '../../core/math.js';
-import { BURN, POSTS, LAMP_H, TALLY_SLOT, tallyYaw } from '../lanterns.js';
+import { BURN, POSTS, TALLY_SLOT, tallyYaw } from '../lanterns.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 const STONE = 0xb9b0bf, STONE_DARK = 0x9d93a8, IRON = 0x4a4350, ACCENT = 0xf08a3c, NICHE_OFF = 0x2c2733;
@@ -89,7 +89,7 @@ export function createView(scene) {
 
   // ---- the tally stone: faces the head of the steps; a straight row of six niches, scrambled (TALLY_SLOT)
   const [tx, tz] = SITES.lanterns.tally, ty = heightAt(tx, tz);
-    const tally = new Group();
+  const tally = new Group();
   tally.position.set(tx, ty, tz);
   tally.rotation.y = tallyYaw() + Math.PI;                    // its local +z faces the head of the steps (checkpoint 10)
   const slab = new Mesh(new BoxGeometry(1.5, 0.95, 0.5), stoneM);
