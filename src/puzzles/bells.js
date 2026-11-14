@@ -39,7 +39,7 @@ export function step(s, players, dt) {
 export function prompt(s, idx, players) {
   const me = players[idx];
   if (s.solved || !me?.present || bellNear(me) < 0) return null;
-  return s.hint ? 'Ring them together — count it down' : 'E — ring the bell';
+  return 'E — ring the bell';
 }
 
 export const valid = (s) => !!s && typeof s === 'object' &&

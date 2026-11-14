@@ -105,12 +105,13 @@ test('prompts', () => {
   expect(prompt(s, 0, [P(A), P(far)])).toBe('E — pick up this end');
   expect(prompt(s, 0, [P(far), P(far)])).toBeNull();
   step(s, [press(A), P(far)], 0.03);
-  expect(prompt(s, 0, [P(A), P(far)])).toBe('Your friend needs to take the other end · E to let go');
+  expect(prompt(s, 0, [P(A), P(far)])).toBe('E — let go');
   s.holdB = 1;
-  expect(prompt(s, 0, [P(A), P(B)])).toBe('Carry it to the gap together');
+  expect(prompt(s, 0, [P(A), P(B)])).toBe('E — let go');
   const [sx, sz] = SITES.plank.slot;
   s.ax = sx - 2; s.az = sz; s.bx = sx + 2; s.bz = sz;
-  expect(prompt(s, 1, [P(A), P(B)])).toBe('E — set it down across the gap');
+  expect(prompt(s, 1, [P(A), P(B)])).toBe('E — let go');
+  expect(prompt(s, 0, [P(A), P(B)])).toBe('E — let go');
   s.placed = true;
   expect(prompt(s, 0, [P(A), P(B)])).toBeNull();
 });

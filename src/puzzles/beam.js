@@ -143,13 +143,8 @@ export function step(s, players, dt) {
 export function prompt(s, idx, players) {
   const me = players[idx];
   if (s.solved || !me?.present) return null;
-  if (carries(s, idx)) {
-    const r = trace(holdersOf(s, players));
-    if (!r.hit.includes(idx)) return 'Stand in the light';
-    if (!r.onLens) return 'Aim the light — look where you want it to go';
-  } else if (freeNear(s, me)) return 'E — pick up the mirror';
-  if (s.charge > 0) return 'Hold it there…';
-  return null;
+  if (carries(s, idx)) return 'E — put down the mirror';
+  return freeNear(s, me) ? 'E — pick up the mirror' : null;
 }
 
 const fin = (v) => typeof v === 'number' && Number.isFinite(v);

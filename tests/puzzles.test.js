@@ -28,7 +28,7 @@ test('gate opens dyn, and solvedCount follows it', () => {
   for (let i = 0; i < 30; i++) stepAll(S, two, 1 / 30);
   expect(dynOf(S).gateOpen).toBe(true);
   expect(solvedCount(S)).toBe(0);
-  expect(promptFor(S, 0, two)).toMatch(/Stay here/);
+  expect(promptFor(S, 0, two)).toBe(null);
   expect(constraintFor(S, 0, two)).toBe(null);
   const b = SITES.gate.plateB;
   const through = [P(b), P([b[0] + 1, b[1]])];

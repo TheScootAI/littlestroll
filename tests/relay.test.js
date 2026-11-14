@@ -133,7 +133,7 @@ test('prompts', () => {
   expect(prompt(s, 0, [P(far), P(far)])).toBe(null);
   expect(prompt(s, 0, [gone, P(far)])).toBe(null);
   const h = held(0);
-  expect(prompt(h, 0, [P(far), P(far)])).toBe("Pass it on before it burns out — you can't run");
+  expect(prompt(h, 0, [P(far), P(far)])).toBe("You can't run with the flame");
   expect(prompt(h, 0, [P(off(great, 1)), P(far)])).toBe('E — light the brazier');
   expect(prompt(h, 1, [P(far), P(off(far, 1))])).toBe('E — take the flame');
   expect(prompt(h, 1, [P(far), P(off(far, 5))])).toBe(null);
@@ -158,7 +158,7 @@ test('index: the relay is last; lighting it ends the walk', () => {
   S.time = 50;
   stepAll(S, [P(small, { pressed: true }), P(far)], 1 / 30);
   expect(S.relay.holder).toBe(0);
-  expect(promptFor(S, 0, [P(far), P(far)])).toBe("Pass it on before it burns out — you can't run");
+  expect(promptFor(S, 0, [P(far), P(far)])).toBe("You can't run with the flame");
   stepAll(S, [P(great, { pressed: true }), P(far)], 1 / 30);
   expect(S.relay.solved).toBe(true);
   expect(S.ended).toEqual({ time: expect.any(Number) });

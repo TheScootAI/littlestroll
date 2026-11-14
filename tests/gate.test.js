@@ -20,6 +20,22 @@ test('never closes on a walker in the doorway', () => {
   settle(s, [P(far), P(mid)]);
   expect(s.open).toBe(true);
 });
+test('walking up to a shut gate does not open it', () => {
+  const s = create(); const d = SITES.gate.door;
+  const mid = [(d.ax + d.bx) / 2, (d.az + d.bz) / 2];
+  settle(s, [P([mid[0], mid[1] + 0.4]), P(far)]);   // as close as the shut door lets a walker stand
+  expect(s.open).toBe(false); expect(s.amt).toBe(0);
+  settle(s, [P(mid), gone]);
+  expect(s.open).toBe(false);
+});
+test('a lone walker cannot hold a plate and then reach the doorway in time', () => {
+  const s = create(); const d = SITES.gate.door;
+  settle(s, [P(SITES.gate.plateA), P(far)]);
+  settle(s, [P([0, 104]), P(far)]);                  // off the plate, still metres short of the door
+  expect(s.open).toBe(false);
+  settle(s, [P([d.ax + 2.5, d.az + 0.4]), P(far)]);
+  expect(s.open).toBe(false);
+});
 test('solved only when both are through, and then stays open', () => {
   const s = create(); const b = SITES.gate.plateB;
   settle(s, [P(b), P(far)]); expect(s.solved).toBe(false);
@@ -31,11 +47,12 @@ test('a walker on the ramp does not count as through', () => {
   const s = create(); const b = SITES.gate.plateB;
   settle(s, [P(b), P([0, 95])]); expect(s.solved).toBe(false);
 });
-test('prompt asks the plate holder to stay, until solved', () => {
+test('prompt never hints: a plate holder gets null, open or solved', () => {
   const s = create(); const a = SITES.gate.plateA;
   const ps = [P(a), P(far)];
   settle(s, ps);
-  expect(prompt(s, 0, ps)).toMatch(/Stay here/);
+  expect(s.open).toBe(true);
+  expect(prompt(s, 0, ps)).toBe(null);
   expect(prompt(s, 1, ps)).toBe(null);
   const b = SITES.gate.plateB;
   const two = [P(b), P([b[0] + 1, b[1]])];

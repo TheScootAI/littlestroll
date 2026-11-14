@@ -11,10 +11,6 @@ const REACH = 1.5;
 export const create = () => ({ y: 0, cranking: false, ladder: false, solved: false });
 
 const near = (p, xz) => Math.hypot(p.x - xz[0], p.z - xz[1]) <= REACH;
-const onDeck = (p) => {
-  const q = SITES.lift.platform;
-  return Math.abs(p.x - q.x) <= q.hw && Math.abs(p.z - q.z) <= q.hd;
-};
 
 export function step(s, players, dt) {
   const here = players.filter((p) => p?.present);
@@ -32,7 +28,6 @@ export function prompt(s, idx, players) {
   const me = players[idx];
   if (s.solved || !me?.present) return null;
   if (near(me, SITES.lift.crank)) return 'Hold E — turn the crank';
-  if (onDeck(me) && s.y === 0 && !s.cranking) return 'Someone has to turn the crank';
   if (near(me, SITES.lift.post) && zoneAt(me.x, me.z) === 'F') return 'E — kick the ladder down';
   return null;
 }

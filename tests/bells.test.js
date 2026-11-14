@@ -77,7 +77,7 @@ test('prompts', () => {
   expect(prompt(s, 1, [P(far), P(B)])).toBe('E — ring the bell');
   expect(prompt(s, 0, [P(far), P(far)])).toBe(null);
   s.hint = true;
-  expect(prompt(s, 0, [P(A), P(far)])).toBe('Ring them together — count it down');
+  expect(prompt(s, 0, [P(A), P(far)])).toBe('E — ring the bell')   // the hint never changes the prompt;
   expect(prompt(s, 0, [P(far), P(far)])).toBe(null);
   s.solved = true;
   expect(prompt(s, 0, [P(A), P(far)])).toBe(null);

@@ -64,7 +64,7 @@ test('an absent walker "holding" at the crank does not raise the lift', () => {
 test('prompts', () => {
   const s = create(); const { crank, post, platform } = SITES.lift;
   expect(prompt(s, 0, [P(crank), P(far)])).toBe('Hold E — turn the crank');
-  expect(prompt(s, 0, [P([platform.x, platform.z]), P(far)])).toBe('Someone has to turn the crank');
+  expect(prompt(s, 0, [P([platform.x, platform.z]), P(far)])).toBe(null);
   s.cranking = true;
   expect(prompt(s, 0, [P([platform.x, platform.z]), P(crank, { hold: true })])).toBe(null);
   s.cranking = false;

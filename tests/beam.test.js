@@ -174,15 +174,15 @@ test('prompts', () => {
   expect(prompt(s, 0, [gone, P(far)])).toBe(null);
   const c = carrying();
   const away = [P(far), P(far)];
-  expect(prompt(c, 0, away)).toBe('Stand in the light');
-  expect(prompt(c, 0, pair(false))).toBe('Aim the light — look where you want it to go');
+  expect(prompt(c, 0, away)).toBe('E — put down the mirror');
+  expect(prompt(c, 0, pair(false))).toBe('E — put down the mirror');
   // walker 1 carries but the beam does reach them in pair(false)
-  expect(prompt(c, 1, pair(false))).toBe('Aim the light — look where you want it to go');
+  expect(prompt(c, 1, pair(false))).toBe('E — put down the mirror');
   hold(c, true, 0.5);
-  expect(prompt(c, 0, pair(true))).toBe('Hold it there…');
-  expect(prompt(c, 1, pair(true))).toBe('Hold it there…');
+  expect(prompt(c, 0, pair(true))).toBe('E — put down the mirror');
+  expect(prompt(c, 1, pair(true))).toBe('E — put down the mirror');
   const w = create(); w.charge = 1;
-  expect(prompt(w, 0, [P(far), P(far)])).toBe('Hold it there…');
+  expect(prompt(w, 0, [P(far), P(far)])).toBe(null);
   forceSolve(c);
   expect(prompt(c, 0, pair(true))).toBe(null);
 });

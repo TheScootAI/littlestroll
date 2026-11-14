@@ -85,11 +85,7 @@ export function prompt(s, idx, players) {
   const me = players[idx];
   if (s.placed || !me?.present) return null;
   const mine = s.holdA === idx || s.holdB === idx;
-  if (mine) {
-    if (!bothHeld(s)) return 'Your friend needs to take the other end · E to let go';
-    const [mx, mz] = mid(s), [sx, sz] = SITES.plank.slot;
-    return Math.hypot(mx - sx, mz - sz) <= PLACE_R ? 'E — set it down across the gap' : 'Carry it to the gap together';
-  }
+  if (mine) return 'E — let go';
   if ((s.holdA === null && near(me, s.ax, s.az, GRAB_R)) || (s.holdB === null && near(me, s.bx, s.bz, GRAB_R)))
     return 'E — pick up this end';
   return null;

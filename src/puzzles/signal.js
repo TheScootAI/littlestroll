@@ -42,8 +42,6 @@ export function prompt(s, idx, players) {
   const me = players[idx];
   if (s.solved || !me?.present) return null;
   if (SITES.signal.dials.some((d) => near(me, d, DIAL_R))) return 'E — turn the dial';
-  if (near(me, SITES.signal.lookout, 4))
-    return s.lit ? 'Tell your friend what you see' : 'The wall is blank — someone has to stand at the dials';
   return null;
 }
 

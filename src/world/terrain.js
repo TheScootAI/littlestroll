@@ -161,6 +161,16 @@ const RULES = {
   tufts: { count: 420, ok: (x, z) => GREEN.has(zoneAt(x, z)) && level(x, z, 0.3, 0.2) },
 };
 
+// Where the camera hangs behind a walker reading the Signal wall from the lookout: a strip
+// running back from the lookout, away from the wall. Tall scenery there fills the screen.
+const SEAT_BACK = 6, SEAT_CLEAR = { trees: 3.5, boulders: 2.5 };
+function lookoutSeatDistance(x, z) {
+  const L = SITES.signal.lookout, w = SITES.signal.wall;
+  const len = Math.hypot(w.x - L[0], w.z - L[1]);
+  const ux = (w.x - L[0]) / len, uz = (w.z - L[1]) / len;
+  return pointSegDist(x, z, L[0], L[1], L[0] - ux * SEAT_BACK, L[1] - uz * SEAT_BACK).d;
+}
+
 export function placeScenery(seed = 20261113) {
   const rnd = mulberry32(seed);
   const e = terrainExtent();
@@ -177,7 +187,9 @@ export function placeScenery(seed = 20261113) {
       if (kind === 'rocks') item.y -= 0.05;
       list.push(item);
     }
-    out[kind] = list;
+    // Taken out afterwards, not skipped while dealing: skipping would shift every later draw
+    // and move the whole island's scenery.
+    out[kind] = kind in SEAT_CLEAR ? list.filter((i) => lookoutSeatDistance(i.x, i.z) >= SEAT_CLEAR[kind]) : list;
   }
   return out;
 }
@@ -282,11 +294,25 @@ function faceColour(x, z, h, ny, n) {
   return c.multiplyScalar(v);
 }
 
+// The height the ground MESH is drawn at: the ground, except under a built top. The lift's deck
+// and the watch-stone's cap are drawn at exactly the height a walker stands on them, so ground
+// drawn there too would share their plane and flicker through. Under them the mesh is sunk
+// out of sight instead. Walking is unaffected: that still asks heightAt.
+const DECK_SEAT = 0.35, CAP_SEAT = 0.3;
+export function meshHeightAt(x, z) {
+  const h = heightAt(x, z, DYN_NONE);
+  const P = SITES.lift.platform;
+  // strictly inside the deck's edge, so the mesh still meets the ground around it at the edge
+  if (Math.abs(x - P.x) < P.hw - 1e-6 && Math.abs(z - P.z) < P.hd - 1e-6) return h - DECK_SEAT;
+  if (Math.hypot(x - WATCH_STONE.x, z - WATCH_STONE.z) <= WATCH_STONE.r) return h - CAP_SEAT;
+  return h;
+}
+
 function terrainGeometry() {
   const e = terrainExtent(), s = TERRAIN_STEP;
   const nx = Math.round((e.x1 - e.x0) / s), nz = Math.round((e.z1 - e.z0) / s);
   const H = new Float32Array((nx + 1) * (nz + 1));
-  for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) H[j * (nx + 1) + i] = heightAt(e.x0 + i * s, e.z0 + j * s, DYN_NONE);
+  for (let j = 0; j <= nz; j++) for (let i = 0; i <= nx; i++) H[j * (nx + 1) + i] = meshHeightAt(e.x0 + i * s, e.z0 + j * s);
   const hAt = (i, j) => H[j * (nx + 1) + i];
 
   const pos = [], colr = [];

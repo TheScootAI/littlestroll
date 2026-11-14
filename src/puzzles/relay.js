@@ -50,7 +50,7 @@ export function prompt(s, idx, players) {
   const me = players[idx];
   if (s.solved || !here(me)) return null;
   if (s.holder === null) return flat(me, SITES.relay.small) <= TAKE_R ? 'E — take the flame' : null;
-  if (s.holder === idx) return flat(me, SITES.relay.great) <= LIGHT_R ? 'E — light the brazier' : "Pass it on before it burns out — you can't run";
+  if (s.holder === idx) return flat(me, SITES.relay.great) <= LIGHT_R ? 'E — light the brazier' : "You can't run with the flame";
   const h = players[s.holder];
   return here(h) && dist3(me, h) <= PASS_R ? 'E — take the flame' : null;
 }

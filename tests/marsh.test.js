@@ -82,9 +82,9 @@ test('the lever needs pressed and presence within 1.5 m', () => {
 
 test('prompts', () => {
   const s = create(5);
-  expect(prompt(s, 0, [P(plate), P(far)])).toBe('Stay here — the stones hold while you watch. Guide your friend.');
+  expect(prompt(s, 0, [P(plate), P(far)])).toBe(null);
   const edge = [M.origin[0] - 1.5, M.origin[1] + 6];
-  expect(prompt(s, 0, [P(edge), P(far)])).toBe('Someone has to watch from the stone');
+  expect(prompt(s, 0, [P(edge), P(far)])).toBe(null);
   const tileCentre = marshTileCentre(0);
   expect(prompt(s, 0, [P(tileCentre), P(far)])).toBe(null);
   expect(prompt(s, 0, [P([M.origin[0] - 3.5, M.origin[1] + 6]), P(far)])).toBe(null);
@@ -197,7 +197,7 @@ test('index: slice, dyn, prompt, flash, forceSolved, validity', () => {
   expect(solvedCount(S)).toBe(6);
   stepAll(S, [P(plate), P(far)], 1 / 30);
   expect(dynOf(S).marsh).toBe(sol(S.marsh.path));
-  expect(promptFor(S, 0, [P(plate), P(far)])).toBe('Stay here — the stones hold while you watch. Guide your friend.');
+  expect(promptFor(S, 0, [P(plate), P(far)])).toBe(null);
   stepAll(S, [P(far), P(M.lever, { pressed: true })], 1 / 30);
   expect(S.marsh.solved).toBe(true); expect(solvedCount(S)).toBe(7);
   expect(solvedLine(6)).toBe('The path holds');

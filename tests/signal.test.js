@@ -45,9 +45,9 @@ test('prompts', () => {
   const s = create(1); const d = SITES.signal.dials[1]; const lk = SITES.signal.lookout; const z = SITES.signal.dialZone;
   expect(prompt(s, 0, [P(d), P(far)])).toBe('E — turn the dial');
   step(s, [P(lk), P(far)], 0.03);
-  expect(prompt(s, 0, [P(lk), P(far)])).toBe('The wall is blank — someone has to stand at the dials');
+  expect(prompt(s, 0, [P(lk), P(far)])).toBe(null);
   step(s, [P(lk), P([z.x, z.z])], 0.03);
-  expect(prompt(s, 0, [P(lk), P([z.x, z.z])])).toBe('Tell your friend what you see');
+  expect(prompt(s, 0, [P(lk), P([z.x, z.z])])).toBe(null);
   expect(prompt(s, 0, [P(far), P(far)])).toBe(null);
   expect(prompt(s, 0, [gone, P(far)])).toBe(null);
   forceSolve(s);

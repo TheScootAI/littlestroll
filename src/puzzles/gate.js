@@ -3,7 +3,7 @@ import { SITES, zoneAt } from '../world/layout.js';
 import { pointSegDist } from '../core/math.js';
 
 const PLATE_R = 1.0;      // standing this close to a plate holds the gate
-const DOOR_R = 0.9;       // ...and so does standing this close to the doorway
+const DOOR_R = 0.9;       // an open gate stays open while someone is this close to the doorway
 const SWING_S = 0.5;      // seconds for the gate to swing fully open or shut
 // any plateau past the gate counts: everything but A, a ramp, the water, and (null) nowhere
 const through = (zone) => zone !== null && zone !== 'A';
@@ -18,9 +18,13 @@ export const onPlate = (p, which) => !!p.present && near(p, SITES.gate[which], P
 export function step(s, players, dt) {
   const { door } = SITES.gate;
   const here = players.filter((p) => p.present);
-  const held = here.some((p) =>
-    near(p, SITES.gate.plateA, PLATE_R) || near(p, SITES.gate.plateB, PLATE_R) ||
+  // A plate opens the gate. The doorway only keeps an open gate from shutting on whoever is in it:
+  // it never opens a shut one, or a lone walker could just walk up and through.
+  const onAPlate = here.some((p) =>
+    near(p, SITES.gate.plateA, PLATE_R) || near(p, SITES.gate.plateB, PLATE_R));
+  const inDoorway = here.some((p) =>
     pointSegDist(p.x, p.z, door.ax, door.az, door.bx, door.bz).d <= DOOR_R);
+  const held = onAPlate || (s.open && inDoorway);
   if (!s.solved && players.length === 2 && here.length === 2 &&
       here.every((p) => through(zoneAt(p.x, p.z)))) s.solved = true;
   s.open = s.solved || held;
@@ -30,10 +34,7 @@ export function step(s, players, dt) {
 }
 
 export function prompt(s, idx, players) {
-  const me = players[idx];
-  if (s.solved || !s.open || !me?.present) return null;
-  return onPlate(me, 'plateA') || onPlate(me, 'plateB')
-    ? 'Stay here — the gate is open for your friend' : null;
+  return null;   // no hints: the gate has no controls of its own
 }
 
 // Is `s` a well-formed gate slice? (checked on every state a joiner receives)

@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { Scene, Box3 } from 'three';
-import { placeScenery, placeFarScenery, featureClearance, trailDistance, siteAnchors, terrainExtent, buildTerrain, mulberry32 } from '../src/world/terrain.js';
+import { placeScenery, placeFarScenery, featureClearance, trailDistance, siteAnchors, terrainExtent, buildTerrain, meshHeightAt, mulberry32 } from '../src/world/terrain.js';
 import { marshTileAt, WATCH_STONE } from '../src/world/layout.js';
 import island1 from './helpers/scenery-island1.json';
 import { SITES, RAMPS, ZONES, TRAIL, PLANK_CORRIDOR, heightAt, zoneAt, DYN_NONE } from '../src/world/layout.js';
@@ -85,7 +85,7 @@ describe('buildTerrain', () => {
     expect(e.z1).toBeGreaterThanOrEqual(ZONES[0].z + ZONES[0].r + 10);
   });
 
-  test('adds terrain sampled from heightAt, water, sun with shadows, hemisphere light, fog', () => {
+  test('adds terrain sampled from meshHeightAt, water, sun with shadows, hemisphere light, fog', () => {
     const scene = new Scene();
     buildTerrain(scene);
     const ground = scene.getObjectByName('terrain');
@@ -95,7 +95,7 @@ describe('buildTerrain', () => {
     expect(ground.geometry.getAttribute('color').count).toBe(pos.count);
     for (let i = 0; i < pos.count; i += 997) {
       const x = pos.getX(i), z = pos.getZ(i);
-      expect(pos.getY(i)).toBeCloseTo(heightAt(x, z, DYN_NONE), 5);
+      expect(pos.getY(i)).toBeCloseTo(meshHeightAt(x, z), 5);
     }
     const water = scene.getObjectByName('water');
     expect(water.position.y).toBe(WATER_Y);
@@ -151,6 +151,16 @@ describe('Far Isle scenery', () => {
     }
     return d;
   };
+  test('nothing tall stands where the camera sits behind the Signal lookout', () => {
+    // the watcher faces the wall; the camera hangs up to 5 m behind them, so a tree or boulder
+    // there fills the screen and hides the symbols
+    const s = placeScenery(); const L = SITES.signal.lookout, w = SITES.signal.wall;
+    const len = Math.hypot(w.x - L[0], w.z - L[1]);
+    const ux = (w.x - L[0]) / len, uz = (w.z - L[1]) / len;
+    const seat = (x, z) => pointSegDist(x, z, L[0], L[1], L[0] - ux * 6, L[1] - uz * 6).d;
+    for (const t of s.trees) expect(seat(t.x, t.z)).toBeGreaterThanOrEqual(3.5);
+    for (const b of s.boulders) expect(seat(b.x, b.z)).toBeGreaterThanOrEqual(2.5);
+  });
   test('the first island is placed exactly as before (first 20 of each kind, and the counts)', () => {
     const s = placeScenery();
     const r6 = (v) => Math.round(v * 1e6) / 1e6;

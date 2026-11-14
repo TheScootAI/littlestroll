@@ -8,7 +8,6 @@ import { rng } from '../core/math.js';
 const { cols: COLS, rows: ROWS } = SITES.marsh;
 const TILES = COLS * ROWS;
 const LEVER_R = 1.5;           // a press this close to the lever pulls it
-const EDGE_R = 3;              // within this of row 0 (and not on a tile) the walker is told to find a watcher
 const MAX_LEN = TILES;
 
 const near = (p, x, z, r) => Math.hypot(p.x - x, p.z - z) <= r;
@@ -93,21 +92,9 @@ export function sinksUnder(walker, tileIndex, dyn) {
   return heightAt(walker.x, walker.z, dyn) < MARSH_SURFACE - 0.2;
 }
 
-// Distance from p to the near edge of the grid (row 0), and whether p is over a tile.
-function nearEdge(p) {
-  const { origin, right, fwd, tile } = SITES.marsh;
-  const u = (p.x - origin[0]) * right[0] + (p.z - origin[1]) * right[1];
-  const v = (p.x - origin[0]) * fwd[0] + (p.z - origin[1]) * fwd[1];
-  const du = Math.max(0, -u, u - COLS * tile);
-  if (v >= 0) return Infinity;           // on the grid or beyond it: not at the near edge
-  return Math.hypot(du, v);
-}
-
 export function prompt(s, idx, players) {
   const me = players[idx];
   if (s.solved || !me?.present) return null;
-  if (onPlate(me)) return 'Stay here — the stones hold while you watch. Guide your friend.';
-  if (!s.held && nearEdge(me) <= EDGE_R) return 'Someone has to watch from the stone';
   if (near(me, SITES.marsh.lever[0], SITES.marsh.lever[1], LEVER_R)) return 'E — pull the lever';
   return null;
 }

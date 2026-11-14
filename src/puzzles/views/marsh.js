@@ -107,10 +107,12 @@ export function createView(scene) {
   // ---- the watch-stone: a rough cairn column with the plate on top and a carved standing stone
   const ws = new Group();
   const baseH = MARSH_SURFACE - 0.15;           // H, the ground the stone stands on (heightAt here would say the stone's own top)
-  const ph = WATCH_STONE.h - (baseH - 0.5);
+  // the column stops just short of the top: its own top face must not share the cap's plane
+  const colTop = WATCH_STONE.h - 0.08;
+  const ph = colTop - (baseH - 0.5);
   const stoneM = mat(STONE_DARK);
   const col = new Mesh(new CylinderGeometry(WATCH_STONE.r, WATCH_STONE.r + 0.08, ph, 9), stoneM);
-  col.position.set(WATCH_STONE.x, WATCH_STONE.h - ph / 2, WATCH_STONE.z);
+  col.position.set(WATCH_STONE.x, colTop - ph / 2, WATCH_STONE.z);
   ws.add(col);
   // courses of stacked stone, so it reads as a cairn rather than a drum
   for (let k = 1; k < 3; k++) {
@@ -118,7 +120,10 @@ export function createView(scene) {
     ring.position.set(WATCH_STONE.x, WATCH_STONE.h - k * (WATCH_STONE.h - baseH) / 3, WATCH_STONE.z);
     ws.add(ring);
   }
-  const cap = new Mesh(new CylinderGeometry(WATCH_STONE.r + 0.12, WATCH_STONE.r + 0.12, 0.12, 9), mat(STONE));
+  // nine flat sides: wide enough that even the flats overhang the walkable top (r), so the
+  // ground mesh sunk beneath it (terrain.js, meshHeightAt) never shows past the rim
+  const capR = (WATCH_STONE.r + 0.06) / Math.cos(Math.PI / 9);
+  const cap = new Mesh(new CylinderGeometry(capR, capR, 0.12, 9), mat(STONE));
   cap.position.set(WATCH_STONE.x, WATCH_STONE.h - 0.06, WATCH_STONE.z);
   ws.add(cap);
   const plateG = new Group();
