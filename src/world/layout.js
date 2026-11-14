@@ -402,7 +402,7 @@ const STANDING_R = 0.6, SEEING_R = 0.7, LANTERN_R = 0.3, TALLY_R = 0.8;
 // Owls: 0-2 on the first island, 3-4 on the Far Isle, 5-7 on the Lantern Isle.
 const OWLS = [
   [-34.5, 79.5], [-14.5, 125.25], [15, -75],     // behind the lookout, up the beach, the summit's north rim
-  [80.75, -43.25], [76.75, -72.75],              // G's western rim, the neck to bell a (each 2.5 m clear of scenery)
+  [107.75, -49.75], [76.75, -72.75],            // H's south-east rim, the neck to bell a (each 2.5 m clear of scenery)
   [142, -88], toward(TOR_C, 90 * deg, 42), toward(TOR_C, 270 * deg, 42),   // K's nook, L's east and west spurs
 ];
 
