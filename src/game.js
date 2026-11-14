@@ -24,6 +24,7 @@ import { createView as createLiftView } from './puzzles/views/lift.js';
 import { createView as createBeamView } from './puzzles/views/beam.js';
 import { createView as createCausewayView } from './puzzles/views/causeway.js';
 import { createView as createBellsView } from './puzzles/views/bells.js';
+import { createView as createMarshView } from './puzzles/views/marsh.js';
 
 export const SCARF = [0xf08a3c, 0x2fb5a6];   // host orange, joiner teal
 
@@ -104,6 +105,7 @@ export class Game {
       { key: 'beam', view: createBeamView(this.scene) },
       { key: 'beam', view: createCausewayView(this.scene) },
       { key: 'bells', view: createBellsView(this.scene) },
+      { key: 'marsh', view: createMarshView(this.scene) },
     ];
     this.input = createInput(canvas);
     this.player = createPlayer(...SITES.spawn[this.idx]);

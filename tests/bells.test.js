@@ -116,7 +116,7 @@ test('index wiring: dyn, order, prompt, validState, flash, ending, checkpoint 6'
   expect(dynOf(S).bells).toBe(false);          // not until the steps have fully risen
   for (let i = 0; i < 90; i++) stepAll(S, [P(far), P(far)], 1 / 30);
   expect(dynOf(S).bells).toBe(true);
-  expect(S.ended).toEqual({ time: expect.any(Number) });   // bells is the last puzzle for now
+  expect(S.ended).toBe(null);                  // the marsh comes after the bells
   const p = createPlayer(...SITES.spawn[0]);
   respawn(p, solvedCount(S), 0);
   expect([p.x, p.z]).toEqual(SITES.checkpoints[6][0]);
