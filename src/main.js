@@ -2,7 +2,7 @@
 import { Game } from './game.js';
 import { showMenu } from './ui/menu.js';
 import { createHud } from './ui/hud.js';
-import { createFeedback } from './ui/feedback.js';
+import { createFeedback, snapshot } from './ui/feedback.js';
 import { Session } from './net/session.js';
 import { makeCode, normalizeCode } from './net/code.js';
 import { heightAt } from './world/layout.js';
@@ -49,10 +49,12 @@ async function startHost(hud) {
 }
 
 // The feedback button is there from the menu on; once a walk exists it lets go of the walker's
-// keys while the box is open and adds how far the pair had got.
+// keys while the box is open, adds how far the pair had got, and can take a picture of the view.
 function wireFeedback(feedback, game) {
   feedback.onOpen = () => game.input.release();
   feedback.info = () => `puzzles solved: ${game.solved} · owls found: ${owlCount(game.S.owls | 0)}`;
+  // the view as it is now: drawn and copied in one go, before the browser clears the buffer
+  feedback.capture = () => { game.render(); return snapshot(canvas); };
 }
 
 async function main() {

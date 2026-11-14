@@ -25,7 +25,7 @@ You can type to each other in the game (Enter). There is no voice chat, so a cal
 
 On a small share of home networks the two browsers can't connect directly. The game says so when that happens.
 
-Found a bug or have an idea? The speech-bubble button in the top-right corner opens a box for a note, then opens GitHub with it filled in, ready to post as an issue.
+Found a bug or have an idea? The speech-bubble button in the top-right corner opens a box for a note, then opens GitHub with it filled in, ready to post as an issue. In a walk it also takes a screenshot of the view and copies it for you to paste into the issue (untick the box to leave it out).
 
 ## Run it locally
 

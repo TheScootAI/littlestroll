@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { issueUrl, tidy, REPO, MAX_CHARS, MAX_URL } from '../src/core/feedback.js';
+import { issueUrl, tidy, shotSize, REPO, MAX_CHARS, MAX_URL, SHOT_FILE } from '../src/core/feedback.js';
 
 const parts = (url) => { const u = new URL(url); return { u, title: u.searchParams.get('title'), body: u.searchParams.get('body') }; };
 
@@ -54,5 +54,43 @@ describe('feedback: the text a player typed becomes a GitHub new-issue link', ()
     expect([...u.searchParams.keys()].sort()).toEqual(['body', 'title']);
     expect(u.hash).toBe('');
     expect(body.startsWith('a&labels=spam&assignees=someone#frag?x=1')).toBe(true);
+  });
+});
+
+describe('feedback: a screenshot travels beside the link, never in it', () => {
+  test('no screenshot: the body says nothing about one', () => {
+    for (const shot of [undefined, null, '', 'nonsense']) {
+      expect(parts(issueUrl('hello', '', shot)).body).not.toMatch(/screenshot/i);
+    }
+  });
+  test('copied to the clipboard: the body asks for a paste, between the note and the footer', () => {
+    const { body } = parts(issueUrl('The gate is stuck', 'puzzles solved: 1', 'clipboard'));
+    expect(body.startsWith('The gate is stuck\n')).toBe(true);
+    expect(body).toMatch(/screenshot/i);
+    expect(body).toMatch(/paste/i);
+    expect(body).toMatch(/Ctrl\+V/);
+    expect(body).not.toContain(SHOT_FILE);
+    expect(body.indexOf('Screenshot')).toBeLessThan(body.indexOf('Sent from inside the game'));
+  });
+  test('saved as a file instead: the body names the file to drag in', () => {
+    const { body } = parts(issueUrl('The gate is stuck', '', 'file'));
+    expect(SHOT_FILE).toBe('little-run-screenshot.png');
+    expect(body).toContain(SHOT_FILE);
+    expect(body).toMatch(/drag/i);
+    expect(body).not.toMatch(/Ctrl\+V/);
+  });
+  test('the screenshot line survives a note long enough to be shortened', () => {
+    const url = issueUrl('😀'.repeat(4000), 'puzzles solved: 11', 'clipboard');
+    expect(url.length).toBeLessThanOrEqual(MAX_URL);
+    expect(parts(url).body).toMatch(/paste/i);
+  });
+  test('shotSize: fits inside the limit, keeps the shape, never enlarges, never zero', () => {
+    expect(shotSize(1920, 1080)).toEqual([1280, 720]);
+    expect(shotSize(2560, 1440, 1280)).toEqual([1280, 720]);
+    expect(shotSize(800, 600)).toEqual([800, 600]);
+    expect(shotSize(1080, 1920)).toEqual([720, 1280]);
+    expect(shotSize(3000, 10, 1280)).toEqual([1280, 4]);
+    expect(shotSize(0, 0)).toEqual([1, 1]);
+    expect(shotSize(NaN, 500)).toEqual([1, 1]);
   });
 });
