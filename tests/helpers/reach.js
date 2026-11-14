@@ -8,8 +8,9 @@ import { DROWN_Y, STEP_UP, PLAYER_R } from '../../src/config.js';
 import { pointSegDist } from '../../src/core/math.js';
 
 const STEP = 0.5;
-const X0 = -160, Z0 = -130;       // grid covers x -160..160, z -130..190
-const N = 641;
+const X0 = -100, Z0 = -215;     // grid covers x -100..300, z -215..185
+const N = 801;
+export const GRID = { X0, Z0, N, STEP };
 
 export function reachable(from, dyn) {
   const { circles, segments } = blockers(dyn);

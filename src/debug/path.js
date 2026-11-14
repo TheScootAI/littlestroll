@@ -18,8 +18,9 @@ import { DROWN_Y, STEP_UP, PLAYER_R } from '../config.js';
 import { pointSegDist } from '../core/math.js';
 
 const STEP = 0.5;
-const X0 = -160, Z0 = -130;     // grid covers x -160..160, z -130..190
-const N = 641;
+const X0 = -100, Z0 = -215;     // grid covers x -100..300, z -215..185
+const N = 801;
+export const GRID = { X0, Z0, N, STEP };
 const MAX_DROP = 0.6;
 const MARGIN = 0.1;             // keep this much extra off blockers so steering slack does not snag
 const SQRT2 = Math.SQRT2;
@@ -55,8 +56,9 @@ function gridFor(dyn = DYN_NONE) {
     gateOpen: !!dyn.gateOpen, bridge: !!dyn.bridge, plank: !!dyn.plank,
     lift: Number.isFinite(dyn.lift) ? dyn.lift : 0, ladder: !!dyn.ladder,
     causeway: !!dyn.causeway, bells: !!dyn.bells, marsh: dyn.marsh | 0,
+    pillars: dyn.pillars | 0, ring: !!dyn.ring,
   };
-  const key = `${+d.gateOpen}${+d.bridge}${+d.plank}${+d.ladder}${+d.causeway}${+d.bells}:${d.lift}:${d.marsh}`;
+  const key = `${+d.gateOpen}${+d.bridge}${+d.plank}${+d.ladder}${+d.causeway}${+d.bells}${+d.ring}:${d.lift}:${d.marsh}:${d.pillars}`;
   let G = grids.get(key);
   if (G) { grids.delete(key); grids.set(key, G); return G; }
 

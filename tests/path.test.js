@@ -225,6 +225,23 @@ describe('the Far Isle dyn keys', () => {
   });
 });
 
+describe('the Lantern Isle dyn keys', () => {
+  const full = (1 << 18) - 1;
+  const { near, far } = SITES.pillars;
+  it('the pillars carry a route from the near landing to the far one only while raised', () => {
+    expect(findPath([near.x, near.z], [far.x, far.z], { ...DYN_NONE, pillars: 0 })).toBeNull();
+    const dyn = { ...DYN_NONE, pillars: full };
+    const p = findPath([near.x, near.z], [far.x, far.z], dyn);
+    expect(p).not.toBeNull();
+    for (let i = 1; i < p.length; i++) expect(walkable(p[i - 1], p[i], dyn)).toBe(true);
+  });
+  it('the steps carry a route from checkpoint 9 to checkpoint 10 only once the ring is solved', () => {
+    const dyn = { ...DYN_NONE, pillars: full };
+    expect(findPath(SITES.checkpoints[9][0], SITES.checkpoints[10][0], dyn)).toBeNull();
+    expect(findPath(SITES.checkpoints[9][0], SITES.checkpoints[10][0], { ...dyn, ring: true })).not.toBeNull();
+  });
+});
+
 describe('the pilot plans on what a player sees', () => {
   const { maskOf, create } = marshRules;
   const ALL = (1 << 30) - 1;

@@ -54,7 +54,7 @@ test('ladder down: the summit and both mirrors', () => {
 test('every checkpoint is dry land', () => {
   for (const pair of SITES.checkpoints) for (const [x, z] of pair)
     expect(heightAt(x, z, DYN_NONE)).toBeGreaterThan(0.2);
-  expect(SITES.checkpoints).toHaveLength(9);
+  expect(SITES.checkpoints).toHaveLength(12);
 });
 test('the lookout faces the back of the wall, close enough to read', () => {
   const { wall, lookout } = SITES.signal;
@@ -336,7 +336,7 @@ describe('F. lift', () => {
 // ---------------------------------------------------------------- ramp seams
 
 test('every ramp, with its flag on, is walkable along its centre and both edges', () => {
-  const dyn = D({ ...ALL, lift: 0, causeway: true, bells: true });
+  const dyn = D({ ...ALL, lift: 0, causeway: true, bells: true, pillars: (1 << 18) - 1, ring: true });
   for (const r of RAMPS) {
     const len = Math.hypot(r.bx - r.ax, r.bz - r.az), ux = (r.bx - r.ax) / len, uz = (r.bz - r.az) / len;
     // An end inside another ramp is a corner of the relay climb: walk up to it, not past
@@ -434,7 +434,7 @@ describe('G. beam', () => {
 // ---------------------------------------------------------------- H. checkpoints
 
 test('H. checkpoints sit in the right zones', () => {
-  const want = ['A', 'B', 'D', 'E', 'F', 'F', 'H', 'I', 'J'];
+  const want = ['A', 'B', 'D', 'E', 'F', 'F', 'H', 'I', 'J', 'K', 'L', 'L'];
   SITES.checkpoints.forEach((pair, i) => {
     expect(pair).toHaveLength(2);
     expect(Math.hypot(pair[0][0] - pair[1][0], pair[0][1] - pair[1][1])).toBeGreaterThanOrEqual(1.5);
@@ -507,7 +507,7 @@ describe('K. renderer data', () => {
   test('RAMPS carry their geometry and flag', () => {
     for (const r of RAMPS) {
       for (const k of ['ax', 'az', 'bx', 'bz', 'hw', 'ha', 'hb']) expect(typeof r[k]).toBe('number');
-      expect([null, 'bridge', 'plank', 'ladder', 'causeway', 'bells']).toContain(r.flag);
+      expect([null, 'bridge', 'plank', 'ladder', 'causeway', 'bells', 'ring']).toContain(r.flag);
     }
     expect(JSON.parse(JSON.stringify(RAMPS))).toEqual(RAMPS);
     expect(JSON.parse(JSON.stringify(SITES))).toEqual(SITES);
@@ -515,11 +515,13 @@ describe('K. renderer data', () => {
   test('TRAIL runs from spawn past the beacon to the great brazier over walkable ground', () => {
     expect(Math.hypot(TRAIL[0][0] - SITES.spawn[0][0], TRAIL[0][1] - SITES.spawn[0][1])).toBeLessThan(3);
     expect(TRAIL).toContainEqual(SITES.beacon);
-    expect(TRAIL[TRAIL.length - 1]).toEqual(SITES.relay.great);
+    // on past the great brazier to the Lantern Isle: see layout-lantern.test.js
+    const upTo = TRAIL.slice(0, TRAIL.findIndex((p) => p[0] === SITES.relay.great[0] && p[1] === SITES.relay.great[1]) + 1);
+    expect(upTo[upTo.length - 1]).toEqual(SITES.relay.great);
     const all8 = D({ ...ALL, causeway: true, bells: true, marsh: mask(column(2)) });
-    const L = polyLen(TRAIL);
+    const L = polyLen(upTo);
     for (let s = 0; s <= L; s += 0.25) {
-      const p = along(TRAIL, s);
+      const p = along(upTo, s);
       expect(heightAt(...p, all8), `${p}`).toBeGreaterThan(DROWN_Y);
       if (Math.hypot(p[0] - SITES.beacon[0], p[1] - SITES.beacon[1]) > 2.5) expect(clearOf(...p, all8), `${p}`).toBe(true);
     }
@@ -713,7 +715,7 @@ describe('L. the Far Isle', () => {
 
   test('stepping off the first island never lands on the Far Isle: 30 m of sea between their discs', () => {
     for (const f of ZONES.filter(isFar))
-      for (const d of ZONES.filter((q) => !isFar(q)))
+      for (const d of ZONES.filter((q) => 'ABCDEF'.includes(q.zone)))
         expect(Math.hypot(f.x - d.x, f.z - d.z) - f.r - d.r, `${f.zone}@${f.x},${f.z} / ${d.zone}@${d.x},${d.z}`).toBeGreaterThanOrEqual(30);
   });
 
@@ -786,7 +788,7 @@ describe('L. the Far Isle', () => {
       expect(zoneAt(x, z)).toBe(zoneAt(x, z));
     }
     expect(k).toBe(800);
-    expect(Object.keys(DYN_NONE).sort()).toEqual(['bells', 'causeway', 'gateOpen', 'ladder', 'lift', 'marsh', 'plank', 'bridge'].sort());
+    expect(Object.keys(DYN_NONE).sort()).toEqual(['bells', 'causeway', 'gateOpen', 'ladder', 'lift', 'marsh', 'plank', 'bridge', 'pillars', 'ring'].sort());
     expect(DYN_NONE.causeway).toBe(false);
     expect(DYN_NONE.bells).toBe(false);
     expect(DYN_NONE.marsh).toBe(0);

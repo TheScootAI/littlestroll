@@ -3,6 +3,7 @@ import { Scene, Box3 } from 'three';
 import { placeScenery, placeFarScenery, featureClearance, trailDistance, siteAnchors, terrainExtent, buildTerrain, meshHeightAt, mulberry32 } from '../src/world/terrain.js';
 import { marshTileAt, WATCH_STONE } from '../src/world/layout.js';
 import island1 from './helpers/scenery-island1.json';
+import island2 from './helpers/scenery-island2.json';
 import { SITES, RAMPS, ZONES, TRAIL, PLANK_CORRIDOR, heightAt, zoneAt, DYN_NONE } from '../src/world/layout.js';
 import { pointSegDist } from '../src/core/math.js';
 import { WATER_Y } from '../src/config.js';
@@ -167,6 +168,13 @@ describe('Far Isle scenery', () => {
     for (const k of Object.keys(island1)) {
       expect(s[k].length).toBe(island1[k].n);
       expect(s[k].slice(0, 20).map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island1[k].first);
+    }
+  });
+  test('the Far Isle is placed exactly as before (first 20 of each kind, and the counts)', () => {
+    const r6 = (v) => Math.round(v * 1e6) / 1e6;
+    for (const k of Object.keys(island2)) {
+      expect(far[k].length).toBe(island2[k].n);
+      expect(far[k].slice(0, 20).map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island2[k].first);
     }
   });
   test('is deterministic, covers trees, boulders, rocks and tufts, all on zones G to J', () => {

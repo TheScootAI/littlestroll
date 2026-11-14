@@ -66,6 +66,7 @@ export const dynOf = (S) => ({
   gateOpen: S.gate.amt > 0.5 || S.gate.open,
   bridge: S.signal.bridge >= 1, plank: S.plank.placed, lift: S.lift.y, ladder: S.lift.ladder,
   causeway: S.beam.solved, bells: S.bells.steps >= 1, marsh: marsh.maskOf(S.marsh),
+  pillars: 0, ring: false,   // the Lantern Isle's puzzles are not wired in yet
 });
 
 // First hint among the unsolved puzzles, in trail order.

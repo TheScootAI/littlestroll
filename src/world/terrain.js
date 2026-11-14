@@ -7,7 +7,7 @@ import {
   ConeGeometry, CylinderGeometry, DoubleSide,
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { heightAt, zoneAt, ZONES, RAMPS, TRAIL, PLANK_CORRIDOR, SITES, WATCH_STONE, DYN_NONE } from './layout.js';
+import { heightAt, zoneAt, ZONES, RAMPS, TRAIL, PLANK_CORRIDOR, SITES, WATCH_STONE, DYN_NONE, LANTERN_ZONES, LANTERN_RAMPS } from './layout.js';
 import { pointSegDist, clamp, lerp } from '../core/math.js';
 import { WATER_Y } from '../config.js';
 
@@ -33,15 +33,15 @@ export const PALETTE = {
 
 // ------------------------------------------------------------------ extent
 
-export function terrainExtent() {
+export function terrainExtent(zones = ZONES, ramps = RAMPS) {
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-  for (const d of ZONES) {
+  for (const d of zones) {
     const r = d.zone === 'A' ? d.r + BEACH_RUN : d.r;
     x0 = Math.min(x0, d.x - r); x1 = Math.max(x1, d.x + r);
     z0 = Math.min(z0, d.z - r); z1 = Math.max(z1, d.z + r);
   }
   // ramps that are always there (the relay climb) reach past their island's disc
-  for (const r of RAMPS) {
+  for (const r of ramps) {
     if (r.flag !== null) continue;
     x0 = Math.min(x0, r.ax - r.hw, r.bx - r.hw); x1 = Math.max(x1, r.ax + r.hw, r.bx + r.hw);
     z0 = Math.min(z0, r.az - r.hw, r.bz - r.hw); z1 = Math.max(z1, r.az + r.hw, r.bz + r.hw);
@@ -171,16 +171,21 @@ function lookoutSeatDistance(x, z) {
   return pointSegDist(x, z, L[0], L[1], L[0] - ux * SEAT_BACK, L[1] - uz * SEAT_BACK).d;
 }
 
+// The first two islands' scenery is dealt over the extent they had before the Lantern Isle,
+// and never onto its ground, so nothing placed there moves.
+const OLD_EXTENT = terrainExtent(ZONES.filter((d) => !LANTERN_ZONES.includes(d)), RAMPS.filter((r) => !LANTERN_RAMPS.includes(r)));
+const onLantern = (x, z) => LANTERN_ZONES.some((d) => (x - d.x) ** 2 + (z - d.z) ** 2 <= d.r * d.r);
+
 export function placeScenery(seed = 20261113) {
   const rnd = mulberry32(seed);
-  const e = terrainExtent();
+  const e = OLD_EXTENT;
   const out = {};
   for (const [kind, rule] of Object.entries(RULES)) {
     const list = [];
     for (let tries = 0; list.length < rule.count && tries < rule.count * 400; tries++) {
       const x = lerp(e.x0, e.x1, rnd()), z = lerp(e.z0, e.z1, rnd());
       const r1 = rnd(), r2 = rnd(), r3 = rnd();
-      if (featureClearance(x, z) < 3 || !rule.ok(x, z)) continue;
+      if (onLantern(x, z) || featureClearance(x, z) < 3 || !rule.ok(x, z)) continue;
       const item = { x, y: heightAt(x, z), z, rot: r1 * Math.PI * 2, s: 0.75 + r2 * 0.6, tint: r3 };
       if (kind === 'trees') item.kind = r3 < 0.55 ? 'pine' : 'round';
       if (kind === 'boulders') item.y -= 0.2 * item.s;
@@ -232,14 +237,14 @@ const FAR_RULES = {
 
 export function placeFarScenery(seed = 20261114) {
   const rnd = mulberry32(seed);
-  const e = terrainExtent();
+  const e = OLD_EXTENT;
   const out = {};
   for (const [kind, rule] of Object.entries(FAR_RULES)) {
     const list = [];
     for (let tries = 0; list.length < rule.count && tries < rule.count * 400; tries++) {
       const x = lerp(FAR_X0, e.x1, rnd()), z = lerp(e.z0, e.z1, rnd());
       const r1 = rnd(), r2 = rnd(), r3 = rnd();
-      if (!farClear(x, z) || !rule.ok(x, z)) continue;
+      if (onLantern(x, z) || !farClear(x, z) || !rule.ok(x, z)) continue;
       const item = { x, y: heightAt(x, z), z, rot: r1 * Math.PI * 2, s: 0.75 + r2 * 0.6, tint: r3 };
       if (kind === 'trees') item.kind = r3 < 0.55 ? 'pine' : 'round';
       if (kind === 'boulders') item.y -= 0.2 * item.s;
