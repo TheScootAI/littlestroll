@@ -16,13 +16,14 @@ const KEYS = {
   KeyQ: 'point',
   KeyF: 'shout',
   Digit1: 'wave',
+  Space: 'jump',
 };
 
 // Keyed on KeyboardEvent.code (the physical key), so Shift+W still releases W.
 export const keyAction = (code) => KEYS[code] ?? null;
 
 export const createInputState = () => ({
-  mx: 0, mz: 0, run: false, hold: false, eN: 0, q: false, shoutN: 0, waveN: 0, camYaw: 0, camPitch: -0.15,
+  mx: 0, mz: 0, run: false, hold: false, eN: 0, q: false, shoutN: 0, waveN: 0, jumpN: 0, camYaw: 0, camPitch: -0.15,
 });
 
 // Recompute the held flags from the set of held actions.
@@ -43,6 +44,7 @@ export function applyKey(s, held, code, down, repeat) {
       if (a === 'interact') s.eN++;
       else if (a === 'shout') s.shoutN++;
       else if (a === 'wave') s.waveN++;
+      else if (a === 'jump') s.jumpN++;
     }
     held.add(a);
   } else held.delete(a);

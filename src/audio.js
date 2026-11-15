@@ -58,7 +58,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0, hoot: 0, splash: 0 },   // for checking in a browser
+    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0, hoot: 0, splash: 0, hop: 0 },   // for checking in a browser
     // a footfall: a soft low scuff with a faint pat under it, a little different every time
     // (it is heard hundreds of times, so it is quiet and dull, never a click)
     step: safe(() => {
@@ -66,6 +66,13 @@ export function createAudio() {
       const t = ctx.currentTime, k = 0.8 + Math.random() * 0.4;
       noise(t, 0.1, 0.025, 230 * k, 0.7, 0.15);
       tone(72 * k, t, 0.09, 0.06);
+    }),
+    // a soft short whup as a walker leaves the ground (it will be mashed, so it is quiet)
+    hop: safe(() => {
+      audio.calls.hop++;
+      const t = ctx.currentTime;
+      tone(190, t, 0.09, 0.05);
+      noise(t, 0.07, 0.015, 420, 0.8, 0.1);
     }),
     // a puzzle solved: the riff for puzzle n (0-based), with the flourish after the last
     riff: safe((n, last) => {

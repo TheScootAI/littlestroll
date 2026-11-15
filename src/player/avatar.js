@@ -13,6 +13,15 @@ const STONE_DARK = 0x8d877f;
 const EYE = 0x2b2622;
 const WAVE_SECS = 1.2;
 const DOWN = new Vector3(0, -1, 0);
+const HOP_SECS = 0.5, HOP_HEIGHT = 0.7;
+
+// A hop, for show only: metres off the ground t seconds after take-off. One smooth arc
+// (a parabola: up fast, hang, down), 0 before take-off and exactly 0 from the landing on.
+export function hopHeight(t) {
+  if (!(t > 0 && t < HOP_SECS)) return 0;
+  const u = t / HOP_SECS;
+  return 4 * HOP_HEIGHT * u * (1 - u);
+}
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 
@@ -22,9 +31,13 @@ export function createAvatar(colour) {
   const scarfMat = mat(colour, { emissive: new Color(colour).multiplyScalar(0.18) });
 
   // body: a slightly squashed pebble sitting on the legs; `body` bobs as a whole
+  // `lifter` holds body and legs: a hop lifts it, so the shadow and the real position stay put
+  const lifter = new Group();
+  lifter.name = 'lifter';
+  group.add(lifter);
   const body = new Group();
   body.name = 'body';
-  group.add(body);
+  lifter.add(body);
   const pebble = new Mesh(new IcosahedronGeometry(0.42, 1), stone);
   pebble.scale.set(1, 1.08, 0.88);
   pebble.position.y = 0.66;
@@ -66,7 +79,7 @@ export function createAvatar(colour) {
     const leg = new Mesh(legGeo, limb);
     leg.position.y = -0.15;
     pivot.add(leg);
-    group.add(pivot);
+    lifter.add(pivot);
     return pivot;
   });
 
@@ -86,7 +99,7 @@ export function createAvatar(colour) {
 
   group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
-  let yaw = null, phase = 0, swing = 0, lastWave = null, waveT = 0;
+  let yaw = null, phase = 0, swing = 0, lastWave = null, waveT = 0, lastJump = null, hopT = -1;
   const q = new Quaternion(), tmp = new Vector3(), qRest = new Quaternion();
   const invYaw = new Quaternion(), yAxis = new Vector3(0, 1, 0);
 
@@ -120,6 +133,17 @@ export function createAvatar(colour) {
     if (view.waveN !== lastWave) { lastWave = view.waveN; waveT = WAVE_SECS; }
     waveT = Math.max(0, waveT - dt);
 
+    // hop: a fresh jumpN starts one, but only on the ground and not while carrying something
+    // heavy (a mirror, a timber). A press in the air is dropped, never queued.
+    let hopped = false;
+    if (lastJump === null) lastJump = view.jumpN;
+    if (view.jumpN !== lastJump) {
+      lastJump = view.jumpN;
+      if (hopT < 0 && !view.carrying) { hopT = 0; hopped = true; }
+    }
+    if (hopT >= 0) { hopT += dt; if (hopT >= HOP_SECS) hopT = -1; }
+    lifter.position.y = hopT >= 0 ? hopHeight(hopT) : 0;
+
     const k = 1 - Math.exp(-14 * dt);
     invYaw.setFromAxisAngle(yAxis, -yaw);
     const restSwing = (sign) => {
@@ -149,6 +173,7 @@ export function createAvatar(colour) {
     } else if (view.carrying) {
       aimArm(armL, tmp.set(-0.15, -0.25, -1).normalize(), k);
     } else armL.quaternion.slerp(restSwing(1), k);
+    return hopped;   // true on the frame a hop begins (the local walker's whup)
   }
 
   return { group, update };

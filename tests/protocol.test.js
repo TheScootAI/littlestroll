@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { encode, decode, versionOf, shouldAccept, accepts, toPIn, snapshot, PROTOCOL_V, MAX_BYTES } from '../src/net/protocol.js';
 
-const P = { t: 'p', x: 1, y: 2, z: 3, yaw: 0.5, ay: 0.1, ap: -0.2, speed: 3.2, hold: true, eN: 4, q: false, shoutN: 1, waveN: 0, dist: 12.5 };
+const P = { t: 'p', x: 1, y: 2, z: 3, yaw: 0.5, ay: 0.1, ap: -0.2, speed: 3.2, hold: true, eN: 4, q: false, shoutN: 1, waveN: 0, jumpN: 2, dist: 12.5 };
 
 describe('protocol', () => {
   test('round-trips every message type', () => {
@@ -12,7 +12,7 @@ describe('protocol', () => {
     expect(decode(encode({ t: 'full' }))).toEqual({ t: 'full' });
     const s = { t: 's', S: { time: 1, gate: { a: 1 } } };
     expect(decode(encode(s))).toEqual(s);
-    expect(PROTOCOL_V).toBe(7);
+    expect(PROTOCOL_V).toBe(8);
     expect(MAX_BYTES).toBe(16384);
   });
 
@@ -62,7 +62,7 @@ describe('protocol', () => {
 
   test('snapshot builds a valid p message', () => {
     const player = { x: 1, y: 2, z: 3, yaw: 0.5, dist: 12.5 };
-    const inp = { camYaw: 0.1, camPitch: -0.2, hold: true, eN: 4, q: false, shoutN: 1, waveN: 0 };
+    const inp = { camYaw: 0.1, camPitch: -0.2, hold: true, eN: 4, q: false, shoutN: 1, waveN: 0, jumpN: 2 };
     expect(snapshot(player, inp, 3.2)).toEqual(P);
     expect(decode(encode(snapshot(player, inp, 3.2)))).toEqual(P);
   });
@@ -85,9 +85,9 @@ describe('protocol', () => {
 
   test('out-of-range p messages are dropped, in-range ones kept', () => {
     const bad = [{ x: 1e300 }, { x: 10001 }, { y: -10001 }, { z: 1e5 }, { yaw: 101 }, { ay: -101 }, { ap: 1e300 },
-      { speed: 51 }, { speed: -1 }, { dist: 1e7 + 1 }, { dist: -1 }, { eN: 1e9 + 1 }, { shoutN: 2e9 }, { waveN: 1e10 }];
+      { speed: 51 }, { speed: -1 }, { dist: 1e7 + 1 }, { dist: -1 }, { eN: 1e9 + 1 }, { shoutN: 2e9 }, { waveN: 1e10 }, { jumpN: 1e10 }, { jumpN: -1 }, { jumpN: 1.5 }, { jumpN: null }, { jumpN: undefined }];
     for (const o of bad) expect(decode(JSON.stringify({ ...P, ...o })), JSON.stringify(o)).toBeNull();
-    const edge = { ...P, x: 10000, y: -10000, z: 10000, yaw: -100, ay: 100, ap: 100, speed: 50, dist: 1e7, eN: 1e9, shoutN: 1e9, waveN: 1e9 };
+    const edge = { ...P, x: 10000, y: -10000, z: 10000, yaw: -100, ay: 100, ap: 100, speed: 50, dist: 1e7, eN: 1e9, shoutN: 1e9, waveN: 1e9, jumpN: 1e9 };
     expect(decode(JSON.stringify(edge))).toEqual(edge);
     expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 2 ** 53, solved: 0 }))).toBeNull();
     expect(decode(JSON.stringify({ t: 'welcome', v: PROTOCOL_V, seed: 2 ** 53 - 1, solved: 0 }))).not.toBeNull();

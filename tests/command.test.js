@@ -8,7 +8,7 @@ function fake(over = {}) {
   let done;
   const p = {
     goTo: vi.fn(() => new Promise((res) => { done = res; })),
-    follow: vi.fn(), stop: vi.fn(), press: vi.fn(), hold: vi.fn(), look: vi.fn(), point: vi.fn(), shout: vi.fn(), wave: vi.fn(),
+    follow: vi.fn(), stop: vi.fn(), press: vi.fn(), hold: vi.fn(), look: vi.fn(), point: vi.fn(), shout: vi.fn(), wave: vi.fn(), jump: vi.fn(),
     say: vi.fn(() => true), state: vi.fn(() => STATE), sites: () => SITES,
     pillar: vi.fn(() => [149.7, -55.2]), tile: vi.fn(() => [111.2, -60.8]),
     ...over,
@@ -39,7 +39,7 @@ describe('pilot commands: reading a typed line', () => {
 describe('pilot commands: what each one does', () => {
   test('help names every command', () => {
     const t = run('help', fake());
-    for (const w of ['goto', 'follow', 'stop', 'press', 'hold', 'look', 'say', 'where', 'sites', 'point', 'shout', 'wave']) expect(t).toContain(w);
+    for (const w of ['goto', 'follow', 'stop', 'press', 'hold', 'look', 'say', 'where', 'sites', 'point', 'shout', 'wave', 'jump']) expect(t).toContain(w);
   });
   test('goto x z walks there at a run and reports when it arrives', async () => {
     const f = fake();
@@ -87,6 +87,7 @@ describe('pilot commands: what each one does', () => {
     expect(run('point off', f)).toBe('stopped pointing');
     expect(run('shout', f)).toBe('shouted'); expect(f.p.shout).toHaveBeenCalled();
     expect(run('wave', f)).toBe('waved'); expect(f.p.wave).toHaveBeenCalled();
+    expect(run('jump', f)).toBe('jumped'); expect(f.p.jump).toHaveBeenCalled();
   });
   test('look: a compass point, a bearing in degrees with an optional tilt, or the friend', () => {
     const f = fake();

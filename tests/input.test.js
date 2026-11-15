@@ -54,6 +54,19 @@ describe('input', () => {
     expect(s.eN).toBe(2); expect(s.shoutN).toBe(1); expect(s.waveN).toBe(2);
   });
 
+  test('Space counts a jump per press, not per auto-repeat; other keys do not; the key is claimed', () => {
+    const s = createInputState(), held = new Set();
+    expect(s.jumpN).toBe(0);
+    expect(keyAction('Space')).toBe('jump');
+    expect(press(s, held, 'Space')).toBe(true);   // claimed: the page will not scroll
+    press(s, held, 'Space', true); press(s, held, 'Space', true);
+    expect(s.jumpN).toBe(1);
+    lift(s, held, 'Space'); press(s, held, 'Space');
+    expect(s.jumpN).toBe(2);
+    for (const k of ['KeyE', 'KeyF', 'Digit1', 'KeyW', 'ShiftLeft', 'Enter']) press(s, held, k);
+    expect(s.jumpN).toBe(2);
+  });
+
   test('releaseAll (window blur) lets go of everything but keeps counters and look', () => {
     const s = createInputState(), held = new Set();
     press(s, held, 'KeyW'); press(s, held, 'KeyD'); press(s, held, 'ShiftLeft');
@@ -95,13 +108,13 @@ import { createInput } from '../src/player/input.js';
 
 test('C3: the network snapshot carries the forced (pilot) input, counters included', () => {
   const state = createInputState();
-  state.eN = 5; state.shoutN = 2; state.waveN = 1;
-  const input = { state, forced: { mx: 0, mz: 1, run: true, hold: true, eN: 7, q: true, shoutN: 3, waveN: 4, camYaw: 1, camPitch: 0.5 } };
+  state.eN = 5; state.shoutN = 2; state.waveN = 1; state.jumpN = 3;
+  const input = { state, forced: { mx: 0, mz: 1, run: true, hold: true, eN: 7, q: true, shoutN: 3, waveN: 4, jumpN: 6, camYaw: 1, camPitch: 0.5 } };
   const player = { x: 1, y: 2, z: 3, yaw: 0.2, dist: 9 };
   const m = netSnapshot(player, input, 4);
-  expect(m).toMatchObject({ t: 'p', x: 1, y: 2, z: 3, eN: 7, hold: true, q: true, shoutN: 3, waveN: 4, ay: 1, ap: 0.5, speed: 4, dist: 9 });
+  expect(m).toMatchObject({ t: 'p', x: 1, y: 2, z: 3, eN: 7, hold: true, q: true, shoutN: 3, waveN: 4, jumpN: 6, ay: 1, ap: 0.5, speed: 4, dist: 9 });
   // without a pilot the live state goes out
-  expect(netSnapshot(player, { state, forced: null }, 0)).toMatchObject({ eN: 5, shoutN: 2, waveN: 1, hold: false, q: false });
+  expect(netSnapshot(player, { state, forced: null }, 0)).toMatchObject({ eN: 5, shoutN: 2, waveN: 1, jumpN: 3, hold: false, q: false });
 });
 
 // A minimal fake browser for createInput.
@@ -152,5 +165,24 @@ test('M1: a lock refused through pointerlockerror also retries on the next click
   win.dispatchEvent(ev('mouseup', { button: 0 }));
   canvas.dispatchEvent(ev('mousedown', { button: 0 }));
   expect(calls).toBe(2);
+  input.dispose();
+});
+
+test('a space typed in a text field does not jump; on the page it jumps and is claimed', () => {
+  const { win, canvas } = fakeDom([]);
+  const input = createInput(canvas);
+  // dispatchEvent sets the target to the window, so shadow it for the field cases
+  const key = (target, preventDefault) => {
+    const e = new Event('keydown');
+    Object.defineProperty(e, 'target', { value: target });
+    Object.assign(e, { code: 'Space', repeat: false, preventDefault });
+    win.dispatchEvent(e);
+  };
+  for (const tagName of ['INPUT', 'TEXTAREA']) key({ tagName }, () => { throw new Error('claimed'); });
+  key({ isContentEditable: true }, () => { throw new Error('claimed'); });
+  expect(input.state.jumpN).toBe(0);
+  let prevented = 0;
+  key({ tagName: 'CANVAS' }, () => { prevented++; });
+  expect(input.state.jumpN).toBe(1); expect(prevented).toBe(1);
   input.dispose();
 });

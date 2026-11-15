@@ -64,7 +64,7 @@ const HELP = [
   'follow [metres] — keep close to your friend; stop — stand still',
   'press (or e) — press E once; hold on / hold off — hold E down',
   'look N|NE|E|SE|S|SW|W|NW, look DEGREES [TILT], or look friend — turn the view (0 is north, 90 east)',
-  'point on / point off, shout, wave',
+  'point on / point off, shout, wave, jump',
   'say TEXT — say it in the game chat',
   'pillar LINE R, tile I — where a pillar or a marsh tile is',
 ].join('\n');
@@ -117,6 +117,7 @@ export function runCommand(line, { pilot, emit = () => {} }) {
         return a === 'on' ? 'pointing' : 'stopped pointing';
       case 'shout': pilot.shout(); return 'shouted';
       case 'wave': pilot.wave(); return 'waved';
+      case 'jump': pilot.jump(); return 'jumped';
       case 'look': {
         let deg = POINTS.indexOf((a ?? '').toUpperCase()) * 45;
         if (deg < 0 && a === 'friend') {

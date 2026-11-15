@@ -36,7 +36,7 @@ export function createStandin(game) {
     pin() {
       return {
         t: 'p', x: st.x, y: heightAt(st.x, st.z, game.dyn), z: st.z, yaw: st.yaw, ay: st.ay, ap: st.ap,
-        speed: 0, hold: st.hold, q: false, eN: st.eN, shoutN: 0, waveN: 0, dist: 0,
+        speed: 0, hold: st.hold, q: false, eN: st.eN, shoutN: 0, waveN: 0, jumpN: 0, dist: 0,
       };
     },
     update() {

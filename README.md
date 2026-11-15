@@ -16,6 +16,7 @@ You can type to each other in the game (Enter). There is no voice chat, so a cal
 | --- | --- |
 | W A S D | Stroll |
 | Shift | Run |
+| Space | Jump |
 | Mouse | Look (click the game first; Esc releases) |
 | E | Interact (hold for cranks) |
 | Q | Point |

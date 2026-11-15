@@ -3,14 +3,14 @@ import { dirFromYawPitch } from '../core/math.js';
 import { readInput } from '../player/input.js';
 import { clean, MAX_LEN } from '../core/chat.js';
 
-export const PROTOCOL_V = 7;   // bump whenever the shape of S or dyn, or what a message means, changes
+export const PROTOCOL_V = 8;   // bump whenever the shape of S or dyn, or what a message means, changes
 export const MAX_BYTES = 16384;
 
 // [field, min, max]
 const NUM = [['x', -1e4, 1e4], ['y', -1e4, 1e4], ['z', -1e4, 1e4], ['yaw', -100, 100], ['ay', -100, 100],
   ['ap', -100, 100], ['speed', 0, 50], ['dist', 0, 1e7]];
 const BOOL = ['hold', 'q'];
-const COUNT = ['eN', 'shoutN', 'waveN'];
+const COUNT = ['eN', 'shoutN', 'waveN', 'jumpN'];
 
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 const isCount = (v) => Number.isInteger(v) && v >= 0 && v <= 1e9;
@@ -101,7 +101,7 @@ export function pressTracker() {
 export const snapshot = (player, inp, speed) => ({
   t: 'p', x: player.x, y: player.y, z: player.z, yaw: player.yaw,
   ay: inp.camYaw, ap: inp.camPitch, speed, hold: !!inp.hold,
-  eN: inp.eN, q: !!inp.q, shoutN: inp.shoutN, waveN: inp.waveN, dist: player.dist,
+  eN: inp.eN, q: !!inp.q, shoutN: inp.shoutN, waveN: inp.waveN, jumpN: inp.jumpN, dist: player.dist,
 });
 
 // The `p` message from an input handle: built from the same merged input the local step

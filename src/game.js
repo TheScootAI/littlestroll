@@ -376,7 +376,7 @@ export class Game {
     g.visible = true;
     av.update({
       x: this.rx, y: this.ry, z: this.rz, yaw: this.ryaw, speed: r.speed,
-      aim: dirFromYawPitch(r.ay, r.ap), pointing: r.q, waveN: r.waveN,
+      aim: dirFromYawPitch(r.ay, r.ap), pointing: r.q, waveN: r.waveN, jumpN: r.jumpN,
       carrying: this.holdsPlank(1 - this.idx) || this.holdsMirror(1 - this.idx), mirror: this.holdsMirror(1 - this.idx), torch: this.holdsFlame(1 - this.idx),
     }, dt);
   }
@@ -490,7 +490,7 @@ export class Game {
     const ui = document.getElementById('ui');
     if (!ui) return null;
     const el = document.createElement('div');
-    el.textContent = 'Click to look around · WASD to stroll · Shift to run · Enter to chat';
+    el.textContent = 'Click to look around · WASD to stroll · Shift to run · Space to jump · Enter to chat';
     Object.assign(el.style, {
       position: 'absolute', left: '50%', bottom: '28px', transform: 'translateX(-50%)',
       padding: '8px 16px', borderRadius: '999px', background: 'rgba(60, 48, 40, 0.55)',
@@ -548,12 +548,13 @@ export class Game {
     this.standin?.update(dt);
     if (dt > 0) this.speed = (p.dist - before) / dt;
 
-    this.avatar.update({
+    const hopped = this.avatar.update({
       x: p.x, y: p.y, z: p.z, yaw: p.yaw, speed: this.speed,
       aim: dirFromYawPitch(inp.camYaw, inp.camPitch),
-      pointing: !!inp.q, waveN: inp.waveN,
+      pointing: !!inp.q, waveN: inp.waveN, jumpN: inp.jumpN,
       carrying: this.holdsPlank(this.idx) || this.holdsMirror(this.idx), mirror: this.holdsMirror(this.idx), torch: this.holdsFlame(this.idx),
     }, dt);
+    if (hopped) this.audio.hop();   // only the local walker's own jump makes the sound
     this.updateRemote(dt);
     this.syncPuzzles(pins, inp, dt);
     if (this.ending) this.updateEnding(dt);

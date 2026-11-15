@@ -166,6 +166,7 @@ export function createPilot(game) {
     point(on) { if (on) forced.q = true; else delete forced.q; },
     shout() { live.shoutN++; },
     wave() { live.waveN++; },
+    jump() { live.jumpN++; },
 
     // chat: say() goes through the same rules as the box (cleaning, flood gate, no friend)
     say(text) { try { return !!game.say(text); } catch { return false; } },
@@ -189,7 +190,7 @@ export function createPilot(game) {
       '__pilot.follow(dist) / stop()      keep within dist of the friend / cancel and stand still',
       '__pilot.hold(bool) / press()       E held / one E press',
       '__pilot.look(yaw, pitch) / aimAt([x,y,z])',
-      '__pilot.point(bool) / shout() / wave()',
+      '__pilot.point(bool) / shout() / wave() / jump()',
       '__pilot.say(text)                  send a chat line -> true if it went',
       '__pilot.chat(afterId)              chat lines with id > afterId: [{ id, from: \'me\'|\'friend\'|\'system\', text }]; state().chatN is the newest id',
     ].join('\n'),
