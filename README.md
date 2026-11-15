@@ -1,20 +1,20 @@
 # Little Stroll
 
-A two-player co-operative puzzle walk that runs in the browser. Two friends, each on their own computer, walk a trail across three small islands and meet eleven puzzles on the way. No puzzle can be solved by one person. Eight stone owls are hidden off the trail for the curious.
+A two-player co-operative puzzle stroll that runs in the browser. Two friends, each on their own computer, stroll a trail across three small islands and meet eleven puzzles on the way. No puzzle can be solved by one person. Eight stone owls are hidden off the trail for the curious.
 
 Built with three.js. No accounts and no server: the two browsers connect directly.
 
 ## Play
 
 1. Both of you open the game.
-2. One clicks **Start a walk** and reads out the five-letter code.
-3. The other clicks **Join a walk** and types it in.
+2. One clicks **Start a stroll** and reads out the five-letter code.
+3. The other clicks **Join a stroll** and types it in.
 
 You can type to each other in the game (Enter). There is no voice chat, so a call is still nicer.
 
 | Key | Does |
 | --- | --- |
-| W A S D | Walk |
+| W A S D | Stroll |
 | Shift | Run |
 | Mouse | Look (click the game first; Esc releases) |
 | E | Interact (hold for cranks) |
@@ -25,7 +25,7 @@ You can type to each other in the game (Enter). There is no voice chat, so a cal
 
 On a small share of home networks the two browsers can't connect directly. The game says so when that happens.
 
-Found a bug or have an idea? The speech-bubble button in the top-right corner opens a box for a note, with a link that opens GitHub with the note filled in; the note is posted when you press GitHub's own button there. In a walk it also takes a screenshot of the view, which you can copy and paste into the issue.
+Found a bug or have an idea? The speech-bubble button in the top-right corner opens a box for a note, with a link that opens GitHub with the note filled in; the note is posted when you press GitHub's own button there. In a stroll it also takes a screenshot of the view, which you can copy and paste into the issue.
 
 ## Run it locally
 

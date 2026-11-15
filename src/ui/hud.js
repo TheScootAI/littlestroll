@@ -140,7 +140,7 @@ export function createHud(root) {
     showEnding({ time, dist, owls }) {
       end.replaceChildren();
       const card = el('div', 'card');
-      card.appendChild(el('h2', '', 'You walked it together'));
+      card.appendChild(el('h2', '', 'You strolled it together'));
       const t = el('p', 'time', 'Time ');
       t.appendChild(el('b', '', fmtTime(time)));
       card.appendChild(t);
@@ -160,7 +160,7 @@ export function createHud(root) {
         walkers.appendChild(w);
       });
       card.appendChild(walkers);
-      const again = el('button', '', 'Walk again');
+      const again = el('button', '', 'Stroll again');
       again.onclick = () => window.location.reload();
       card.appendChild(again);
       end.appendChild(card);

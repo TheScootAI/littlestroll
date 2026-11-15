@@ -76,10 +76,10 @@ async function main() {
   const hud = createHud(ui);
   let game;
   if (choice.role === 'host') {
-    hud.setStatus('Starting a walk…');
+    hud.setStatus('Starting a stroll…');
     const started = await startHost(hud);
     if (!started) {
-      hud.setStatus("Couldn't start a walk — check your connection and try again.",
+      hud.setStatus("Couldn't start a stroll — check your connection and try again.",
         { label: 'Back to menu', onClick: () => window.location.reload() });
       return;
     }

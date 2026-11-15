@@ -163,14 +163,14 @@ export class Game {
         hud?.setStatus('Reconnecting to your friend…');
       } else if (st === 'lost') {
         this.clearRemote();
-        hud?.setStatus("Your friend's walk has ended.", back);
+        hud?.setStatus("Your friend's stroll has ended.", back);
       } else if (st === 'failed') {
         hud?.setStatus("Couldn't connect. Check the code — and some home networks block direct connections.", back);
       } else if (st === 'version') {
         if (this.role === 'host') hud?.setCode(this.code);
         hud?.setStatus('You and your friend are on different versions — both refresh the page.', back);
       } else if (st === 'full') {
-        hud?.setStatus('This walk already has two walkers.', back);
+        hud?.setStatus('This stroll already has two people.', back);
       }
     };
   }
@@ -481,7 +481,7 @@ export class Game {
     const ui = document.getElementById('ui');
     if (!ui) return null;
     const el = document.createElement('div');
-    el.textContent = 'Click to look around · WASD to walk · Shift to run · Enter to chat';
+    el.textContent = 'Click to look around · WASD to stroll · Shift to run · Enter to chat';
     Object.assign(el.style, {
       position: 'absolute', left: '50%', bottom: '28px', transform: 'translateX(-50%)',
       padding: '8px 16px', borderRadius: '999px', background: 'rgba(60, 48, 40, 0.55)',

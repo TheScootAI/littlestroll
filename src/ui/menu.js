@@ -30,10 +30,10 @@ export function showMenu(root) {
     const menu = el('div', 'lr-menu');
     const card = el('div', 'lr-card');
     card.appendChild(el('h1', 'lr-title', 'Little Stroll'));
-    card.appendChild(el('p', 'lr-sub', 'A walk across three small islands, for two.'));
+    card.appendChild(el('p', 'lr-sub', 'A stroll across three small islands, for two.'));
 
-    const start = el('button', 'lr-btn', 'Start a walk');
-    const joinBtn = el('button', 'lr-btn alt', 'Join a walk');
+    const start = el('button', 'lr-btn', 'Start a stroll');
+    const joinBtn = el('button', 'lr-btn alt', 'Join a stroll');
     const join = el('div', 'lr-join');
     const input = el('input', 'lr-input');
     input.type = 'text';
@@ -41,7 +41,7 @@ export function showMenu(root) {
     input.placeholder = 'CODE';
     input.autocomplete = 'off';
     input.spellcheck = false;
-    input.setAttribute('aria-label', 'Walk code');
+    input.setAttribute('aria-label', 'Stroll code');
     const err = el('p', 'lr-err');
     join.append(input, err);
 
@@ -50,7 +50,7 @@ export function showMenu(root) {
     joinBtn.onclick = () => { join.classList.add('open'); input.focus(); };
     const submit = () => {
       const code = normalizeCode(input.value);
-      if (!code) { err.textContent = "That isn't a walk code — five letters."; return; }
+      if (!code) { err.textContent = "That isn't a stroll code — five letters."; return; }
       done({ role: 'join', code });
     };
     input.addEventListener('input', () => { err.textContent = ''; });
