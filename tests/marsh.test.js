@@ -101,8 +101,13 @@ test('prompts', () => {
   expect(prompt(s, 0, [P(M.lever), P(far)])).toBe(null);
 });
 
-test('seesPath: only from the plate, or once solved', () => {
+test('seesPath: only from the plate with the barrier up, or once solved', () => {
   const s = create(2);
+  // The barrier waits while a walker is near it. Until it is up nobody sees the path: otherwise
+  // a watcher could hold it down from the plate's edge, read the path, let the partner take the
+  // plate and stroll off to cross from memory (no re-deal, the plate was never left empty).
+  expect(seesPath(s, P(plate))).toBe(false);
+  s.up = true;
   expect(seesPath(s, P(plate))).toBe(true);
   expect(seesPath(s, P([plate[0] + M.plate.r + 0.2, plate[1]]))).toBe(false);
   expect(seesPath(s, P(far))).toBe(false);
@@ -394,4 +399,15 @@ test('dynOf exposes the barrier as watch', () => {
   const S = createAll(9);
   expect(dynOf(S).watch).toBe(false);
   S.marsh.up = true; expect(dynOf(S).watch).toBe(true);
+});
+
+test('a watcher holding the barrier down from the plate\'s edge sees nothing until it rises', () => {
+  const s = create(7), b = M.barrier;
+  const edge = [b.ax + 0.5, (b.az + b.bz) / 2];          // on the plate, half a metre from the barrier
+  expect(onPlate(P(edge))).toBe(true);
+  step(s, [P(edge), P(far)], 1 / 30);
+  expect(s.held).toBe(true); expect(s.up).toBe(false);
+  expect(seesPath(s, P(edge))).toBe(false);
+  step(s, [P(plate), P(far)], 1 / 30);                    // steps to the middle: the barrier rises behind them
+  expect(s.up).toBe(true); expect(seesPath(s, P(plate))).toBe(true);
 });

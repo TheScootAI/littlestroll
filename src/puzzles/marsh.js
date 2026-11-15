@@ -102,8 +102,10 @@ export function step(s, players, dt) {
 // The bit mask of solid tiles (bit i = tile i): the path while watched or solved, else none.
 export const maskOf = (s) => (s.held || s.solved ? s.path.reduce((m, i) => m | (1 << i), 0) : 0);
 
-// May this walker see which tiles are safe? On the plate, or anyone once it is solved.
-export const seesPath = (s, walker) => !!s.solved || onPlate(walker);
+// On the plate with the barrier up behind them, or anyone once it is solved. Not before the
+// barrier is up: it waits for walkers to clear it, and a watcher who could read the path while
+// holding it down could hand the plate to the partner and walk off with the path in their head.
+export const seesPath = (s, walker) => !!s.solved || (!!s.up && onPlate(walker));
 
 // Does a slab visibly give way under this walker? Only when the walker over it is actually
 // unsupported (the ground at their feet is below the surface); a walker on a safe tile's 0.3 m
