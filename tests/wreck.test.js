@@ -5,7 +5,8 @@ import { placeScenery } from '../src/world/terrain.js';
 import { reachable } from './helpers/reach.js';
 import { blockers } from '../src/world/layout.js';
 import { pointSegDist } from '../src/core/math.js';
-import { DEBRIS, leanEnds, TIP_R, TIP_RISE } from '../src/world/wreck.js';
+import { DEBRIS, leanEnds, TIP_R, TIP_RISE, fallPose, hitTime, FALL_END } from '../src/world/wreck.js';
+import { WATER_Y } from '../src/config.js';
 
 const W = SITES.wreck, scenery = placeScenery();
 const ends = W.pieces.flatMap((p, i) => [[i, 'a', p.a], [i, 'b', p.b]]);
@@ -114,5 +115,26 @@ test('debris keeps 1.2 m clear of every resting timber as drawn (slid toward the
   for (const p of W.pieces) {
     const e = leanEnds(p.a, p.b, W.rock, p.len);
     for (const o of DEBRIS) expect(pointSegDist(o.x, o.z, e.a[0], e.a[1], e.b[0], e.b[1]).d).toBeGreaterThanOrEqual(1.2);
+  }
+});
+
+test('a too-short piece laid out from the near bank, then falling in', () => {
+  for (const len of [1.8, 2.5]) {
+    const p0 = fallPose(len, 0);
+    expect(p0.a[0]).toBe(6); expect(p0.a[2]).toBe(-9);
+    expect(p0.a[1]).toBeCloseTo(heightAt(6, -8.5, DYN_NONE), 6);
+    expect(p0.b[1]).toBeCloseTo(p0.a[1], 6);   // level
+    let prev = Infinity;
+    for (let t = 0; t < FALL_END; t += 0.02) {
+      const { a, b } = fallPose(len, t);
+      expect(Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])).toBeCloseTo(len, 6);
+      expect(b[1]).toBeLessThanOrEqual(prev + 1e-9);
+      prev = b[1];
+      expect(b[2]).toBeGreaterThan(-12.6 + 0.1);   // never reaches the far bank
+    }
+    const end = fallPose(len, FALL_END - 0.001);
+    expect(end.a[1]).toBeLessThan(WATER_Y); expect(end.b[1]).toBeLessThan(WATER_Y);
+    expect(fallPose(len, FALL_END)).toBeNull();
+    expect(hitTime(len)).toBeGreaterThan(0.4); expect(hitTime(len)).toBeLessThan(FALL_END);
   }
 });

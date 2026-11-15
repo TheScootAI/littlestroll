@@ -1,7 +1,8 @@
 // The wreck's loose things, as places: what lies on the sand between the hull and the rock, and
 // where a timber's two ends are drawn when it leans on the rock. Scenery only: nothing here is
 // puzzle state, and the rules never read it. Pure, no three.js.
-import { SITES } from './layout.js';
+import { SITES, heightAt, DYN_NONE } from './layout.js';
+import { WATER_Y } from '../config.js';
 
 // kind, where, which way it faces (radians about the vertical)
 export const DEBRIS = [
@@ -27,4 +28,24 @@ export function leanEnds(a, b, rock = SITES.wreck.rock, len = Math.hypot(b[0] - 
   const tip = (rock[0] - a[0]) * ux + (rock[1] - a[1]) * uz - tipR;   // along the line from a
   const run = Math.sqrt(len * len - rise * rise);
   return { a: [a[0] + ux * (tip - run), a[1] + uz * (tip - run)], b: [a[0] + ux * tip, a[1] + uz * tip] };
+}
+
+// A piece too short for the gap, let go at the slot, is laid out from the near bank and falls in.
+// Its pose, a pure function of its length and the seconds since it fell: first (LAY_T) it lies level
+// from the near lip, its far end in the air short of the far bank; then it tips about the lip and
+// slides off into the water. Ends are [x, y, z] of the piece's surface (the view adds half its
+// thickness); null once it is over (FALL_END), when the piece is drawn at its rest again.
+export const LAY_T = 0.4, FALL_T = 0.9, FALL_END = 1.6;
+const GAP_X = 6, LIP_Z = -9, SLIDE = 0.3, TIP = 1.35;
+const BANK_Y = heightAt(GAP_X, -8.5, DYN_NONE);
+export function fallPose(len, t) {
+  if (t >= FALL_END) return null;
+  const u = Math.min(1, Math.max(0, (t - LAY_T) / FALL_T)), k = u * u;
+  const th = TIP * k, nz = LIP_Z - SLIDE * k, ny = BANK_Y - (BANK_Y - WATER_Y + 0.6) * k;
+  return { a: [GAP_X, ny, nz], b: [GAP_X, ny - len * Math.sin(th), nz - len * Math.cos(th)] };
+}
+// When the far end first reaches the water: the splash starts then.
+export function hitTime(len) {
+  for (let t = 0; t < FALL_END; t += 0.01) if (fallPose(len, t).b[1] <= WATER_Y) return t;
+  return FALL_END;
 }

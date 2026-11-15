@@ -9,7 +9,8 @@ import {
 } from 'three';
 import { SITES, heightAt } from '../../world/layout.js';
 import { LEN, board as rigid, lengthOf, atRest } from '../plank.js';
-import { leanEnds, TIP_RISE } from '../../world/wreck.js';
+import { leanEnds, TIP_RISE, fallPose, hitTime } from '../../world/wreck.js';
+import { WATER_Y } from '../../config.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 const HIP = 0.75;          // carried ends ride this far above the ground under them
@@ -121,9 +122,8 @@ export function createView(scene) {
   for (let k = 0; k < DROPS; k++) { const d = new Mesh(new BoxGeometry(0.1, 0.14, 0.1), dropMat); splash.add(d); drops.push(d); }
   splash.visible = false;
   root.add(splash);
-  const [slx, slz] = SITES.plank.slot;
-  const splashY = heightAt(slx, slz) + 0.15;
-  const SPLASH_T = 1.2;
+  const SPLASH_X = 6, SPLASH_Z = -10.8, SPLASH_Y = WATER_Y + 0.05;   // in the gap, where the piece hits the water
+  const SPLASH_T = 1.0;
 
   const sp = SITES.plank.span;
   const spanLen = Math.hypot(sp.bx - sp.ax, sp.bz - sp.az);
@@ -144,41 +144,47 @@ export function createView(scene) {
         const end = (hold, x, z) => {
           const q = hold !== null ? ctx.players[hold] : null;
           if (q && q.present) { x = q.x; z = q.z; }
-          return [x, z];
+          return [x, z, q && q.present && Number.isFinite(q.y) ? q.y : null];   // a carried end rides at its carrier's height
         };
         // once something is laid nobody carries anything: draw the others where S says they lie
         const ha = s.placed === null && b.holdA !== null, hb = s.placed === null && b.holdB !== null;
-        let [ax, az] = end(ha ? b.holdA : null, b.ax, b.az), [bx, bz] = end(hb ? b.holdB : null, b.bx, b.bz);
+        let [ax, az, ca] = end(ha ? b.holdA : null, b.ax, b.az), [bx, bz, cb] = end(hb ? b.holdB : null, b.bx, b.bz);
+        const ground = (x, z) => heightAt(x, z, ctx.dyn);
         let ya, yb;
         if (ha && hb) {
           // carried by two it is rigid: its full length, centred between the carriers
           [ax, az, bx, bz] = rigid(len, ax, az, bx, bz, [1, 0]);
-          ya = heightAt(ax, az) + HIP; yb = heightAt(bx, bz) + HIP;
+          ya = (ca ?? ground(ax, az)) + HIP; yb = (cb ?? ground(bx, bz)) + HIP;
         } else if (ha || hb) {
           // carried by one: that end at their hip, the piece's full length pointing at its other end
           const [hx, hz, ox, oz] = ha ? [ax, az, bx, bz] : [bx, bz, ax, az];
-          const hy = heightAt(hx, hz) + HIP, oy = heightAt(ox, oz) + rest;
+          const hy = ((ha ? ca : cb) ?? ground(hx, hz)) + HIP, oy = ground(ox, oz) + rest;
           const l = Math.hypot(ox - hx, oy - hy, oz - hz) || 1, k = len / l;
           const ex = hx + (ox - hx) * k, ez = hz + (oz - hz) * k, ey = hy + (oy - hy) * k;
           if (ha) { bx = ex; bz = ez; ya = hy; yb = ey; } else { ax = ex; az = ez; yb = hy; ya = ey; }
+        } else if (s.fell === i && fallPose(len, s.splash)) {
+          // too short for the gap: laid out from the near bank, then it falls in (not drawn at the wreck meanwhile)
+          const f = fallPose(len, s.splash);
+          place(p, f.a[0], f.a[1] + hf, f.a[2], f.b[0], f.b[1] + hf, f.b[2]);
+          return;
         } else if (atRest(s, i)) {
           // leaning on the rock: end A on the sand, end B up on the rock
           const e = leanEnds([b.ax, b.az], [b.bx, b.bz], [rkx, rkz], len);
           [ax, az] = e.a; [bx, bz] = e.b;
-          ya = heightAt(ax, az) + rest; yb = ya + TIP_RISE;
+          ya = ground(ax, az) + rest; yb = ya + TIP_RISE;
         } else {
-          ya = heightAt(ax, az) + rest; yb = heightAt(bx, bz) + rest;
+          ya = ground(ax, az) + rest; yb = ground(bx, bz) + rest;
         }
         place(p, ax, ya, az, bx, yb, bz);
       });
       // the splash
-      const t = s.splash;
-      splash.visible = t < SPLASH_T;
+      const t = s.fell !== null ? s.splash - hitTime(lengthOf(s.fell)) : -1;   // from the moment it reaches the water
+      splash.visible = t >= 0 && t < SPLASH_T;
       if (splash.visible) {
         drops.forEach((d, k) => {
           const a = (k / DROPS) * Math.PI * 2, r = (0.5 + (k % 3) * 0.35) * (0.4 + t), y = (2.4 + (k % 2) * 0.9) * t - 4.9 * t * t;
           d.visible = y >= 0;
-          d.position.set(slx + Math.cos(a) * r, splashY + Math.max(0, y), slz + Math.sin(a) * r);
+          d.position.set(SPLASH_X + Math.cos(a) * r, SPLASH_Y + Math.max(0, y), SPLASH_Z + Math.sin(a) * r);
         });
         dropMat.opacity = Math.min(0.9, (SPLASH_T - t) * 2);
       }
