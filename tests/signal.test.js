@@ -254,3 +254,13 @@ test('valid: new slice fields, mid-play states and round-trips', () => {
   expect(valid({ ...s, seed: undefined })).toBe(false);
   expect(valid({ ...create(11), deal: 1e9, answer: draw(11, 1e9) })).toBe(true);
 });
+
+test('the symbols light only once the barrier is up: a walker standing in its way keeps them dark', () => {
+  const s = create(5), b = SITES.signal.barrier, pl = [SITES.signal.plate.x, SITES.signal.plate.z];
+  const at = (xz) => ({ x: xz[0], z: xz[1], y: 0, present: true, pressed: false });
+  const inTheWay = [(b.ax + b.bx) / 2 + 0.3, (b.az + b.bz) / 2];
+  step(s, [at(pl), at(inTheWay)], 1 / 30);
+  expect(s.held).toBe(true); expect(s.up).toBe(false); expect(s.lit).toBe(false);
+  step(s, [at(pl), at([inTheWay[0] + 3, inTheWay[1]])], 1 / 30);
+  expect(s.up).toBe(true); expect(s.lit).toBe(true);
+});

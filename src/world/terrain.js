@@ -84,12 +84,15 @@ function faceColour(x, z, h, ny, n) {
 // and the watch-stone's cap are drawn at exactly the height a walker stands on them, so ground
 // drawn there too would share their plane and flicker through. Under them the mesh is sunk
 // out of sight instead. Walking is unaffected: that still asks heightAt.
-const DECK_SEAT = 0.35, CAP_SEAT = 0.3;
+const DECK_SEAT = 0.35, CAP_SEAT = 0.3, DECK_RING = 0.5 + 1e-6, DECK_UNDER = 0.05;
 export function meshHeightAt(x, z) {
   const h = heightAt(x, z, DYN_NONE);
   const P = SITES.lift.platform;
   // strictly inside the deck's edge, so the mesh still meets the ground around it at the edge
   if (Math.abs(x - P.x) < P.hw - 1e-6 && Math.abs(z - P.z) < P.hd - 1e-6) return h - DECK_SEAT;
+  // along the deck's edge and half a metre out, ground that undulates above the deck's top would
+  // show through it (worst at the corners, where the ropes come down): keep it just under
+  if (Math.abs(x - P.x) <= P.hw + DECK_RING && Math.abs(z - P.z) <= P.hd + DECK_RING && Math.abs(h - SITES.lift.low) <= 0.3) return Math.min(h, SITES.lift.low - DECK_UNDER);
   if (Math.hypot(x - WATCH_STONE.x, z - WATCH_STONE.z) <= WATCH_STONE.r) return h - CAP_SEAT;
   return h;
 }

@@ -437,7 +437,10 @@ export const SITES = {
     dials: [[-10, 74.5], [-10, 77.5], [-7, 74.5], [-7, 77.5]],
     dialZone: { x: -8.5, z: 76, r: 3.5 },
     plate: { x: -26, z: 76, r: 1.5 },                 // stand here and the symbols show
-    barrier: seg(-17, 64.45, -17, 67.55),             // across the spur (z = 66, hw 1.25) over open sea, up while the plate is held
+    // Across the spur (z = 66, hw 1.25) over open sea, up while the plate is held. It stands in
+    // FRONT of the wall's plane (x = -14.8): from the dials' side of it nobody can walk round to
+    // where the symbols on the wall's back are in view.
+    barrier: seg(-13.3, 64.45, -13.3, 67.55),
     bridge: rampSeg('bridge'),
   },
   plank: {

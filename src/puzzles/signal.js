@@ -51,7 +51,7 @@ export function step(s, players, dt) {
     }
     if (s.held && s.dials.every((v, i) => v === s.answer[i])) { s.solved = true; s.up = false; }
   }
-  s.lit = s.held || s.solved;
+  s.lit = s.up || s.solved;   // only once the barrier is up: a walker standing in its way must not get a look
   if (s.solved) s.bridge = Math.min(1, s.bridge + dt / SWING_S);
 }
 

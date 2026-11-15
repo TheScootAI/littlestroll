@@ -2,6 +2,7 @@ import { test, expect } from 'vitest';
 import { DYN_NONE, SITES, RAMPS, blockers, zoneAt, heightAt } from '../src/world/layout.js';
 import { reachable } from './helpers/reach.js';
 import { pointSegDist } from '../src/core/math.js';
+import { onBackSide } from '../src/puzzles/signal.js';
 
 const D = (o) => ({ ...DYN_NONE, ...o });
 const spur = RAMPS.find((r) => r.from === 'B' && r.to === 'C');
@@ -28,7 +29,8 @@ test('the plate is on the lookout terrace, level, and well clear of the barrier'
   expect(Math.max(...hs) - Math.min(...hs)).toBeLessThan(0.2);
   expect(pointSegDist(plate.x, plate.z, barrier.ax, barrier.az, barrier.bx, barrier.bz).d).toBeGreaterThanOrEqual(6);
 });
-test('the barrier crosses the spur at right angles, full width plus 0.3 m a side, 3 m up from B', () => {
+test('the barrier crosses the spur at right angles, full width plus 0.3 m a side, 3 m up from B, in front of the wall\'s plane', () => {
+  expect(barrier.ax).toBeGreaterThan(SITES.signal.wall.x + 1); expect(barrier.bx).toBe(barrier.ax);
   const ux = (spur.bx - spur.ax), uz = (spur.bz - spur.az), len = Math.hypot(ux, uz);
   const dir = [ux / len, uz / len];
   const dx = barrier.bx - barrier.ax, dz = barrier.bz - barrier.az, bl = Math.hypot(dx, dz);
@@ -45,4 +47,19 @@ test('blockers carries the barrier only while it is up', () => {
   const has = (b) => b.segments.some((s) => s.ax === barrier.ax && s.az === barrier.az && s.bx === barrier.bx && s.bz === barrier.bz);
   expect(has(blockers(D({ spur: true })))).toBe(true);
   expect(has(blockers(DYN_NONE))).toBe(false);
+});
+
+// The symbols are on the back of the wall. With the barrier up, nobody on the dials' side of it
+// may be able to walk to where that back can be seen (issue 11: from the spur, just short of the
+// barrier, the back was in plain view).
+test('with the barrier up, nowhere a walker can reach from the dials is behind the wall', () => {
+  const { wall, dials } = SITES.signal;
+  const from = reachable(dials[0], D({ gateOpen: true, spur: true }));
+  let checked = 0;
+  for (let x = -30; x <= 16; x += 0.25) for (let z = 58; z <= 92; z += 0.25) {
+    if (!from(x, z)) continue;
+    checked++;
+    expect(onBackSide(wall, x, z), `(${x}, ${z})`).toBe(false);   // the view's own test of who may see the symbols
+  }
+  expect(checked).toBeGreaterThan(1000);
 });

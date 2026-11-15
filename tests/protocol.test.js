@@ -12,7 +12,7 @@ describe('protocol', () => {
     expect(decode(encode({ t: 'full' }))).toEqual({ t: 'full' });
     const s = { t: 's', S: { time: 1, gate: { a: 1 } } };
     expect(decode(encode(s))).toEqual(s);
-    expect(PROTOCOL_V).toBe(12);
+    expect(PROTOCOL_V).toBe(13);
     expect(MAX_BYTES).toBe(16384);
   });
 
