@@ -2,6 +2,7 @@ import { test, expect } from 'vitest';
 import { STONES, LEN, REACH, facePos, deal, create, inside, bothInside, atSpot, seesFace, step, prompt, valid, forceSolve } from '../src/puzzles/ring.js';
 import { createAll, stepAll, dynOf } from '../src/puzzles/index.js';
 import { SITES } from '../src/world/layout.js';
+import { GLYPHS } from '../src/puzzles/glyphs.js';
 
 const R = SITES.ring;
 const P = (xz, o = {}) => ({ present: true, x: xz[0], y: 0, z: xz[1], aim: [0, 0, -1], hold: false, pressed: false, ...o });
@@ -271,4 +272,8 @@ test('facePos: the ring picture, x right, y up, entrance at the bottom, matches 
     expect(Math.sign(x)).toBe(Math.sign(R.stones[i][0] - R.centre[0]));
     expect(Math.sign(y)).toBe(Math.sign(R.centre[1] - R.stones[i][1]));
   }
+});
+
+test('there is a carved glyph for every standing stone', () => {
+  expect(GLYPHS.length).toBe(STONES);
 });

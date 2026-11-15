@@ -11,7 +11,7 @@ export function signTexture(i) {
   const g = c.getContext('2d');
   g.fillStyle = '#fff'; g.strokeStyle = '#fff';
   g.lineWidth = GLYPH_STROKE; g.lineJoin = 'round'; g.lineCap = 'round';
-  const glyph = GLYPHS[i];
+  const glyph = GLYPHS[i] ?? GLYPHS[0];   // ids are checked before they get here; never throw while drawing
   for (const l of glyph.lines) {
     g.beginPath();
     for (let k = 0; k < l.length; k += 2) g[k ? 'lineTo' : 'moveTo'](l[k], l[k + 1]);

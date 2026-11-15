@@ -46,3 +46,9 @@ test('same ignores order and line direction, and notices a real difference', () 
   expect(same(a, b)).toBe(true);
   expect(same(a, { ...b, dots: [[1, 1, 3]] })).toBe(false);
 });
+test('mirrored turns a quarter arc round: right-to-bottom becomes bottom-to-left', () => {
+  const q = { lines: [[10, 20, 30, 40]], arcs: [[100, 128, 50, 0, Math.PI / 2]], dots: [] };
+  const want = { lines: [[246, 20, 226, 40]], arcs: [[156, 128, 50, Math.PI / 2, Math.PI]], dots: [] };
+  expect(same(mirrored(q), want)).toBe(true);
+  expect(same(mirrored(q), q)).toBe(false);
+});
