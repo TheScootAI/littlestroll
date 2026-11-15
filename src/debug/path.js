@@ -13,7 +13,8 @@
 // clearance only costs more; it is never forbidden. The raw cell path is then string-pulled
 // into a few waypoints, and a straight cut is taken only if it keeps as much clearance as the
 // cells it replaces (up to CLEAR_KEEP), so simplification never pulls the route to an edge.
-import { heightAt, blockers, lookDyn, DYN_NONE } from '../world/layout.js';
+import { heightAt, lookDyn, DYN_NONE } from '../world/layout.js';
+import { obstacles } from '../world/solids.js';
 import { DROWN_Y, STEP_UP, PLAYER_R } from '../config.js';
 import { pointSegDist } from '../core/math.js';
 
@@ -48,6 +49,36 @@ const cellOf = (x, z) => {
   return ix < 0 || iz < 0 || ix >= N || iz >= N ? -1 : iz * N + ix;
 };
 
+// The circles are many (every tree and boulder) and `clear` is asked of every cell the search
+// touches, so they are bucketed: each circle goes into every 4 m bucket its reach (radius, the
+// walker, and the widest margin used here) overlaps, and `clear` looks only in its own bucket.
+// Built once per circles array (obstacles() hands back the same one every call).
+const BUCKET = 4, REACH_PAD = PLAYER_R + MARGIN + 0.01;
+const NB = Math.ceil((N * STEP) / BUCKET);            // buckets per side, over the grid's own span
+const bucketsOf = new WeakMap();
+const bucketOf = (x, z) => {
+  const bx = Math.floor((x - X0) / BUCKET), bz = Math.floor((z - Z0) / BUCKET);
+  return bx < 0 || bz < 0 || bx >= NB || bz >= NB ? -1 : bz * NB + bx;
+};
+function bucketsFor(circles) {
+  let b = bucketsOf.get(circles);
+  if (b) return b;
+  b = new Array(NB * NB).fill(null);
+  for (const c of circles) {
+    const R = c.r + REACH_PAD;
+    for (let z = c.z - R; ; z += BUCKET) {
+      for (let x = c.x - R; ; x += BUCKET) {
+        const k = bucketOf(Math.min(x, c.x + R), Math.min(z, c.z + R));
+        if (k >= 0 && !(b[k] && b[k][b[k].length - 1] === c)) (b[k] ||= []).push(c);
+        if (x >= c.x + R) break;
+      }
+      if (z >= c.z + R) break;
+    }
+  }
+  bucketsOf.set(circles, b);
+  return b;
+}
+
 const grids = new Map();          // dyn key -> grid (a few, most recently used last)
 const GRID_CACHE = 6;
 
@@ -62,9 +93,11 @@ function gridFor(dyn = DYN_NONE) {
   let G = grids.get(key);
   if (G) { grids.delete(key); grids.set(key, G); return G; }
 
-  const { circles, segments } = blockers(d);
+  const { circles, segments } = obstacles(d);
+  const buckets = bucketsFor(circles);
   const clear = (x, z, m) => {
-    for (const c of circles) if (Math.hypot(x - c.x, z - c.z) < c.r + PLAYER_R + m) return false;
+    const k = bucketOf(x, z), near = k >= 0 ? buckets[k] : null;
+    if (near) for (const c of near) if (Math.hypot(x - c.x, z - c.z) < c.r + PLAYER_R + m) return false;
     for (const s of segments) if (pointSegDist(x, z, s.ax, s.az, s.bx, s.bz).d < PLAYER_R + m) return false;
     return true;
   };

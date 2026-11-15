@@ -1,9 +1,10 @@
 // Breadth-first flood over a 0.5 m grid: where can a walker get to from `from`
 // under the world state `dyn`? A step to one of the 8 neighbours is allowed when
 // the neighbour is above DROWN_Y, rises no more than STEP_UP, and is at least
-// PLAYER_R clear of every blocker. Heights are computed lazily, only for cells
+// PLAYER_R clear of every blocker, trees and boulders included. Heights are computed lazily, only for cells
 // the flood touches.
-import { heightAt, blockers } from '../../src/world/layout.js';
+import { heightAt } from '../../src/world/layout.js';
+import { obstacles } from '../../src/world/solids.js';
 import { DROWN_Y, STEP_UP, PLAYER_R } from '../../src/config.js';
 import { pointSegDist } from '../../src/core/math.js';
 
@@ -13,7 +14,7 @@ const N = 801;
 export const GRID = { X0, Z0, N, STEP };
 
 export function reachable(from, dyn) {
-  const { circles, segments } = blockers(dyn);
+  const { circles, segments } = obstacles(dyn);
   const height = new Float32Array(N * N).fill(NaN);
   const seen = new Uint8Array(N * N);
   const queue = new Int32Array(N * N);
@@ -75,7 +76,7 @@ export function reachable(from, dyn) {
 // On routes that run along the axes or at 45° it is close to exact; at other
 // angles the 8-neighbour grid overestimates by up to 8%.
 export function walkDistance(from, dyn) {
-  const { circles, segments } = blockers(dyn);
+  const { circles, segments } = obstacles(dyn);
   const height = new Float32Array(N * N).fill(NaN);
   const dist = new Float64Array(N * N).fill(Infinity);
   const done = new Uint8Array(N * N);

@@ -1,7 +1,8 @@
 import { describe, test, expect } from 'vitest';
 import { createPlayer, stepPlayer, needsRespawn, respawn } from '../src/player/controller.js';
 import { SITES, DYN_NONE, RAMPS, zoneAt, heightAt } from '../src/world/layout.js';
-import { WALK, RUN, STEP_UP } from '../src/config.js';
+import { WALK, RUN, STEP_UP, PLAYER_R } from '../src/config.js';
+import { SOLIDS } from '../src/world/solids.js';
 
 const fwd = { mx: 0, mz: 1, run: false, camYaw: 0 };
 const run = (p, input, secs, dyn = DYN_NONE, veto) => { for (let i = 0; i < Math.round(secs * 60); i++) stepPlayer(p, input, 1 / 60, dyn, veto); };
@@ -104,5 +105,53 @@ describe('controller', () => {
     run(down, { ...north, camYaw: Math.PI }, 2);
     expect(down.y).toBeLessThan(9);
     expect(down.z).toBeGreaterThan(-30);
+  });
+});
+
+// ---- trees and boulders are solid
+// A solid of `kind` with open, level ground all round it (so only it decides what a walker does).
+const lone = (kind) => SOLIDS.find((s) => {
+  if (s.kind !== kind) return false;
+  if (SOLIDS.some((o) => o !== s && Math.hypot(o.x - s.x, o.z - s.z) < 5)) return false;
+  const h = heightAt(s.x, s.z, DYN_NONE);
+  for (let k = 0; k < 24; k++) for (const d of [1, 2, 3, 4, 5]) {
+    const x = s.x + d * Math.cos(k * Math.PI / 12), z = s.z + d * Math.sin(k * Math.PI / 12);
+    if (Math.abs(heightAt(x, z, DYN_NONE) - h) > 0.3) return false;
+  }
+  return true;
+});
+// camYaw = PI makes (mx, mz) read as world (-x, +z)
+const toward = (ux, uz) => ({ mx: -ux, mz: uz, run: false, camYaw: Math.PI });
+
+describe.each(['boulder', 'pine', 'round'])('a %s is solid', (kind) => {
+  const s = lone(kind);
+  const lim = s?.r + PLAYER_R;
+  test('there is one with clear level ground round it to test on', () => { expect(s).toBeTruthy(); });
+  test('walking straight at it stops at r + PLAYER_R from its centre', () => {
+    const p = createPlayer(s.x, s.z - 5);
+    run(p, toward(0, 1), 4);
+    expect(Math.hypot(p.x - s.x, p.z - s.z)).toBeGreaterThan(lim - 0.05);
+    expect(Math.hypot(p.x - s.x, p.z - s.z)).toBeLessThan(lim + 0.05);
+    expect(p.z).toBeLessThan(s.z);
+  });
+  const aslant = toward(0.06 * lim, 1);   // would pass the centre line 0.5 lim off it: straight into the solid
+  test('walking at it off-centre slides round and ends up past it', () => {
+    const p = createPlayer(s.x + 0.2 * lim, s.z - 5);
+    run(p, aslant, 12);
+    expect(p.z).toBeGreaterThan(s.z + lim);
+    let min = Infinity;
+    const q = createPlayer(s.x + 0.2 * lim, s.z - 5);
+    for (let i = 0; i < 720; i++) { stepPlayer(q, aslant, 1 / 60, DYN_NONE); min = Math.min(min, Math.hypot(q.x - s.x, q.z - s.z)); }
+    expect(min).toBeGreaterThan(lim - 1e-6);
+  });
+  test('a walker put at its centre can walk out any of eight ways, and standing still moves nobody', () => {
+    const idle = createPlayer(s.x, s.z);
+    run(idle, { mx: 0, mz: 0, run: false, camYaw: 0 }, 2);
+    expect([idle.x, idle.z]).toEqual([s.x, s.z]);
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4, p = createPlayer(s.x, s.z);
+      run(p, toward(Math.cos(a), Math.sin(a)), 4);
+      expect(Math.hypot(p.x - s.x, p.z - s.z), `direction ${k}`).toBeGreaterThanOrEqual(lim - 1e-6);
+    }
   });
 });

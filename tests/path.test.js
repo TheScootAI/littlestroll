@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { findPath, clearanceAt, steer, planningDyn } from '../src/debug/path.js';
-import { SITES, DYN_NONE, RAMPS, heightAt, blockers, marshTileAt } from '../src/world/layout.js';
+import { SITES, DYN_NONE, RAMPS, heightAt, marshTileAt } from '../src/world/layout.js';
+import { obstacles } from '../src/world/solids.js';
 import * as marshRules from '../src/puzzles/marsh.js';
 import { createPlayer, stepPlayer, needsRespawn } from '../src/player/controller.js';
 import { DROWN_Y, STEP_UP, PLAYER_R } from '../src/config.js';
@@ -15,7 +16,7 @@ const clearOf = (bl, x, z) =>
 
 // every 0.25 m along a→b obeys the walker's rule
 function walkable(a, b, dyn) {
-  const bl = blockers(dyn);
+  const bl = obstacles(dyn);
   const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
   const n = Math.max(1, Math.ceil(len / 0.25));
   let prev = heightAt(a[0], a[1], dyn);

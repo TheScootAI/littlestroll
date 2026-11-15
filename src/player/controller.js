@@ -1,7 +1,8 @@
 // Walker movement and collision. Pure: no three.js, no DOM.
 import { WALK, RUN, STEP_UP, PLAYER_R, DROWN_Y } from '../config.js';
 import { lerpAngle, pointSegDist } from '../core/math.js';
-import { heightAt, blockers, SITES } from '../world/layout.js';
+import { heightAt, SITES } from '../world/layout.js';
+import { obstacles } from '../world/solids.js';
 
 const GRAVITY = 20;
 const MAX_SUBSTEP = 0.1;   // metres of horizontal travel per sub-step
@@ -9,22 +10,23 @@ const TURN_RATE = 14;
 
 export const createPlayer = (x, z) => ({ x, y: heightAt(x, z), z, yaw: 0, vy: 0, dist: 0 });
 
-// Distance from (x, z) to each blocker, as {d, lim}: overlapping when d < lim.
-function overlaps(bl, x, z) {
-  const out = [];
-  for (const c of bl.circles) out.push({ d: Math.hypot(x - c.x, z - c.z), lim: c.r + PLAYER_R });
-  for (const s of bl.segments) out.push({ d: pointSegDist(x, z, s.ax, s.az, s.bx, s.bz).d, lim: PLAYER_R });
-  return out;
-}
-
 // A move is blocked when it enters a blocker, unless the walker already overlaps that
-// blocker and the move does not take it closer (so it can always walk out).
+// blocker and the move does not take it closer (so it can always walk out). Allocation-free:
+// there are a few hundred circles (the trees and boulders) and this runs every sub-step.
+function enters(od, nd, lim) {
+  if (nd >= lim) return false;
+  return !(od < lim && nd >= od - 1e-9);
+}
 function blocked(bl, ox, oz, nx, nz) {
-  const before = overlaps(bl, ox, oz), after = overlaps(bl, nx, nz);
-  for (let i = 0; i < after.length; i++) {
-    if (after[i].d >= after[i].lim) continue;
-    if (before[i].d < before[i].lim && after[i].d >= before[i].d - 1e-9) continue;
-    return true;
+  const cs = bl.circles;
+  for (let i = 0; i < cs.length; i++) {
+    const c = cs[i];
+    if (enters(Math.hypot(ox - c.x, oz - c.z), Math.hypot(nx - c.x, nz - c.z), c.r + PLAYER_R)) return true;
+  }
+  const ss = bl.segments;
+  for (let i = 0; i < ss.length; i++) {
+    const s = ss[i];
+    if (enters(pointSegDist(ox, oz, s.ax, s.az, s.bx, s.bz).d, pointSegDist(nx, nz, s.ax, s.az, s.bx, s.bz).d, PLAYER_R)) return true;
   }
   return false;
 }
@@ -38,7 +40,7 @@ export function stepPlayer(p, input, dt, dyn, veto = null) {
   let mag = Math.hypot(dx, dz);
   if (mag > 1) { dx /= mag; dz /= mag; mag = 1; }
   const speed = Math.min(1, mag) * (input.run ? RUN : WALK);
-  const bl = blockers(dyn);
+  const bl = obstacles(dyn);
 
   const n = Math.max(1, Math.ceil((speed * dt) / MAX_SUBSTEP));
   const h = dt / n;

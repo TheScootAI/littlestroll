@@ -1,12 +1,13 @@
 // Can two walkers carry a rigid board through the plank course? A breadth-first search over
 // where the two carriers stand (a 0.25 m grid), one carrier taking one small step at a time.
 // A stand is allowed when both carriers are on the plank terrace's ground and clear of the
-// stones, they are the board's length apart (give or take `slack`), and the board itself (its
+// stones and the solids, they are the board's length apart (give or take `slack`), and the board itself (its
 // true length, centred between them) clears every stone by `margin`. Used by the tests to
 // prove the course can be done, and by nothing else.
 import { zoneAt, heightAt, SITES, DYN_NONE } from '../../src/world/layout.js';
 import { pointSegDist } from '../../src/core/math.js';
 import { PLAYER_R } from '../../src/config.js';
+import { SOLIDS } from '../../src/world/solids.js';
 
 const STEP = 0.25;
 
@@ -28,6 +29,7 @@ export function carrySearch({ len, slack, margin = 0.15, stones = SITES.plank.st
   for (let z = 44; z >= -9.5; z -= STEP) for (let x = -4; x <= 16; x += STEP) {
     if (zoneAt(x, z) !== 'D' || Math.abs(heightAt(x, z, dyn) - heightAt(...SITES.plank.restA, dyn)) > 0.3) continue;
     if (stones.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + PLAYER_R)) continue;
+    if (SOLIDS.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + PLAYER_R)) continue;   // trees and boulders stop a carrier too; the board itself still meets the stones only
     index.set(`${x},${z}`, cells.length);
     cells.push([x, z]);
   }
