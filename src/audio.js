@@ -58,7 +58,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0, hoot: 0, splash: 0, hop: 0 },   // for checking in a browser
+    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0, find: 0, splash: 0, hop: 0 },   // for checking in a browser
     // a footfall: a soft low scuff with a faint pat under it, a little different every time
     // (it is heard hundreds of times, so it is quiet and dull, never a click)
     step: safe(() => {
@@ -119,12 +119,13 @@ export function createAudio() {
       tone(f, t, 0.9, 0.2);
       tone(f * 2, t, 0.5, 0.05);
     }),
-    // an owl found: two soft low notes, the second a little lower
-    hoot: safe(() => {
-      audio.calls.hoot++;
+    // a piece of clothing found: a soft three-note "ta-da", quick and rising (under half a second)
+    find: safe(() => {
+      audio.calls.find++;
       const t = ctx.currentTime;
-      tone(329.63, t, 0.45, 0.14);
-      tone(261.63, t + 0.32, 0.6, 0.14);
+      tone(523.25, t, 0.12, 0.12);
+      tone(659.25, t + 0.09, 0.12, 0.12);
+      tone(783.99, t + 0.18, 0.28, 0.14);
     }),
     // a timber falling into the water: a burst of soft hissing noise over a quick low thump
     splash: safe(() => {

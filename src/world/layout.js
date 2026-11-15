@@ -399,14 +399,15 @@ const SEEING = [
 const TALLY = [157, -123];
 const STANDING_R = 0.6, SEEING_R = 0.7, LANTERN_R = 0.3, TALLY_R = 0.8;
 
-// Owls: 0-2 and 8 on the first island, 3-4 on the Far Isle, 5-7 on the Lantern Isle.
-const OWLS = [
+// Finds (a piece of clothing each): 0-2, 8 and 9 on the first island, 3-4 on the Far Isle, 5-7 on the Lantern Isle.
+const FIND_SITES = [
   // between the pines on the lookout; behind the big rock behind where the walkers start (out of sight from
   // both starting places, on the beach's rim); the summit's north rim
   [-35.3, 70.8], [3.94, 135.49], [15, -75],
   [107.75, -49.75], [76.75, -72.75],            // H's south-east rim, the neck to bell a (each 2.5 m clear of scenery)
   [142, -88], toward(TOR_C, 90 * deg, 42), toward(TOR_C, 270 * deg, 42),   // K's nook, L's east and west spurs
   [11.1, 80.2],                                 // behind the boulder and the round tree east of the Signal's dials
+  [13.3, 131.3],                                // the pirate hat: tucked against the wreck's hull, on the side away from the spawn
 ];
 
 export const SITES = {
@@ -505,7 +506,7 @@ export const SITES = {
     lamp: [...TOR_C],
     lampH: 8,        // the great lamp's flame centre above the tor's top (the ending shot frames it)
   },
-  owls: OWLS,
+  finds: FIND_SITES,
 };
 
 // The relay climb's centre line, from the small brazier to the great one.

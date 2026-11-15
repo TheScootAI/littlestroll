@@ -15,7 +15,7 @@ import * as relay from './relay.js';
 import * as pillars from './pillars.js';
 import * as ring from './ring.js';
 import * as lanterns from './lanterns.js';
-import * as owls from './owls.js';
+import * as finds from './finds.js';
 
 // Trail order. `solved(S)` says whether that puzzle is done.
 const ORDER = [
@@ -32,7 +32,7 @@ const ORDER = [
   { key: 'lanterns', mod: lanterns, valid: lanterns.valid, solved: (S) => S.lanterns.solved, done: 'The Lantern Isle is lit' },
 ];
 
-export const createAll = (seed) => ({ time: 0, gate: gate.create(seed), signal: signal.create(seed), plank: plank.create(), lift: lift.create(), beam: beam.create(), bells: bells.create(), marsh: marsh.create(seed), relay: relay.create(), pillars: pillars.create(), ring: ring.create(seed), lanterns: lanterns.create(), owls: owls.create(), ended: null });
+export const createAll = (seed) => ({ time: 0, gate: gate.create(seed), signal: signal.create(seed), plank: plank.create(), lift: lift.create(), beam: beam.create(), bells: bells.create(), marsh: marsh.create(seed), relay: relay.create(), pillars: pillars.create(), ring: ring.create(seed), lanterns: lanterns.create(), finds: finds.create(), ended: null });
 
 export function stepAll(S, players, dt) {
   dt = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), MAX_DT) : 0;
@@ -48,18 +48,18 @@ export function stepAll(S, players, dt) {
   pillars.step(S.pillars, players, dt, S.relay.solved);   // dormant until the Relay is solved
   ring.step(S.ring, players, dt);
   lanterns.step(S.lanterns, players, dt);
-  S.owls = owls.step(S.owls, players);   // not a puzzle: nothing else reads it
+  S.finds = finds.step(S.finds, players);   // not a puzzle: nothing else reads it
   // the walk ends the moment the last puzzle in the order is solved
   if (!S.ended && ORDER.at(-1).solved(S)) S.ended = { time: S.time };
 }
 
-// Is S safe to adopt (joiner side)? Every ORDER row's slice is checked by its module, and owls (a bitmask).
+// Is S safe to adopt (joiner side)? Every ORDER row's slice is checked by its module, and finds (an array of ten).
 export function validState(S) {
   if (!S || typeof S !== 'object' || Array.isArray(S)) return false;
   if (!Number.isFinite(S.time) || S.time < 0) return false;
   const e = S.ended;
   if (e !== null && !(e && typeof e === 'object' && !Array.isArray(e) && Number.isFinite(e.time))) return false;
-  if (!owls.valid(S.owls)) return false;
+  if (!finds.valid(S.finds)) return false;
   return ORDER.every((p) => p.valid(S[p.key]));
 }
 

@@ -202,24 +202,25 @@ test('validState rejects a bad pillars slice', () => {
   expect(validState(JSON.parse(JSON.stringify(createAll(1))))).toBe(true);
 });
 
-test('owls: createAll starts at 0, a walker on an owl sets its bit, finding all changes nothing else', () => {
+test('finds: createAll starts all -1, a walker on a find sets its entry, finding all changes nothing else', () => {
   const S = createAll(2);
-  expect(S.owls).toBe(0);
-  const [x, z] = SITES.owls[5];
+  expect(S.finds).toEqual(Array(10).fill(-1));
+  const [x, z] = SITES.finds[5];
   stepAll(S, [P([x, z], { y: hAt(x, z) }), P(far)], 0.05);
-  expect(S.owls).toBe(1 << 5);
-  for (const [ax, az] of SITES.owls) stepAll(S, [P([ax, az], { y: hAt(ax, az) }), P(far)], 0.05);
-  expect(S.owls).toBe(511);
+  expect(S.finds).toEqual([-1, -1, -1, -1, -1, 0, -1, -1, -1, -1]);
+  for (const [ax, az] of SITES.finds) stepAll(S, [P(far), P([ax, az], { y: hAt(ax, az) })], 0.05);
+  expect(S.finds).toEqual([1, 1, 1, 1, 1, 0, 1, 1, 1, 1]);
+  expect(validState(JSON.parse(JSON.stringify(S)))).toBe(true);
   expect(solvedCount(S)).toBe(0);
   expect(S.ended).toBe(null);
   expect(promptFor(S, 0, [P([x, z], { y: hAt(x, z) }), P(far)])).toBe(promptFor(createAll(2), 0, [P([x, z], { y: hAt(x, z) }), P(far)]));
 });
-test('validState rejects a bad or missing owls', () => {
-  for (const v of [512, -1, 1.5, NaN, '1', undefined]) {
-    const S = createAll(3); S.owls = v; expect(validState(S)).toBe(false);
+test('validState rejects a bad or missing finds (the old bitmask included)', () => {
+  for (const v of [0, 511, null, [], Array(9).fill(-1), Array(11).fill(-1), [2, ...Array(9).fill(-1)], ['0', ...Array(9).fill(-1)], undefined]) {
+    const S = createAll(3); S.finds = v; expect(validState(S)).toBe(false);
   }
-  const S = createAll(3); delete S.owls; expect(validState(S)).toBe(false);
-  const ok = createAll(3); ok.owls = 511; expect(validState(ok)).toBe(true);
+  const S = createAll(3); delete S.finds; expect(validState(S)).toBe(false);
+  const ok = createAll(3); ok.finds = [0, 1, -1, 0, 1, -1, 0, 1, -1, 1]; expect(validState(ok)).toBe(true);
 });
 
 test('the plank slice: one board per wreck piece, none laid, dyn follows placed', () => {

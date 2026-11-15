@@ -35,6 +35,14 @@ describe('the pilot and the keyboard share the walker', () => {
     expect(readInput(g.input)).toMatchObject({ mx: 1, mz: 0 });
     expect(p.state().busy).toBe(false);
   });
+  test('state() says how many finds there are and which this walker wears; no finds array is zero and nothing', () => {
+    const g = fakeGame();
+    const p = createPilot(g);
+    expect(p.state()).toMatchObject({ finds: 0, wearing: [] });
+    expect(p.state()).not.toHaveProperty('owls');
+    g.S.finds = [0, 1, -1, 1, -1, -1, 0, -1, -1, 1];   // this fake walker is the joiner (idx 1)
+    expect(p.state()).toMatchObject({ finds: 5, wearing: ['boots', 'jacket', 'pirate hat'] });
+  });
   test('press, shout and wave count on top of the keyboard\'s own', () => {
     const g = fakeGame();
     const p = createPilot(g);

@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { fmtTime, owlsLine } from '../src/ui/hud.js';
+import { fmtTime, findsLine } from '../src/ui/hud.js';
 
 test('fmtTime: m:ss', () => {
   expect(fmtTime(0)).toBe('0:00');
@@ -7,12 +7,8 @@ test('fmtTime: m:ss', () => {
   expect(fmtTime(-3)).toBe('0:00');
 });
 
-test('owlsLine: "N of M" from an array of two, bad numbers shown as 0, anything else omitted', () => {
-  expect(owlsLine([5, 8])).toBe('5 of 8');
-  expect(owlsLine([NaN, 8])).toBe('0 of 8');
-  expect(owlsLine([3, Infinity])).toBe('3 of 0');
-  expect(owlsLine([-2, 8])).toBe('0 of 8');
-  expect(owlsLine([3, -1])).toBe('3 of 0');
-  expect(owlsLine(['3', 8])).toBe('0 of 8');
-  for (const v of [undefined, null, [1], [1, 2, 3], 'x', 5, {}]) expect(owlsLine(v)).toBeNull();
+test('findsLine: "you N · your friend M · of T" from three whole numbers, anything else omitted', () => {
+  expect(findsLine([4, 3, 10])).toBe('you 4 · your friend 3 · of 10');
+  expect(findsLine([0, 0, 10])).toBe('you 0 · your friend 0 · of 10');
+  for (const v of [[NaN, 3, 10], [4, Infinity, 10], [-1, 3, 10], [4, 3, -10], [1.5, 3, 10], ['4', 3, 10], [4, 3], [4, 3, 10, 1], [], undefined, null, 'x', 5, {}]) expect(findsLine(v)).toBeNull();
 });

@@ -231,4 +231,84 @@ describe('avatar', () => {
     run(a, view({ pointing: true, aim: [0, 0, -1], jumpN: 1 }), 0.3);
     expect(armR.quaternion.angleTo(q)).toBeLessThan(0.1);
   });
+
+  describe('clothing', () => {
+    const PARTS = ['body', 'legL', 'legR', 'armL', 'armR'];
+    const ownerOf = (m) => { for (let o = m.parent; o; o = o.parent) if (PARTS.includes(o.name)) return o.name; return null; };
+    const clothes = (a) => { const out = []; a.group.traverse((o) => { if (o.isMesh && o.userData.find !== undefined) out.push(o); }); return out; };
+    const shown = (a) => clothes(a).filter((m) => { for (let o = m; o; o = o.parent) if (!o.visible) return false; return true; });
+    const wearing = (mask) => { const a = createAvatar(0xf08a3c); run(a, view({ wear: mask }), 0.1); return a; };
+    const where = { 0: ['body'], 1: ['legL', 'legR'], 2: ['body'], 3: ['body'], 4: ['body'], 5: ['body'], 6: ['body'], 7: ['body'], 8: ['armL', 'armR'], 9: ['body'] };
+
+    test('wear 0 (or no wear at all) shows no clothing, but every piece is built', () => {
+      for (const v of [view(), view({ wear: 0 })]) {
+        const a = createAvatar(0xf08a3c);
+        run(a, v, 0.1);
+        expect(shown(a)).toHaveLength(0);
+        expect(new Set(clothes(a).map((m) => m.userData.find)).size).toBe(10);
+      }
+    });
+    test('one bit set shows exactly that piece, under the right part', () => {
+      for (let i = 0; i < 10; i++) {
+        const a = wearing(1 << i);
+        const on = shown(a);
+        expect(on.length, `piece ${i}`).toBeGreaterThan(0);
+        expect(new Set(on.map((m) => m.userData.find)), `piece ${i}`).toEqual(new Set([i]));
+        expect(on.length).toBe(clothes(a).filter((m) => m.userData.find === i).length);
+        expect([...new Set(on.map(ownerOf))].sort(), `piece ${i}`).toEqual([...where[i]].sort());
+      }
+    });
+    test('boots come in a pair, one on each leg; gloves one on each arm', () => {
+      for (const [i, p] of [[1, 'leg'], [8, 'arm']]) {
+        const a = wearing(1 << i);
+        for (const side of ['L', 'R']) expect(shown(a).filter((m) => ownerOf(m) === p + side).length).toBeGreaterThan(0);
+      }
+    });
+    test('changing wear hides what is no longer worn and shows what now is', () => {
+      const a = wearing(0b1111111111);
+      expect(new Set(shown(a).map((m) => m.userData.find)).size).toBe(10);
+      run(a, view({ wear: 1 << 9 }), 0.05);
+      expect(new Set(shown(a).map((m) => m.userData.find))).toEqual(new Set([9]));
+      run(a, view({ wear: (1 << 2) | (1 << 4) }), 0.05);
+      expect(new Set(shown(a).map((m) => m.userData.find))).toEqual(new Set([2, 4]));
+      run(a, view({ wear: 0 }), 0.05);
+      expect(shown(a)).toHaveLength(0);
+    });
+    test('clothing swings with its part: boots with the legs, gloves with the arms', () => {
+      const a = wearing(0b1100000010);
+      const boot = shown(a).find((m) => m.userData.find === 1 && ownerOf(m) === 'legL');
+      const rest = boot.getWorldPosition(new Vector3());
+      run(a, view({ speed: 3, wear: 0b1100000010 }), 0.4);
+      expect(boot.getWorldPosition(new Vector3()).distanceTo(rest)).toBeGreaterThan(0.02);
+    });
+    test('no piece covers either eye from the front, all worn at once', () => {
+      const a = wearing(0b1111111111);
+      const eyes = [];
+      a.group.getObjectByName('eyes').children.forEach((e) => eyes.push(e.getWorldPosition(new Vector3())));
+      expect(eyes).toHaveLength(2);
+      for (const m of shown(a)) {
+        const b = new Box3().setFromObject(m);
+        for (const e of eyes) {
+          const over = e.x > b.min.x && e.x < b.max.x && e.y > b.min.y && e.y < b.max.y && b.min.z < e.z;
+          expect(over, `piece ${m.userData.find} covers an eye`).toBe(false);
+        }
+      }
+    });
+    test('clothing stays small and low: a worn avatar is still about 1.1 to 1.3 m tall and every mesh casts a shadow', () => {
+      const a = wearing(0b1111111111);
+      const box = new Box3().setFromObject(a.group);
+      expect(box.max.y - box.min.y).toBeLessThan(1.35);
+      expect(box.min.y).toBeGreaterThan(-0.05);
+      expect(clothes(a).every((m) => m.castShadow)).toBe(true);
+      let tris = 0;
+      for (const m of clothes(a)) tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3;
+      expect(tris).toBeLessThan(1200);
+    });
+    test('the scarf stays uncovered: nothing worn overlaps the scarf ring\'s middle front', () => {
+      const a = wearing(0b1111111111);
+      const sc = new Box3().setFromObject(a.group.getObjectByName('scarf'));
+      const front = new Vector3((sc.min.x + sc.max.x) / 2, 0.84, sc.min.z + 0.02);
+      for (const m of shown(a)) expect(new Box3().setFromObject(m).containsPoint(front), `piece ${m.userData.find}`).toBe(false);
+    });
+  });
 });

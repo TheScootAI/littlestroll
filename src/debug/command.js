@@ -30,7 +30,7 @@ export function describeState(s) {
     const dx = s.friend.x - s.me.x, dz = s.friend.z - s.me.z;
     parts.push(`friend ${Math.round(Math.hypot(dx, dz))} m ${compass(bearingOf(dx, dz))} at ${at(s.friend.x, s.friend.z)}`);
   } else parts.push('no friend here');
-  parts.push(`solved ${s.solved ?? 0}`, `owls ${s.owls ?? 0}`);
+  parts.push(`solved ${s.solved ?? 0}`, `finds ${s.finds ?? 0}`);
   if (s.prompt) parts.push(`prompt: ${s.prompt}`);
   parts.push(s.ended ? 'the stroll has ended' : s.busy ? 'moving' : 'standing');
   return parts.join(' · ');

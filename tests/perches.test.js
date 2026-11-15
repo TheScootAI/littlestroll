@@ -62,12 +62,12 @@ test('no perch gives a way up: nothing within r + PLAYER_R + 0.5 is a step the h
   }
 });
 
-test('the wreck perches keep clear of every timber end, rest, spawn, checkpoint and owl', () => {
+test('the wreck perches keep clear of every timber end, rest, spawn, checkpoint and find', () => {
   const W = SITES.wreck;
   const spots = [
     ...W.pieces.flatMap((p) => [p.a, p.b]),
     SITES.plank.restA, SITES.plank.restB,
-    ...SITES.spawn, ...SITES.checkpoints.flat(), ...SITES.owls,
+    ...SITES.spawn, ...SITES.checkpoints.flat(), ...SITES.finds,
   ];
   for (const p of PERCHES.filter((q) => q.kind !== 'boulder')) for (const s of spots) {
     expect(near([p.x, p.z], s), `${p.kind} at ${p.x}, ${p.z} vs ${s}`).toBeGreaterThanOrEqual(p.r + PLAYER_R + 0.2);

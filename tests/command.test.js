@@ -2,7 +2,7 @@ import { test, expect, describe, vi } from 'vitest';
 import { parse, runCommand, describeState, yawFromBearing, bearingOf, compass } from '../src/debug/command.js';
 
 const SITES = { gate: { plateA: [0, 110], plateB: [0, 87], door: { ax: -2.5, az: 97, bx: 2.5, bz: 97 } }, marsh: { plate: { x: 102.5, z: -56, r: 1.5 } }, spawn: [[-1.5, 124], [1.5, 124]] };
-const STATE = { me: { x: 1.5, y: 1, z: 124, yaw: 0, zone: 'A' }, friend: { x: 1.5, y: 1, z: 114 }, solved: 3, owls: 1, prompt: 'E — ring the bell', ended: null, busy: false, chatN: 0 };
+const STATE = { me: { x: 1.5, y: 1, z: 124, yaw: 0, zone: 'A' }, friend: { x: 1.5, y: 1, z: 114 }, solved: 3, finds: 1, wearing: ['boots'], prompt: 'E — ring the bell', ended: null, busy: false, chatN: 0 };
 
 function fake(over = {}) {
   let done;
@@ -122,7 +122,7 @@ describe('pilot commands: what each one does', () => {
     expect(t).toContain('You (1.5, 124) on A');
     expect(t).toContain('friend 10 m N');
     expect(t).toContain('solved 3');
-    expect(t).toContain('owls 1');
+    expect(t).toContain('finds 1');
     expect(t).toContain('E — ring the bell');
     expect(describeState({ ...STATE, friend: null, busy: true, prompt: null })).toContain('no friend');
     expect(describeState({ ...STATE, busy: true })).toContain('moving');

@@ -7,7 +7,7 @@ import { Session } from './net/session.js';
 import { makeCode, normalizeCode } from './net/code.js';
 import { heightAt } from './world/layout.js';
 import { clean } from './core/chat.js';
-import { count as owlCount } from './puzzles/owls.js';
+import { count as findCount } from './puzzles/finds.js';
 
 const params = new URLSearchParams(window.location.search);
 // ?debug (the solo stand-in) exists only on the dev server: in a production build
@@ -56,7 +56,7 @@ async function startHost(hud) {
 // keys while the box is open, adds how far the pair had got, and can take a picture of the view.
 function wireFeedback(feedback, game) {
   feedback.onOpen = () => game.input.release();
-  feedback.info = () => `puzzles solved: ${game.solved} · owls found: ${owlCount(game.S.owls | 0)}`;
+  feedback.info = () => `puzzles solved: ${game.solved} · clothes found: ${findCount(game.S.finds)}`;
   // the view as it is now: drawn and copied in one go, before the browser clears the buffer
   feedback.capture = () => { game.render(); return snapshot(canvas); };
 }

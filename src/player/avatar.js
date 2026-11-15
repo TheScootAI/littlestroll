@@ -8,6 +8,7 @@ import {
 import { lerpAngle } from '../core/math.js';
 import { WALK } from '../config.js';
 import { HOP_SECS, hopHeight } from './hop.js';
+import { wornParts } from './wardrobe.js';
 
 const STONE = 0xa9a39b;
 const STONE_DARK = 0x8d877f;
@@ -89,6 +90,22 @@ export function createAvatar(colour) {
   });
   const [armL, armR] = arms;
 
+  // clothing: every piece built once, hidden, under the part it moves with (boots on the legs, gloves
+  // on the arms, the rest on the body); `wear` in the view says which are showing
+  const partOf = { body, legL: legs[0], legR: legs[1], armL, armR };
+  const clothes = [];
+  for (let i = 0; i < 10; i++) {
+    const meshes = [];
+    for (const { on, mesh } of wornParts(i)) {
+      mesh.visible = false;
+      mesh.traverse((o) => { o.userData.find = i; });
+      partOf[on].add(mesh);
+      meshes.push(mesh);
+    }
+    clothes.push(meshes);
+  }
+  let worn = 0;
+
   group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
   let yaw = null, phase = 0, swing = 0, lastWave = null, waveT = 0, lastJump = null, hopT = -1, hopFromY = 0;
@@ -108,6 +125,13 @@ export function createAvatar(colour) {
     const wantYaw = mirror ? Math.atan2(-view.aim[0], -view.aim[2]) : view.yaw;
     yaw = yaw === null ? wantYaw : lerpAngle(yaw, wantYaw, 1 - Math.exp(-12 * dt));
     group.rotation.y = yaw;
+
+    // clothing: show exactly the pieces in the view's wear bitmask
+    const wear = Number.isInteger(view.wear) ? view.wear : 0;
+    if (wear !== worn) {
+      worn = wear;
+      clothes.forEach((ms, i) => { const on = !!(wear & (1 << i)); for (const m of ms) m.visible = on; });
+    }
 
     // stride: legs swing with speed, body bobs twice per stride
     const sp = Math.max(0, view.speed || 0);

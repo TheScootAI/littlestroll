@@ -62,11 +62,10 @@ export const fmtTime = (s) => {
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 };
 
-// "5 of 8" from [found, total]; a bad or negative number shows as 0; null unless an array of two.
-export const owlsLine = (owls) => {
-  if (!Array.isArray(owls) || owls.length !== 2) return null;
-  const n = (v) => (Number.isFinite(v) && v >= 0 ? v : 0);
-  return `${n(owls[0])} of ${n(owls[1])}`;
+// "you 4 · your friend 3 · of 10" from [mine, theirs, total]; null unless three whole numbers.
+export const findsLine = (f) => {
+  if (!Array.isArray(f) || f.length !== 3 || !f.every((v) => Number.isInteger(v) && v >= 0)) return null;
+  return `you ${f[0]} · your friend ${f[1]} · of ${f[2]}`;
 };
 
 export function createHud(root) {
@@ -137,17 +136,17 @@ export function createHud(root) {
       arrow.style.transform = `translate(calc(${x}px - 50%), calc(${y}px - 50%)) rotate(${angle}rad)`;
     },
     // The ending card: time as m:ss and each walker's metres ([host, joiner]) by scarf colour.
-    showEnding({ time, dist, owls }) {
+    showEnding({ time, dist, finds }) {
       end.replaceChildren();
       const card = el('div', 'card');
       card.appendChild(el('h2', '', 'You strolled it together'));
       const t = el('p', 'time', 'Time ');
       t.appendChild(el('b', '', fmtTime(time)));
       card.appendChild(t);
-      const owlText = owlsLine(owls);
-      if (owlText !== null) {
-        const o = el('p', 'time', 'Owls found ');
-        o.appendChild(el('b', '', owlText));
+      const findsText = findsLine(finds);
+      if (findsText !== null) {
+        const o = el('p', 'time', 'Clothes found ');
+        o.appendChild(el('b', '', findsText));
         card.appendChild(o);
       }
       const walkers = el('div', 'walkers');

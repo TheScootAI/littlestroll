@@ -31,8 +31,8 @@ import { createView as createMarshView } from './puzzles/views/marsh.js';
 import { createView as createPillarsView } from './puzzles/views/pillars.js';
 import { createView as createRingView } from './puzzles/views/ring.js';
 import { createView as createLanternsView } from './puzzles/views/lanterns.js';
-import { OWLS, count as owlCount, news as owlNews } from './puzzles/owls.js';
-import { createView as createOwlsView } from './puzzles/views/owls.js';
+import { FINDS, countBy as findsBy, wornMask, news as findNews } from './puzzles/finds.js';
+import { createView as createFindsView } from './puzzles/views/finds.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
 import { carrying, splashed } from './puzzles/plank.js';
@@ -115,7 +115,7 @@ export class Game {
       { key: 'pillars', view: createPillarsView(this.scene) },
       { key: 'ring', view: createRingView(this.scene) },
       { key: 'lanterns', view: createLanternsView(this.scene) },
-      { key: 'owls', view: createOwlsView(this.scene) },
+      { key: 'finds', view: createFindsView(this.scene) },
     ];
     this.input = createInput(canvas);
     // carrying the relay's flame or an end of the plank: no running, whoever asks (see readInput)
@@ -237,19 +237,23 @@ export class Game {
     // a too-short piece tipped into the water: splash restarts from 0 (host or joiner alike)
     const sp = this.S.plank?.splash;
     if (Number.isFinite(sp)) { if (splashed(this.splashPrev, sp)) this.audio.splash?.(); this.splashPrev = sp; }
-    // an owl found (host or joiner alike); the first state after a welcome only sets the baseline.
-    // Its line waits for a "solved" flash from the same update to finish (that one lasts 3 s),
-    // unless the walk has ended by then: nothing is flashed over the ending.
-    const owl = owlNews(this.owlPrev, owlCount(this.S.owls | 0));
-    if (owl.line) {
-      if (!flashed) this.hud?.flash(owl.line);
-      else {
-        clearTimeout(this.owlLater);
-        this.owlLater = setTimeout(() => { if (!this.S.ended) this.hud?.flash(owl.line); }, 3200);
+    // a piece of clothing found (host or joiner alike); the first state after a welcome only sets the
+    // baseline. Each line waits for a "solved" flash from the same update to finish (that one lasts
+    // 3 s), and two found at once show one after the other, 3.2 s apart; nothing is flashed over the ending.
+    const found = findNews(this.findPrev, this.S.finds, this.idx);
+    if (found.lines.length) {
+      const now = Date.now();
+      let at = Math.max(now + (flashed ? 3200 : 0), this.findFree ?? 0);   // when the next line may show
+      for (const line of found.lines) {
+        const wait = at - now;
+        if (wait <= 0) this.hud?.flash(line);
+        else setTimeout(() => { if (!this.S.ended) this.hud?.flash(line); }, wait);
+        this.audio.find();
+        at += 3200;
       }
-      this.audio.hoot();
+      this.findFree = at;
     }
-    this.owlPrev = owl.next;
+    this.findPrev = found.next;
     const amt = this.S.gate?.amt ?? 0;
     if (Math.abs(amt - this.gateAmt) > 1e-4) this.audio.creak();
     this.gateAmt = amt;
@@ -338,7 +342,7 @@ export class Game {
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
       this.bellPrev = null; this.spurPrev = null; this.pillarPrev = 0; this.ringPrev = null;
-      this.relayPrev = null; this.lanternPrev = null; this.owlPrev = null; this.splashPrev = null;
+      this.relayPrev = null; this.lanternPrev = null; this.findPrev = null; this.splashPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);
       this.welcomedOnce = true;
@@ -379,6 +383,7 @@ export class Game {
       x: this.rx, y: this.ry, z: this.rz, yaw: this.ryaw, speed: r.speed,
       aim: dirFromYawPitch(r.ay, r.ap), pointing: r.q, waveN: r.waveN, jumpN: r.jumpN,
       carrying: this.holdsPlank(1 - this.idx) || this.holdsMirror(1 - this.idx), mirror: this.holdsMirror(1 - this.idx), torch: this.holdsFlame(1 - this.idx),
+      wear: wornMask(this.S.finds, 1 - this.idx),
     }, dt);
   }
 
@@ -557,6 +562,7 @@ export class Game {
       aim: dirFromYawPitch(inp.camYaw, inp.camPitch),
       pointing: !!inp.q, waveN: inp.waveN, jumpN: p.hopN,   // the hops the controller approved, not the presses
       carrying: hands, mirror: this.holdsMirror(this.idx), torch: this.holdsFlame(this.idx),
+      wear: wornMask(this.S.finds, this.idx),
     }, dt);
     if (p.hopN !== hopN) this.audio.hop();   // only the local walker's own approved hop makes the sound
     this.updateRemote(dt);
@@ -604,7 +610,7 @@ export class Game {
     }
     if (!e.shown && card) {
       const mine = this.player.dist, theirs = this.remote?.dist ?? 0;
-      this.hud?.showEnding({ time: e.time, dist: this.idx === 0 ? [mine, theirs] : [theirs, mine], owls: [owlCount(this.S.owls | 0), OWLS] });
+      this.hud?.showEnding({ time: e.time, dist: this.idx === 0 ? [mine, theirs] : [theirs, mine], finds: [findsBy(this.S.finds, this.idx), findsBy(this.S.finds, 1 - this.idx), FINDS] });
       e.shown = true;
     }
   }

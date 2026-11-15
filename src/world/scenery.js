@@ -267,7 +267,7 @@ const LANTERN_KEEP = 3;                            // metres off the tall sites
 const LANTERN_ANCHORS = [
   ...SITES.ring.stones, ...SITES.ring.seeing.flatMap((s) => [s.stone, [s.spot.x, s.spot.z]]),
   ...SITES.lanterns.posts, SITES.lanterns.tally, SITES.lanterns.lamp,
-  ...SITES.owls, ...SITES.checkpoints.flat(),
+  ...SITES.finds.slice(0, 9), ...SITES.checkpoints.flat(),   // the nine old find spots only (the hat's is on the first island): the list stays as it was, so nothing moves
 ];
 const SEEING_LINE = SITES.ring.seeing.map((s) => [s.spot.x, s.spot.z]);   // the stones' sight line across the ring
 

@@ -37,12 +37,12 @@ test('every end is on the beach flat sand', () => {
 test('ends of different pieces are at least 1.5 m apart', () => {
   for (const [i, , p] of ends) for (const [j, , q] of ends) if (i < j) expect(d(p, q)).toBeGreaterThanOrEqual(1.5);
 });
-test('ends keep clear of the spawn slots, the first leg of the trail, the owl, and the scenery', () => {
+test('ends keep clear of the spawn slots, the first leg of the trail, the find, and the scenery', () => {
   const leg = [TRAIL[0], TRAIL[1]];
   for (const [, , p] of ends) {
     for (const s of SITES.spawn) expect(d(p, s)).toBeGreaterThanOrEqual(2.5);
     expect(pointSegDist(p[0], p[1], leg[0][0], leg[0][1], leg[1][0], leg[1][1]).d).toBeGreaterThanOrEqual(2.5);
-    expect(d(p, SITES.owls[1])).toBeGreaterThanOrEqual(3);
+    expect(d(p, SITES.finds[1])).toBeGreaterThanOrEqual(3);
     for (const o of others) expect(d(p, [o.x, o.z])).toBeGreaterThanOrEqual(1);
   }
 });
@@ -68,14 +68,14 @@ test('2 to 3 barrels (one on its side), a crate or two, rope or sail, an anchor 
   expect(n('rope') + n('sail')).toBeGreaterThanOrEqual(1);
   expect(n('anchor') + n('wheel')).toBeGreaterThanOrEqual(1);
 });
-test('debris keeps clear of every piece end, the spawn slots, the trail, the owl, the rock and the scenery', () => {
+test('debris keeps clear of every piece end, the spawn slots, the trail, the find, the rock and the scenery', () => {
   const leg = [TRAIL[0], TRAIL[1]];
   for (const o of DEBRIS) {
     const p = [o.x, o.z];
     for (const [, , e] of ends) expect(d(p, e)).toBeGreaterThanOrEqual(1.5);
     for (const s of SITES.spawn) expect(d(p, s)).toBeGreaterThanOrEqual(2.5);
     expect(pointSegDist(p[0], p[1], leg[0][0], leg[0][1], leg[1][0], leg[1][1]).d).toBeGreaterThanOrEqual(2.5);
-    expect(d(p, SITES.owls[1])).toBeGreaterThanOrEqual(2);
+    expect(d(p, SITES.finds[1])).toBeGreaterThanOrEqual(2);
     expect(d(p, W.rock)).toBeGreaterThanOrEqual(2);
     for (const q of others) expect(d(p, [q.x, q.z])).toBeGreaterThanOrEqual(1);
     for (const q of DEBRIS) if (q !== o) expect(d(p, [q.x, q.z])).toBeGreaterThanOrEqual(0.9);

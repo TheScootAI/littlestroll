@@ -6,7 +6,7 @@ import {
 import { siteAnchors } from '../src/world/terrain.js';
 import { reachable, walkDistance, GRID } from './helpers/reach.js';
 import { SOLIDS } from '../src/world/solids.js';
-import { FOUND_R } from '../src/puzzles/owls.js';
+import { FOUND_R } from '../src/puzzles/finds.js';
 import { GRID as PATH_GRID } from '../src/debug/path.js';
 import { DROWN_Y, STEP_UP, PLAYER_R, RUN } from '../src/config.js';
 import { pointSegDist } from '../src/core/math.js';
@@ -17,7 +17,7 @@ const FAR = D({ gateOpen: true, bridge: true, plank: true, ladder: true, causewa
 const full = (1 << PILLAR_BITS) - 1;
 const CROSSED = { ...FAR, pillars: full };
 const ALL = { ...CROSSED, ring: true };
-const { pillars: P, ring, lanterns, owls, checkpoints } = SITES;
+const { pillars: P, ring, lanterns, finds, checkpoints } = SITES;
 const cp8 = checkpoints[8][0];
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const xz = (d) => [d.x, d.z];
@@ -312,8 +312,9 @@ test('around every standing stone, seeing stone, lantern post and the tally: 2 m
   }
 });
 
-test('owls: nine, off the trail, reachable, room to walk up, clear of every site, apart', () => {
-  expect(owls).toHaveLength(9);
+test('finds 0-8 (the old owl spots): off the trail, reachable, room to walk up, clear of every site, apart', () => {
+  expect(finds).toHaveLength(10);
+  const owls = finds.slice(0, 9);
   expect(FOUND_R - 0.2).toBeCloseTo(1, 9);   // reachable() counts a point reached through a cell within 1 m
   const trailD = (p) => Math.min(...TRAIL.slice(1).map((b, i) => pointSegDist(...p, ...TRAIL[i], ...b).d));
   const r = reachable(SITES.spawn[0], ALL);
@@ -325,18 +326,45 @@ test('owls: nine, off the trail, reachable, room to walk up, clear of every site
   const { circles, segments } = blockers(DYN_NONE);
   const zones = ['ABCDEF', 'ABCDEF', 'ABCDEF', 'GHIJ', 'GHIJ', 'KL', 'KL', 'KL', 'ABCDEF'];
   owls.forEach((o, i) => {
-    expect(trailD(o), `owl ${i}`).toBeGreaterThanOrEqual(6);
-    expect(r(...o), `owl ${i}`).toBe(true);   // some reachable point within 1 m = FOUND_R - 0.2, trees and boulders counted
-    for (const so of SOLIDS) expect(Math.hypot(o[0] - so.x, o[1] - so.z), `owl ${i} / ${so.kind} at ${so.x.toFixed(1)}, ${so.z.toFixed(1)}`).toBeGreaterThanOrEqual(so.r + 0.3);
+    expect(trailD(o), `find ${i}`).toBeGreaterThanOrEqual(6);
+    expect(r(...o), `find ${i}`).toBe(true);   // some reachable point within 1 m = FOUND_R - 0.2, trees and boulders counted
+    for (const so of SOLIDS) expect(Math.hypot(o[0] - so.x, o[1] - so.z), `find ${i} / ${so.kind} at ${so.x.toFixed(1)}, ${so.z.toFixed(1)}`).toBeGreaterThanOrEqual(so.r + 0.3);
     // room to walk up to it: most of the ground a step away is level with it (an owl may sit on a
     // plateau's rim, like the one behind the rock at the start, but never on a point or a ledge)
-    expect(levelAround(o), `owl ${i}`).toBeGreaterThanOrEqual(5);
-    for (const a of anchors) expect(dist(o, a), `owl ${i} / ${a}`).toBeGreaterThanOrEqual(3);
-    for (const c of circles) expect(Math.hypot(o[0] - c.x, o[1] - c.z) - c.r, `owl ${i}`).toBeGreaterThanOrEqual(3);
+    expect(levelAround(o), `find ${i}`).toBeGreaterThanOrEqual(5);
+    for (const a of anchors) expect(dist(o, a), `find ${i} / ${a}`).toBeGreaterThanOrEqual(3);
+    for (const c of circles) expect(Math.hypot(o[0] - c.x, o[1] - c.z) - c.r, `find ${i}`).toBeGreaterThanOrEqual(3);
     for (const s of segments) expect(pointSegDist(...o, s.ax, s.az, s.bx, s.bz).d).toBeGreaterThanOrEqual(3);
     expect(zones[i]).toContain(zoneAt(...o));
-    for (let j = i + 1; j < owls.length; j++) expect(dist(o, owls[j]), `owls ${i}, ${j}`).toBeGreaterThanOrEqual(10);
+    for (let j = i + 1; j < owls.length; j++) expect(dist(o, owls[j]), `finds ${i}, ${j}`).toBeGreaterThanOrEqual(10);
   });
+});
+
+test('the nine old find spots are exactly where the owls were', () => {
+  expect(finds.slice(0, 9)).toEqual([
+    [-35.3, 70.8], [3.94, 135.49], [15, -75], [107.75, -49.75], [76.75, -72.75],
+    [142, -88], [194.5, -162], [110.5, -162], [11.1, 80.2],
+  ]);
+});
+
+test('the pirate hat (find 9): by the wreck, on the side of the hull away from both spawns, dry, reachable, clear of the timbers, the rock and the boots', () => {
+  const hat = finds[9], W = SITES.wreck, H = W.hull;
+  expect(dist(hat, [H.x, H.z])).toBeLessThanOrEqual(4);
+  // far side: the straight line from each spawn to the hat crosses the keel (the hull's long axis, 10.5 m)
+  const ax = [Math.cos(H.yaw), -Math.sin(H.yaw)], keel = [[H.x - ax[0] * 5.25, H.z - ax[1] * 5.25], [H.x + ax[0] * 5.25, H.z + ax[1] * 5.25]];
+  const side = (p) => (p[0] - H.x) * ax[1] * -1 + (p[1] - H.z) * ax[0];   // signed distance across the keel line
+  const crosses = (a, b) => side(a) * side(b) < 0 && (() => {
+    const t = side(a) / (side(a) - side(b)), q = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    return pointSegDist(q[0], q[1], keel[0][0], keel[0][1], keel[1][0], keel[1][1]).d < 1e-6 || Math.abs((q[0] - H.x) * ax[0] + (q[1] - H.z) * ax[1]) <= 5.25;
+  })();
+  for (const sp of SITES.spawn) expect(crosses(sp, hat), `from spawn ${sp}`).toBe(true);
+  expect(Math.abs(side(hat))).toBeGreaterThan(1);   // not on the keel itself: beside the hull's far wall
+  expect(heightAt(...hat, DYN_NONE)).toBeGreaterThan(0.2);   // above the water line
+  expect(reachable(SITES.spawn[0], DYN_NONE)(...hat)).toBe(true);   // a walker can stand within 1 m
+  for (const p of W.pieces) for (const e of [p.a, p.b]) expect(dist(hat, e)).toBeGreaterThanOrEqual(2);
+  expect(dist(hat, W.rock)).toBeGreaterThanOrEqual(2);
+  expect(dist(hat, finds[1])).toBeGreaterThanOrEqual(10);
+  for (const so of SOLIDS) expect(Math.hypot(hat[0] - so.x, hat[1] - so.z), `${so.kind}`).toBeGreaterThanOrEqual(so.r + 0.3);
 });
 
 test('checkpoints 9-11: K, the head of the steps, L; level, apart, reachable once earned', () => {

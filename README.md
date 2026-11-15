@@ -1,6 +1,6 @@
 # Little Stroll
 
-A two-player co-operative puzzle stroll that runs in the browser. Two friends, each on their own computer, stroll a trail across three small islands and meet eleven puzzles on the way. No puzzle can be solved by one person. Eight stone owls are hidden off the trail for the curious.
+A two-player co-operative puzzle stroll that runs in the browser. Two friends, each on their own computer, stroll a trail across three small islands and meet eleven puzzles on the way. No puzzle can be solved by one person. Ten pieces of clothing (glasses, boots, a belt, a jacket and more, and a pirate hat by the shipwreck) lie hidden off the trail for the curious: whoever walks up to one first puts it on, and both of you see it.
 
 Built with three.js. No accounts and no server: the two browsers connect directly.
 

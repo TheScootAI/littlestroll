@@ -27,7 +27,7 @@ test('SOLIDS has one entry per tree and boulder, sized by the rule; built the sa
 
 const W = SITES.wreck;
 const musts = () => [
-  ...SITES.spawn, ...SITES.checkpoints.flat(), ...siteAnchors(), ...SITES.owls,
+  ...SITES.spawn, ...SITES.checkpoints.flat(), ...siteAnchors(), ...SITES.finds,
   SITES.plank.restA, SITES.plank.restB,
 ];
 
