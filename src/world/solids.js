@@ -10,8 +10,13 @@ export { TREE_R, BOULDER_R };
 export const SOLIDS = (() => {
   const out = [];
   for (const o of [placeScenery(), placeFarScenery(), placeLanternScenery()]) {
-    for (const t of o.trees) out.push({ x: t.x, z: t.z, r: TREE_R[t.kind] * t.s, kind: t.kind });
-    for (const b of o.boulders) out.push({ x: b.x, z: b.z, r: BOULDER_R * b.s, kind: 'boulder' });
+    // `kind` comes FIRST on purpose. A circle written { x, z, r, kind } shares its first fields
+    // with the layout's own { x, z, r } objects, and making a hundred of those makes the engine
+    // throw away its fast code for heightAt (measured in Node: up to 18 times slower on every
+    // later call; the pilot's path grid took three times as long). The "is quick" test in
+    // tests/path.test.js is the one that notices.
+    for (const t of o.trees) out.push({ kind: t.kind, x: t.x, z: t.z, r: TREE_R[t.kind] * t.s });
+    for (const b of o.boulders) out.push({ kind: 'boulder', x: b.x, z: b.z, r: BOULDER_R * b.s });
   }
   return out;
 })();
