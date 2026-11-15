@@ -155,7 +155,7 @@ export function createAvatar(colour) {
     // so the lift is the hop's arc less however far that has risen since take-off (a walker landing
     // on a barrel): one smooth arc up and down onto the top.
     let hopped = false;
-    const handsFull = !!(view.carrying || view.torch);
+    const handsFull = !!((view.carrying && !view.mirror) || view.torch);   // a timber or the flame; a mirror hops with you
     if (lastJump === null) lastJump = view.jumpN;
     if (view.jumpN !== lastJump) {
       lastJump = view.jumpN;
@@ -201,5 +201,8 @@ export function createAvatar(colour) {
   // shows next starts from their own counters, so an old jump or wave is not replayed.
   const forget = () => { lastWave = lastJump = null; waveT = 0; hopT = -1; };
 
-  return { group, update, forget };
+  // how far the body is off its feet right now (a hop): things drawn in its hands elsewhere add this
+  const lift = () => lifter.position.y;
+
+  return { group, update, forget, lift };
 }

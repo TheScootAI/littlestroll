@@ -296,7 +296,7 @@ export function createView(scene) {
           const p = ctx.players[m.by];
           if (!p?.present || !p.aim) { g.visible = false; mv.glint.visible = false; return; }
           g.visible = true;
-          const cy = p.y + CHEST;
+          const cy = p.y + (p.lift || 0) + CHEST;   // it hops with its carrier
           g.position.set(p.x + p.aim[0] * 0.5, cy + p.aim[1] * 0.5, p.z + p.aim[2] * 0.5);
           g.lookAt(v1.copy(g.position).add(v2.fromArray(p.aim)));
           // lit when some leg (other than the last) ends at this carrier's chest

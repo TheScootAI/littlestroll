@@ -216,7 +216,15 @@ describe('avatar', () => {
     expect(lift(a) - rest).toBeGreaterThan(0.5);
   });
 
-  test('a walker carrying something does not hop: a timber, a mirror, or the flame', () => {
+  test('a walker holding a mirror can hop', () => {
+    const a = createAvatar(0xf08a3c);
+    run(a, view({ carrying: true, mirror: true }), 0.2);
+    const rest = lift(a);
+    run(a, view({ carrying: true, mirror: true, jumpN: 1 }), 0.25);
+    expect(lift(a) - rest).toBeGreaterThan(0.5);
+    expect(a.lift()).toBeGreaterThan(0.5);            // what the mirror's own drawing adds to its height
+  });
+  test('a walker carrying a timber or the flame does not hop', () => {
     for (const hands of [{ carrying: true }, { torch: true }]) {
       const a = createAvatar(0xf08a3c);
       run(a, view(hands), 0.2);

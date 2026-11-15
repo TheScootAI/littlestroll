@@ -243,3 +243,24 @@ test('C2: a carrier who disconnects over water leaves the mirror on its stand', 
   step(s, [gone, P(far)], 0.03);
   expect(s.mirrors[0]).toMatchObject({ by: null, x: m[0], z: m[1] });
 });
+
+// Issues 13 and 14: once the beacon was lit the mirrors stayed in the walkers' hands for good
+// (they could not be put down, and full hands cannot jump or run).
+test('lighting the beacon sets both mirrors down where their carriers stand', () => {
+  const s = carrying(); hold(s, true, 2.1);
+  expect(s.solved).toBe(true);
+  expect(s.mirrors.map((m) => m.by)).toEqual([null, null]);
+  expect([s.mirrors[0].x, s.mirrors[0].z]).toEqual([hint.p1[0], hint.p1[1]]);
+  expect([s.mirrors[1].x, s.mirrors[1].z]).toEqual([hint.p2[0], hint.p2[1]]);
+  expect(s.segs.length).toBeGreaterThan(0);          // the lit beam stays drawn
+  const segs = JSON.stringify(s.segs);
+  step(s, [P([0, 0]), P([1, 1])], 1 / 30);           // the walkers stroll off: nothing changes
+  expect(JSON.stringify(s.segs)).toBe(segs); expect(s.solved).toBe(true); expect(valid(s)).toBe(true);
+});
+test('a state already lit with a mirror still in hand lets go of it on the next step', () => {
+  const s = carrying(); hold(s, true, 2.1);
+  s.mirrors[0].by = 0;                               // as a stroll in progress before this fix would have it
+  step(s, [P([3, -48], { y: 13.5 }), P([1, 1])], 1 / 30);   // standing on the summit's ground there
+  expect(s.mirrors[0].by).toBe(null);
+  expect([s.mirrors[0].x, s.mirrors[0].z]).toEqual([3, -48]);
+});

@@ -385,9 +385,10 @@ export class Game {
     const prompt = promptFor(this.S, this.idx, pins);
     if (prompt !== this.prompt) { this.prompt = prompt; this.hud?.setPrompt(prompt); }
     const p = this.player;
-    const mine = { present: true, x: p.x, y: p.y, z: p.z, yaw: p.yaw, aim: dirFromYawPitch(inp.camYaw, inp.camPitch) };
+    // `lift`: how far each walker's body is off its feet in a hop, for what a view draws in their hands
+    const mine = { present: true, x: p.x, y: p.y, z: p.z, yaw: p.yaw, aim: dirFromYawPitch(inp.camYaw, inp.camPitch), lift: this.avatar.lift() };
     const theirs = this.remote && this.remoteShown
-      ? { present: true, x: this.rx, y: this.ry, z: this.rz, yaw: this.ryaw, aim: dirFromYawPitch(this.remote.ay, this.remote.ap) }
+      ? { present: true, x: this.rx, y: this.ry, z: this.rz, yaw: this.ryaw, aim: dirFromYawPitch(this.remote.ay, this.remote.ap), lift: this.remoteAvatar.lift() }
       : { present: false };
     const ctx = { players: this.idx === 0 ? [mine, theirs] : [theirs, mine], localIdx: this.idx, dyn: this.dyn };
     for (const v of this.views) v.view.sync(this.S[v.key], ctx, dt);
@@ -542,7 +543,7 @@ export class Game {
     const before = p.dist;
     // once the walk has ended the walkers stand still where they are
     const hands = this.holdsPlank(this.idx) || this.holdsMirror(this.idx);   // a timber or a mirror
-    const move = { ...inp, noHop: hands || this.holdsFlame(this.idx) };       // full hands: no hop
+    const move = { ...inp, noHop: this.holdsPlank(this.idx) || this.holdsFlame(this.idx) };   // a timber or the flame: no hop (a mirror hops with you)
     if (this.ending) { move.mx = 0; move.mz = 0; move.run = false; }
     const hopN = p.hopN;
     stepPlayer(p, move, dt, this.dyn, this.veto);

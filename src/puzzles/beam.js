@@ -116,7 +116,9 @@ function freeNear(s, p) {
 }
 
 export function step(s, players, dt) {
-  if (s.solved) return;   // lit stays lit: the ending must not knock it off the lens
+  // Lit stays lit: the ending must not knock it off the lens. The beam stays drawn as it was;
+  // the mirrors are set down where their carriers stand, so nobody is left with full hands.
+  if (s.solved) { setDown(s, players); return; }
   // carried mirrors go where their carrier is; a carrier who left drops theirs there
   s.mirrors.forEach((m, k) => {
     if (m.by === null) return;
@@ -137,7 +139,16 @@ export function step(s, players, dt) {
   s.segs = r.segs.map((g) => g.map(r2));
   s.onLens = r.onLens;
   s.charge = clamp(s.charge + (r.onLens ? dt : -dt), 0, CHARGE);
-  if (s.charge >= CHARGE - 1e-9) { s.charge = CHARGE; s.solved = true; }
+  if (s.charge >= CHARGE - 1e-9) { s.charge = CHARGE; s.solved = true; setDown(s, players); }
+}
+
+// Every carried mirror is put down where its carrier stands (or where it last was, if they have gone).
+function setDown(s, players) {
+  s.mirrors.forEach((m, k) => {
+    if (m.by === null) return;
+    const c = players[m.by];
+    if (c?.present) release(s, k, c.x, c.z, c.y); else release(s, k, m.x, m.z);
+  });
 }
 
 export function prompt(s, idx, players) {
