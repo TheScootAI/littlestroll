@@ -36,6 +36,16 @@ const level = (p, dyn = ALL) => {
   }
   return true;
 };
+// How many of the eight points 1 m around p are within 0.2 m of p's height.
+const levelAround = (p, dyn = ALL) => {
+  const h = heightAt(...p, dyn);
+  let n = 0;
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4;
+    if (Math.abs(heightAt(p[0] + Math.cos(a), p[1] + Math.sin(a), dyn) - h) <= 0.2) n++;
+  }
+  return n;
+};
 // Some point within `r` of p that a reach map says is reached.
 const near = (reach, p, r) => {
   for (let k = 0; k < 16; k++) {
@@ -300,7 +310,7 @@ test('around every standing stone, seeing stone, lantern post and the tally: 2 m
   }
 });
 
-test('owls: eight, off the trail, reachable, level, clear of every site, apart', () => {
+test('owls: eight, off the trail, reachable, room to walk up, clear of every site, apart', () => {
   expect(owls).toHaveLength(8);
   const trailD = (p) => Math.min(...TRAIL.slice(1).map((b, i) => pointSegDist(...p, ...TRAIL[i], ...b).d));
   const r = reachable(SITES.spawn[0], ALL);
@@ -314,7 +324,9 @@ test('owls: eight, off the trail, reachable, level, clear of every site, apart',
   owls.forEach((o, i) => {
     expect(trailD(o), `owl ${i}`).toBeGreaterThanOrEqual(6);
     expect(r(...o), `owl ${i}`).toBe(true);
-    expect(level(o), `owl ${i}`).toBe(true);
+    // room to walk up to it: most of the ground a step away is level with it (an owl may sit on a
+    // plateau's rim, like the one behind the rock at the start, but never on a point or a ledge)
+    expect(levelAround(o), `owl ${i}`).toBeGreaterThanOrEqual(5);
     for (const a of anchors) expect(dist(o, a), `owl ${i} / ${a}`).toBeGreaterThanOrEqual(3);
     for (const c of circles) expect(Math.hypot(o[0] - c.x, o[1] - c.z) - c.r, `owl ${i}`).toBeGreaterThanOrEqual(3);
     for (const s of segments) expect(pointSegDist(...o, s.ax, s.az, s.bx, s.bz).d).toBeGreaterThanOrEqual(3);

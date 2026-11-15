@@ -320,6 +320,28 @@ describe('Lantern Isle scenery', () => {
   });
 });
 
+describe('the first owl hides behind the big rock behind the start', () => {
+  // Issue #2: "Hide that owl at the start behind that rock behind where the players start."
+  const owl = SITES.owls[1];
+  // how close the straight line a -> b passes to p, and whether p lies between them
+  const lineTo = (a, b, p) => {
+    const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz);
+    const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / (len * len);
+    return { off: Math.abs((p[0] - a[0]) * dz - (p[1] - a[1]) * dx) / len, between: t > 0.1 && t < 0.98 };
+  };
+  test('it is behind the players as they start (they face north, toward the gate)', () => {
+    for (const slot of SITES.spawn) expect(owl[1]).toBeGreaterThan(slot[1] + 6);
+  });
+  test('from both starting places a boulder stands in the way', () => {
+    const boulders = placeScenery().boulders;
+    for (const slot of SITES.spawn) {
+      // a boulder is at least 1.4 * s * 0.8 wide to either side of its middle (see rockGeometry)
+      const hiding = boulders.filter((b) => { const l = lineTo(slot, owl, [b.x, b.z]); return l.between && l.off <= 1.4 * b.s * 0.8 - 0.4; });
+      expect(hiding.length, `from ${slot}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
 describe('owls stand clear of scenery', () => {
   test('every owl is 2.5 m from every tree, boulder and rock (the tor\'s crag too) and 1 m from every tuft', () => {
     const lan = placeLanternScenery();
