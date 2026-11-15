@@ -22,6 +22,7 @@ import { createAll, validState, stepAll, solvedCount, solvedLine, dynOf, promptF
 import { createView as createGateView } from './puzzles/views/gate.js';
 import { createView as createSignalView } from './puzzles/views/signal.js';
 import { createView as createPlankView } from './puzzles/views/plank.js';
+import { createView as createWreckView } from './puzzles/views/wreck.js';
 import { createView as createLiftView } from './puzzles/views/lift.js';
 import { createView as createBeamView } from './puzzles/views/beam.js';
 import { createView as createCausewayView } from './puzzles/views/causeway.js';
@@ -104,6 +105,7 @@ export class Game {
       { key: 'gate', view: createGateView(this.scene) },
       { key: 'signal', view: createSignalView(this.scene) },
       { key: 'plank', view: createPlankView(this.scene) },
+      { key: 'plank', view: createWreckView(this.scene) },
       { key: 'lift', view: createLiftView(this.scene) },
       { key: 'beam', view: createBeamView(this.scene) },
       { key: 'beam', view: createCausewayView(this.scene) },

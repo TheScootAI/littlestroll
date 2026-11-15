@@ -58,7 +58,7 @@ export function createAudio() {
       } catch { /* ignore */ }
     },
     get running() { return !!live(); },
-    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0, hoot: 0 },   // for checking in a browser
+    calls: { step: 0, riff: 0, shout: 0, creak: 0, bell: 0, pass: 0, roar: 0, blip: 0, thud: 0, chimeStone: 0, dud: 0, hoot: 0, splash: 0 },   // for checking in a browser
     step: safe(() => {
       audio.calls.step++;
       noise(ctx.currentTime, 0.07, 0.005, 700 + Math.random() * 300, 1.2, 0.5);
@@ -114,6 +114,14 @@ export function createAudio() {
       const t = ctx.currentTime;
       tone(329.63, t, 0.45, 0.14);
       tone(261.63, t + 0.32, 0.6, 0.14);
+    }),
+    // a timber falling into the water: a burst of soft hissing noise over a quick low thump
+    splash: safe(() => {
+      audio.calls.splash++;
+      const t = ctx.currentTime;
+      noise(t, 0.55, 0.03, 1800, 0.7, 0.45);
+      noise(t + 0.04, 0.4, 0.05, 900, 0.8, 0.3);
+      tone(95, t, 0.25, 0.22);
     }),
     // four judged wrong: a soft low note
     dud: safe(() => {

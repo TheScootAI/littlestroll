@@ -3,6 +3,7 @@ import { test, expect } from 'vitest';
 import { SITES, TRAIL, zoneAt, heightAt, DYN_NONE } from '../src/world/layout.js';
 import { placeScenery } from '../src/world/terrain.js';
 import { pointSegDist } from '../src/core/math.js';
+import { DEBRIS, leanEnds, TIP_R, TIP_RISE } from '../src/world/wreck.js';
 
 const W = SITES.wreck, scenery = placeScenery();
 const ends = W.pieces.flatMap((p, i) => [[i, 'a', p.a], [i, 'b', p.b]]);
@@ -51,4 +52,47 @@ test('the hull lies on the beach east or south-east of the rock, clear of the sp
   expect(Number.isFinite(h.yaw)).toBe(true);
   for (const s of SITES.spawn) expect(d([h.x, h.z], s)).toBeGreaterThanOrEqual(6);
   for (const [, , p] of ends) expect(d([h.x, h.z], p)).toBeGreaterThanOrEqual(4);
+});
+
+// ---- the debris on the sand and the way a timber leans on the rock (what is drawn)
+test('2 to 3 barrels (one on its side), a crate or two, rope or sail, an anchor or a wheel', () => {
+  const n = (k) => DEBRIS.filter((o) => o.kind === k).length;
+  expect(n('barrel') + n('barrelSide')).toBeGreaterThanOrEqual(2);
+  expect(n('barrel') + n('barrelSide')).toBeLessThanOrEqual(3);
+  expect(n('barrelSide')).toBe(1);
+  expect(n('crate')).toBeGreaterThanOrEqual(1);
+  expect(n('crate')).toBeLessThanOrEqual(2);
+  expect(n('rope') + n('sail')).toBeGreaterThanOrEqual(1);
+  expect(n('anchor') + n('wheel')).toBeGreaterThanOrEqual(1);
+});
+test('debris keeps clear of every piece end, the spawn slots, the trail, the owl, the rock and the scenery', () => {
+  const leg = [TRAIL[0], TRAIL[1]];
+  for (const o of DEBRIS) {
+    const p = [o.x, o.z];
+    for (const [, , e] of ends) expect(d(p, e)).toBeGreaterThanOrEqual(1.5);
+    for (const s of SITES.spawn) expect(d(p, s)).toBeGreaterThanOrEqual(2.5);
+    expect(pointSegDist(p[0], p[1], leg[0][0], leg[0][1], leg[1][0], leg[1][1]).d).toBeGreaterThanOrEqual(2.5);
+    expect(d(p, SITES.owls[1])).toBeGreaterThanOrEqual(2);
+    expect(d(p, W.rock)).toBeGreaterThanOrEqual(2);
+    for (const q of others) expect(d(p, [q.x, q.z])).toBeGreaterThanOrEqual(1);
+    for (const q of DEBRIS) if (q !== o) expect(d(p, [q.x, q.z])).toBeGreaterThanOrEqual(0.9);
+  }
+});
+test('every item stands on dry ground, off the hull', () => {
+  for (const o of DEBRIS) {
+    expect(Number.isFinite(o.yaw)).toBe(true);
+    expect(heightAt(o.x, o.z, DYN_NONE)).toBeGreaterThan(0.3);
+    const c = Math.cos(W.hull.yaw), sn = Math.sin(W.hull.yaw), k = [W.hull.x - c * 5.5, W.hull.z + sn * 5.5], m = [W.hull.x + c * 5.5, W.hull.z - sn * 5.5];
+    expect(pointSegDist(o.x, o.z, k[0], k[1], m[0], m[1]).d).toBeGreaterThanOrEqual(2.2);   // the keel line; the ribs reach about 1.6 m either side
+  }
+});
+test('a leaning timber keeps its full length, its tip is on the rock and it slides little from its end', () => {
+  for (const p of W.pieces) {
+    const e = leanEnds(p.a, p.b, W.rock, p.len);
+    expect(Math.hypot(e.b[0] - e.a[0], e.b[1] - e.a[1], TIP_RISE)).toBeCloseTo(p.len, 6);
+    expect(d(e.b, W.rock)).toBeCloseTo(TIP_R, 6);
+    expect(d(e.a, p.a)).toBeLessThanOrEqual(1.1);   // a walker who comes for its end A still finds it (grab radius 1.2)
+    const u = [(p.b[0] - p.a[0]) / p.len, (p.b[1] - p.a[1]) / p.len];   // same line as before
+    expect((e.b[0] - e.a[0]) * u[1] - (e.b[1] - e.a[1]) * u[0]).toBeCloseTo(0, 6);
+  }
 });
