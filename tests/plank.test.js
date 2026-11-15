@@ -181,6 +181,7 @@ test('the plank let go at the slot is laid', () => {
 test('the short board and the hatch let go at the slot are not laid: back at the wreck, with a splash', () => {
   for (const i of [2, 3]) {
     const s = carryTo(i, SITES.plank.slot);
+    expect(s.fell).toBe(i);
     expect(s.placed).toBeNull(); expect(s.solved).toBe(false);
     expect(s.splash).toBe(0);
     expect(holds(s)).toEqual(NONE);
@@ -429,4 +430,20 @@ test('I2: a pair whose board already crosses a stone may move to ease it, not to
   const st2 = { x: st.x - 1.2, z: st.z + 3.2, r: 1 };
   const v2 = veto(t, 0, [P(me), P(o)], [st, st2]);
   expect(v2(me[0], me[1] + 2.5)).toBe(true);
+});
+
+test('fell: set with the splash by a too-short piece, untouched otherwise', () => {
+  expect(create().fell).toBeNull();
+  expect(carryTo(0, SITES.plank.slot, 4).fell).toBeNull();
+  expect(carryTo(1, [6, 36]).fell).toBeNull();                      // dropped elsewhere
+  const s = create(); s.fell = 2;
+  carryTo(3, [6, 36], 1.8, s); expect(s.fell).toBe(2);              // a drop elsewhere leaves it
+  const u = create(); u.fell = 2;
+  carryTo(3, SITES.plank.slot, 1.8, u); expect(u.fell).toBe(3);
+  const f = create(); f.fell = 2; forceSolve(f); expect(f.fell).toBe(2);
+});
+test('valid: fell is null or a too-short piece', () => {
+  const mod = (v) => { const c = JSON.parse(JSON.stringify(create())); if (v === undefined) delete c.fell; else c.fell = v; return c; };
+  for (const ok of [null, 2, 3]) { expect(valid(mod(ok))).toBe(true); expect(valid(JSON.parse(JSON.stringify(mod(ok))))).toBe(true); }
+  for (const bad of ['2', 9, 0, 1, -1, 1.5, undefined]) expect(valid(mod(bad)), String(bad)).toBe(false);
 });

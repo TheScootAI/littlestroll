@@ -27,7 +27,7 @@ export const lengthOf = (i) => pieces[i].len;
 
 export const create = () => ({
   boards: pieces.map((p) => ({ ax: p.a[0], az: p.a[1], bx: p.b[0], bz: p.b[1], holdA: null, holdB: null })),
-  placed: null, splash: 999, solved: false,
+  placed: null, splash: 999, fell: null, solved: false,
 });
 
 const bothHeld = (b) => b.holdA !== null && b.holdB !== null;
@@ -133,7 +133,7 @@ export function step(s, players, dt) {
     const [sx, sz] = SITES.plank.slot;
     if (Math.hypot(mx - sx, mz - sz) <= PLACE_R) {
       if (lengthOf(i) >= NEED) layAcross(b, i);
-      else { toRest(b, i); s.splash = 0; }   // too short: it tips into the water
+      else { toRest(b, i); s.splash = 0; s.fell = i; }   // too short: it tips into the water
       if (lengthOf(i) >= NEED) { s.placed = i; s.solved = true; }
     } else settle(b, i);
     return;
@@ -211,6 +211,7 @@ export function valid(s) {
   }
   if (new Set(used).size !== used.length) return false;   // a walker holds at most one end
   if (s.placed !== null && !(Number.isInteger(s.placed) && s.placed >= 0 && s.placed < pieces.length && lengthOf(s.placed) >= NEED)) return false;
+  if (s.fell !== null && !(Number.isInteger(s.fell) && s.fell >= 0 && s.fell < pieces.length && lengthOf(s.fell) < NEED)) return false;
   return Number.isFinite(s.splash) && s.splash >= 0 && s.splash <= 999 &&
     typeof s.solved === 'boolean' && s.solved === (s.placed !== null);
 }
