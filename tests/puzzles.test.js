@@ -209,17 +209,17 @@ test('owls: createAll starts at 0, a walker on an owl sets its bit, finding all 
   stepAll(S, [P([x, z], { y: hAt(x, z) }), P(far)], 0.05);
   expect(S.owls).toBe(1 << 5);
   for (const [ax, az] of SITES.owls) stepAll(S, [P([ax, az], { y: hAt(ax, az) }), P(far)], 0.05);
-  expect(S.owls).toBe(255);
+  expect(S.owls).toBe(511);
   expect(solvedCount(S)).toBe(0);
   expect(S.ended).toBe(null);
   expect(promptFor(S, 0, [P([x, z], { y: hAt(x, z) }), P(far)])).toBe(promptFor(createAll(2), 0, [P([x, z], { y: hAt(x, z) }), P(far)]));
 });
 test('validState rejects a bad or missing owls', () => {
-  for (const v of [256, -1, 1.5, NaN, '1', undefined]) {
+  for (const v of [512, -1, 1.5, NaN, '1', undefined]) {
     const S = createAll(3); S.owls = v; expect(validState(S)).toBe(false);
   }
   const S = createAll(3); delete S.owls; expect(validState(S)).toBe(false);
-  const ok = createAll(3); ok.owls = 255; expect(validState(ok)).toBe(true);
+  const ok = createAll(3); ok.owls = 511; expect(validState(ok)).toBe(true);
 });
 
 test('the plank slice: one board per wreck piece, none laid, dyn follows placed', () => {

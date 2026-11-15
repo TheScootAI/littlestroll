@@ -1,9 +1,9 @@
-// The owls: eight small stone owls off the trail. S.owls is a bitmask, bit i = owl i found.
+// The owls: small stone owls off the trail. S.owls is a bitmask, bit i = owl i found.
 // Walk within FOUND_R of one (either walker, and within FOUND_DY of its ground height) and it is found, for good. Not a puzzle: no
 // prompt, no gate, not in the order, not counted as solved.
 import { SITES, heightAt } from '../world/layout.js';
 
-export const OWLS = 8, FOUND_R = 1.2, FOUND_DY = 1.5;
+export const OWLS = SITES.owls.length, FOUND_R = 1.2, FOUND_DY = 1.5;
 
 const GROUND = SITES.owls.map(([x, z]) => heightAt(x, z));   // each owl's ground height, once
 

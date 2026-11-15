@@ -5,8 +5,8 @@ import { SITES, heightAt } from '../src/world/layout.js';
 const P = (x, z, o = {}) => ({ present: true, x, y: heightAt(x, z), z, aim: [0, 0, -1], hold: false, pressed: false, ...o });
 const [ox, oz] = SITES.owls[3];
 
-test('eight owls, none found at the start', () => {
-  expect(OWLS).toBe(8);
+test('nine owls, none found at the start', () => {
+  expect(OWLS).toBe(9);
   expect(SITES.owls.length).toBe(OWLS);
   expect(create()).toBe(0);
 });
@@ -43,24 +43,31 @@ test('each owl is found at its own site', () => {
 });
 test('count', () => {
   expect(count(0)).toBe(0);
+  expect(count(511)).toBe(9);
   expect(count(255)).toBe(8);
   expect(count(0b10100101)).toBe(4);
 });
 test('valid', () => {
-  for (const v of [0, 1, 255]) expect(valid(v)).toBe(true);
-  for (const v of [256, -1, 1.5, NaN, Infinity, '3', null, undefined, {}]) expect(valid(v)).toBe(false);
+  for (const v of [0, 1, 255, 256, 511]) expect(valid(v)).toBe(true);
+  for (const v of [512, 1 << 20, -1, 1.5, NaN, Infinity, '3', null, undefined, {}]) expect(valid(v)).toBe(false);
 });
 
 test('news: no baseline, no line; a rise gives one line with the total; no change or a fall gives none', () => {
   expect(news(null, 3)).toEqual({ line: null, next: 3 });
   expect(news(undefined, 0)).toEqual({ line: null, next: 0 });
-  expect(news(2, 3)).toEqual({ line: 'An owl — 3 of 8', next: 3 });
-  expect(news(2, 4)).toEqual({ line: 'An owl — 4 of 8', next: 4 });
-  expect(news(0, 1).line).toBe('An owl — 1 of 8');
+  expect(news(2, 3)).toEqual({ line: 'An owl — 3 of 9', next: 3 });
+  expect(news(2, 4)).toEqual({ line: 'An owl — 4 of 9', next: 4 });
+  expect(news(0, 1).line).toBe('An owl — 1 of 9');
   expect(news(3, 3)).toEqual({ line: null, next: 3 });
   expect(news(5, 2)).toEqual({ line: null, next: 2 });
   // a reset (as after a welcome) puts the baseline back to null: the next state only sets it
   let prev = news(null, 6).next;
   expect(prev).toBe(6);
-  expect(news(prev, 7).line).toBe('An owl — 7 of 8');
+  expect(news(prev, 7).line).toBe('An owl — 7 of 9');
+});
+
+test('the ninth owl hides behind the boulder and the round tree east of the Signal\'s dials; the first sits between the lookout\'s pines', () => {
+  expect(SITES.owls[0]).toEqual([-35.3, 70.8]);
+  expect(SITES.owls[8]).toEqual([11.1, 80.2]);
+  expect(step(0, [P(...SITES.owls[8]), P(0, 1000)])).toBe(1 << 8);
 });

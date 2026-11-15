@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { Scene, Box3 } from 'three';
+import { SOLIDS } from '../src/world/solids.js';
 import { placeScenery, placeFarScenery, placeLanternScenery, featureClearance, trailDistance, siteAnchors, terrainExtent, buildTerrain, meshHeightAt, mulberry32 } from '../src/world/terrain.js';
 import { marshTileAt, WATCH_STONE } from '../src/world/layout.js';
 import island1 from './helpers/scenery-island1.json';
@@ -262,8 +263,8 @@ describe('Lantern Isle scenery', () => {
       expect(Math.abs(it.y - heightAt(it.x, it.z, DYN_NONE))).toBeLessThan(0.6);
     }
   });
-  test('no tree or boulder within 2.5 m of a stone, post, tally, owl or checkpoint slot', () => {
-    for (const it of [...lan.trees, ...lan.boulders]) for (const [ax, az] of keep) expect(Math.hypot(it.x - ax, it.z - az)).toBeGreaterThanOrEqual(2.5);
+  test('no tree or boulder within 2.5 m of a stone, post, tally or checkpoint slot', () => {
+    for (const it of [...lan.trees, ...lan.boulders]) for (const [ax, az] of keep.filter((k) => !owls.includes(k))) expect(Math.hypot(it.x - ax, it.z - az)).toBeGreaterThanOrEqual(2.5);
   });
   test('no rock or tuft within 3 m of a stone, post, tally, lamp, owl or checkpoint slot (the same clearance as trees)', () => {
     const anchors = [...keep, lanterns.lamp];
@@ -343,14 +344,23 @@ describe('the first owl hides behind the big rock behind the start', () => {
 });
 
 describe('owls stand clear of scenery', () => {
-  test('every owl is 2.5 m from every tree, boulder and rock (the tor\'s crag too) and 1 m from every tuft', () => {
-    const lan = placeLanternScenery();
-    const sets = [placeScenery(), placeFarScenery(), lan];
-    const solid = [...sets.flatMap((s) => [...s.trees, ...s.boulders, ...s.rocks]), ...lan.crag];
+  const lan = placeLanternScenery();
+  const sets = [placeScenery(), placeFarScenery(), lan];
+  test('every owl is at least r + 0.3 from the centre of every tree and boulder (never buried in one)', () => {
+    SITES.owls.forEach((o, i) => {
+      for (const so of SOLIDS) expect(Math.hypot(o[0] - so.x, o[1] - so.z), `owl ${i} / ${so.kind} at ${so.x.toFixed(1)}, ${so.z.toFixed(1)}`).toBeGreaterThanOrEqual(so.r + 0.3);
+    });
+  });
+  // Small rocks and tufts are not solid. An owl is about 0.6 m across: it keeps 1 m from each small rock
+  // and 0.5 m from each tuft, so neither stands in it. (This was 2.5 m from every rock together with the
+  // trees and boulders, and 1 m from every tuft; the owl between the lookout's pines is 2.42 m from one
+  // rock and the one behind the boulder east of the dials is 0.61 m from a tuft.)
+  test('every owl is 1 m from every small rock, 0.5 m from every tuft and 2.5 m from the tor\'s crag', () => {
     const tufts = sets.flatMap((s) => s.tufts);
     SITES.owls.forEach((o, i) => {
-      for (const it of solid) expect(Math.hypot(o[0] - it.x, o[1] - it.z), `owl ${i}`).toBeGreaterThanOrEqual(2.5);
-      for (const it of tufts) expect(Math.hypot(o[0] - it.x, o[1] - it.z), `owl ${i}`).toBeGreaterThanOrEqual(1);
+      for (const it of sets.flatMap((s) => s.rocks)) expect(Math.hypot(o[0] - it.x, o[1] - it.z), `owl ${i}`).toBeGreaterThanOrEqual(1);
+      for (const it of lan.crag) expect(Math.hypot(o[0] - it.x, o[1] - it.z), `owl ${i}`).toBeGreaterThanOrEqual(2.5);
+      for (const it of tufts) expect(Math.hypot(o[0] - it.x, o[1] - it.z), `owl ${i}`).toBeGreaterThanOrEqual(0.5);
     });
   });
 });

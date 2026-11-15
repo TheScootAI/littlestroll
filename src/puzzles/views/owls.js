@@ -1,4 +1,4 @@
-// The owls on screen: eight small stone owls (about 0.6 m) sitting at SITES.owls, rock-coloured
+// The owls on screen: small stone owls (about 0.6 m) sitting at SITES.owls, rock-coloured
 // so they are easy to walk past: a round body, two big eyes, ear tufts and a beak. Each faces the
 // nearest point of the trail. A found owl's eyes glow warm, for good. slice = the found mask.
 import { Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, IcosahedronGeometry, SphereGeometry, ConeGeometry } from 'three';

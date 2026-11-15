@@ -5,6 +5,8 @@ import {
 } from '../src/world/layout.js';
 import { siteAnchors } from '../src/world/terrain.js';
 import { reachable, walkDistance, GRID } from './helpers/reach.js';
+import { SOLIDS } from '../src/world/solids.js';
+import { FOUND_R } from '../src/puzzles/owls.js';
 import { GRID as PATH_GRID } from '../src/debug/path.js';
 import { DROWN_Y, STEP_UP, PLAYER_R, RUN } from '../src/config.js';
 import { pointSegDist } from '../src/core/math.js';
@@ -310,8 +312,9 @@ test('around every standing stone, seeing stone, lantern post and the tally: 2 m
   }
 });
 
-test('owls: eight, off the trail, reachable, room to walk up, clear of every site, apart', () => {
-  expect(owls).toHaveLength(8);
+test('owls: nine, off the trail, reachable, room to walk up, clear of every site, apart', () => {
+  expect(owls).toHaveLength(9);
+  expect(FOUND_R - 0.2).toBeCloseTo(1, 9);   // reachable() counts a point reached through a cell within 1 m
   const trailD = (p) => Math.min(...TRAIL.slice(1).map((b, i) => pointSegDist(...p, ...TRAIL[i], ...b).d));
   const r = reachable(SITES.spawn[0], ALL);
   const anchors = [
@@ -320,10 +323,11 @@ test('owls: eight, off the trail, reachable, room to walk up, clear of every sit
     SITES.marsh.lever, xz(SITES.marsh.plate), SITES.relay.small, SITES.relay.great,
   ];
   const { circles, segments } = blockers(DYN_NONE);
-  const zones = ['ABCDEF', 'ABCDEF', 'ABCDEF', 'GHIJ', 'GHIJ', 'KL', 'KL', 'KL'];
+  const zones = ['ABCDEF', 'ABCDEF', 'ABCDEF', 'GHIJ', 'GHIJ', 'KL', 'KL', 'KL', 'ABCDEF'];
   owls.forEach((o, i) => {
     expect(trailD(o), `owl ${i}`).toBeGreaterThanOrEqual(6);
-    expect(r(...o), `owl ${i}`).toBe(true);
+    expect(r(...o), `owl ${i}`).toBe(true);   // some reachable point within 1 m = FOUND_R - 0.2, trees and boulders counted
+    for (const so of SOLIDS) expect(Math.hypot(o[0] - so.x, o[1] - so.z), `owl ${i} / ${so.kind} at ${so.x.toFixed(1)}, ${so.z.toFixed(1)}`).toBeGreaterThanOrEqual(so.r + 0.3);
     // room to walk up to it: most of the ground a step away is level with it (an owl may sit on a
     // plateau's rim, like the one behind the rock at the start, but never on a point or a ledge)
     expect(levelAround(o), `owl ${i}`).toBeGreaterThanOrEqual(5);
@@ -331,7 +335,7 @@ test('owls: eight, off the trail, reachable, room to walk up, clear of every sit
     for (const c of circles) expect(Math.hypot(o[0] - c.x, o[1] - c.z) - c.r, `owl ${i}`).toBeGreaterThanOrEqual(3);
     for (const s of segments) expect(pointSegDist(...o, s.ax, s.az, s.bx, s.bz).d).toBeGreaterThanOrEqual(3);
     expect(zones[i]).toContain(zoneAt(...o));
-    for (let j = i + 1; j < 8; j++) expect(dist(o, owls[j]), `owls ${i}, ${j}`).toBeGreaterThanOrEqual(10);
+    for (let j = i + 1; j < owls.length; j++) expect(dist(o, owls[j]), `owls ${i}, ${j}`).toBeGreaterThanOrEqual(10);
   });
 });
 
