@@ -3,7 +3,7 @@ import { dirFromYawPitch } from '../core/math.js';
 import { readInput } from '../player/input.js';
 import { clean, MAX_LEN } from '../core/chat.js';
 
-export const PROTOCOL_V = 13;   // bump whenever the shape of S or dyn, or what a message means, changes
+export const PROTOCOL_V = 14;   // bump whenever the shape of S or dyn, or what a message means, changes
 export const MAX_BYTES = 16384;
 
 // [field, min, max]

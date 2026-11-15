@@ -39,7 +39,7 @@ import { clamp } from '../core/math.js';
 
 export const DYN_NONE = Object.freeze({
   gateOpen: false, bridge: false, plank: false, lift: 0, ladder: false,
-  causeway: false, bells: false, marsh: 0, pillars: 0, ring: false, spur: false,
+  causeway: false, bells: false, marsh: 0, pillars: 0, ring: false, spur: false, watch: false,
 });
 
 const SEA_Y = -4;
@@ -410,6 +410,18 @@ const FIND_SITES = [
   [13.3, 131.3],                                // the pirate hat: tucked against the wreck's hull, on the side away from the spawn
 ];
 
+// The watch-stone's railing: vertices evenly spaced over the 278.6 degrees the opening leaves,
+// from the opening's end at z = -54.5 round (through north and east) to its end at z = -57.5.
+const RAIL_R = 2.3, RAIL_OPEN_HALF = 1.5;
+const RAIL_END = Math.atan2(RAIL_OPEN_HALF, -Math.sqrt(RAIL_R * RAIL_R - RAIL_OPEN_HALF * RAIL_OPEN_HALF));
+const RAIL_SPAN = 2 * Math.PI - 2 * (Math.PI - RAIL_END);
+const RAIL_PTS = Array.from({ length: 14 }, (_, k) => {
+  const a = RAIL_END - (k / 13) * RAIL_SPAN;
+  return [WATCH_STONE.x + RAIL_R * Math.cos(a), WATCH_STONE.z + RAIL_R * Math.sin(a)];
+});
+const RAIL = Array.from({ length: 13 }, (_, k) => seg(RAIL_PTS[k][0], RAIL_PTS[k][1], RAIL_PTS[k + 1][0], RAIL_PTS[k + 1][1]));
+const RAIL_GATE = seg(RAIL_PTS[13][0], RAIL_PTS[13][1], RAIL_PTS[0][0], RAIL_PTS[0][1]);
+
 export const SITES = {
   spawn: [[-1.5, 124], [1.5, 124]],
   checkpoints: [
@@ -481,6 +493,11 @@ export const SITES = {
     ...MARSH,
     plate: { x: WATCH_STONE.x, z: WATCH_STONE.z, r: 1.5 },
     lever: [126.5, -60.5],
+    // The railing round the watch-stone's top: a 14-sided ring of radius 2.3 about its centre, the
+    // stretch facing the ramp left open (13 segments, the opening's two ends at z = -57.5 and
+    // z = -54.5). `barrier` closes that opening while the plate is held.
+    rail: RAIL,
+    barrier: RAIL_GATE,
   },
   relay: {
     small: [130, -63],
@@ -552,8 +569,9 @@ const STATIC_CIRCLES = [
 const WALL_SEG = seg(WALL.x, WALL.z - WALL_HALF, WALL.x, WALL.z + WALL_HALF);
 
 export function blockers(dyn = DYN_NONE) {
-  const segments = [WALL_SEG];
+  const segments = [WALL_SEG, ...RAIL];
   if (!dyn.gateOpen) segments.push(SITES.gate.door);
   if (dyn.spur) segments.push(SITES.signal.barrier);
+  if (dyn.watch) segments.push(RAIL_GATE);
   return { circles: STATIC_CIRCLES, segments };
 }

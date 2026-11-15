@@ -784,7 +784,7 @@ describe('L. the Far Isle', () => {
       expect(zoneAt(x, z)).toBe(zoneAt(x, z));
     }
     expect(k).toBe(800);
-    expect(Object.keys(DYN_NONE).sort()).toEqual(['bells', 'causeway', 'gateOpen', 'ladder', 'lift', 'marsh', 'plank', 'bridge', 'pillars', 'ring', 'spur'].sort());
+    expect(Object.keys(DYN_NONE).sort()).toEqual(['bells', 'causeway', 'gateOpen', 'ladder', 'lift', 'marsh', 'plank', 'bridge', 'pillars', 'ring', 'spur', 'watch'].sort());
     expect(DYN_NONE.causeway).toBe(false);
     expect(DYN_NONE.bells).toBe(false);
     expect(DYN_NONE.marsh).toBe(0);

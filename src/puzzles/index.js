@@ -77,7 +77,7 @@ export const solvedLine = (n) => ORDER[n]?.done ?? null;
 export const dynOf = (S) => ({
   gateOpen: S.gate.amt > 0.5 || S.gate.open,
   bridge: S.signal.bridge >= 1, spur: S.signal.up, plank: S.plank.placed !== null, lift: S.lift.y, ladder: S.lift.ladder,
-  causeway: S.beam.solved, bells: S.bells.steps >= 1, marsh: marsh.maskOf(S.marsh),
+  causeway: S.beam.solved, bells: S.bells.steps >= 1, marsh: marsh.maskOf(S.marsh), watch: S.marsh.up,
   pillars: pillars.maskOf(S.pillars), ring: S.ring.steps >= 1,
 });
 

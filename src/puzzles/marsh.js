@@ -3,7 +3,8 @@
 // which (the view decides that, with seesPath). The tiles hold only while a walker stays on the
 // watch-stone's plate, so the watcher has to talk the other across. Pure rules, no three.js.
 import { SITES, MARSH_SURFACE, heightAt, marshTileAt } from '../world/layout.js';
-import { rng } from '../core/math.js';
+import { rng, pointSegDist } from '../core/math.js';
+import { BARRIER_CLEAR } from './signal.js';
 
 const { cols: COLS, rows: ROWS } = SITES.marsh;
 const TILES = COLS * ROWS;
@@ -65,15 +66,36 @@ export function makePath(seed = 0) {
   return [2, 7, 8, 13, 18, 17, 22, 27];   // unreachable in practice: a fixed legal path
 }
 
-export const create = (seed = 0) => ({ path: makePath(seed), held: false, solved: false });
+// Paths come in two kinds, by the parity of their tile numbers' sum. Deal d is drawn until it
+// is of kind d & 1, so consecutive deals always differ (as the Signal's symbols do), and any
+// deal is O(1) in the deal number. Two fixed legal paths of opposite kinds back the draw up.
+const kind = (p) => p.reduce((a, i) => a + i, 0) & 1;
+export const FALLBACK = [[2, 7, 8, 13, 18, 17, 22, 27], [1, 0, 5, 10, 15, 16, 21, 22, 27]];   // by kind, 0 then 1
+const TRIES = 12;
+export function pathFor(seed, deal = 0) {
+  const d = deal | 0, base = Math.imul(seed | 0, 0x9e3779b1) ^ Math.imul(d, 0x85ebca6b) ^ 0x5bd1e995;
+  for (let k = 0; k < TRIES; k++) {
+    const p = makePath(Math.imul(base ^ Math.imul(k + 1, 0xc2b2ae35), 0x27d4eb2f) >>> 0);
+    if (kind(p) === (d & 1)) return p;
+  }
+  return FALLBACK[d & 1].slice();
+}
+
+export const create = (seed = 0) => ({ path: pathFor(seed, 0), seed, deal: 0, held: false, up: false, solved: false });
 
 export const onPlate = (p) => !!p?.present && near(p, SITES.marsh.plate.x, SITES.marsh.plate.z, SITES.marsh.plate.r);
 
 export function step(s, players, dt) {
-  s.held = players.some(onPlate);
+  const { barrier } = SITES.marsh;
+  const here = players.filter((p) => p?.present);
+  const was = s.held;
+  s.held = here.some(onPlate);
+  if (was && !s.held && !s.solved) { s.deal += 1; s.path = pathFor(s.seed, s.deal); }
+  if (s.solved || !s.held) s.up = false;
+  else if (!s.up && !here.some((p) => pointSegDist(p.x, p.z, barrier.ax, barrier.az, barrier.bx, barrier.bz).d <= BARRIER_CLEAR)) s.up = true;
   if (s.solved) return;
-  for (const p of players) {
-    if (p?.present && p.pressed && near(p, SITES.marsh.lever[0], SITES.marsh.lever[1], LEVER_R)) { s.solved = true; break; }
+  for (const p of here) {
+    if (p.pressed && near(p, SITES.marsh.lever[0], SITES.marsh.lever[1], LEVER_R)) { s.solved = true; s.up = false; break; }
   }
 }
 
@@ -99,7 +121,10 @@ export function prompt(s, idx, players) {
   return null;
 }
 
+const sameList = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 export const valid = (s) => !!s && typeof s === 'object' && typeof s.held === 'boolean' &&
-  typeof s.solved === 'boolean' && pathOk(s.path);
+  typeof s.solved === 'boolean' && typeof s.up === 'boolean' && pathOk(s.path) &&
+  Number.isSafeInteger(s.seed) && Number.isInteger(s.deal) && s.deal >= 0 && s.deal <= 1e9 &&
+  sameList(s.path, pathFor(s.seed, s.deal));   // never adopt a path the host could not have dealt
 
-export function forceSolve(s) { s.solved = true; s.held = false; }
+export function forceSolve(s) { s.solved = true; s.held = false; s.up = false; }

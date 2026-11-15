@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
-import { sinksUnder, makePath, create, step, prompt, maskOf, seesPath, valid, forceSolve } from '../src/puzzles/marsh.js';
+import { sinksUnder, makePath, create, step, prompt, maskOf, seesPath, valid, forceSolve, onPlate, pathFor, pathOk, FALLBACK } from '../src/puzzles/marsh.js';
+import { rng } from '../src/core/math.js';
 import { createAll, stepAll, solvedCount, dynOf, promptFor, forceSolved, validState, solvedLine } from '../src/puzzles/index.js';
 import { SITES, heightAt, zoneAt, marshTileCentre, marshTileAt, MARSH_SURFACE } from '../src/world/layout.js';
 import { createPlayer, stepPlayer, needsRespawn, respawn } from '../src/player/controller.js';
@@ -55,14 +56,15 @@ test('makePath: no non-consecutive tiles are orthogonally adjacent, and corners 
 
 test('create: a path, nobody holding, unsolved', () => {
   const s = create(3);
-  expect(s.path).toEqual(makePath(3)); expect(s.held).toBe(false); expect(s.solved).toBe(false);
+  expect(s.path).toEqual(pathFor(3, 0)); expect(s.held).toBe(false); expect(s.solved).toBe(false);
 });
 test('maskOf: 0 with nobody on the plate, the path while someone is, 0 when they leave, forever once solved', () => {
-  const s = create(5), full = sol(s.path);
+  const s = create(5);
   step(s, [P(far), P(far)], 1 / 30); expect(maskOf(s)).toBe(0);
-  step(s, [P(plate), P(far)], 1 / 30); expect(s.held).toBe(true); expect(maskOf(s)).toBe(full);
+  step(s, [P(plate), P(far)], 1 / 30); expect(s.held).toBe(true); expect(maskOf(s)).toBe(sol(pathFor(5, 0)));
   step(s, [P(far), P(far)], 1 / 30); expect(s.held).toBe(false); expect(maskOf(s)).toBe(0);
-  step(s, [P(far), P(plate)], 1 / 30); expect(maskOf(s)).toBe(full);
+  step(s, [P(far), P(plate)], 1 / 30); expect(maskOf(s)).toBe(sol(pathFor(5, 1)));   // a new deal every time it is left
+  const full = sol(s.path);
   step(s, [P(plate), P(M.lever, { pressed: true })], 1 / 30); expect(s.solved).toBe(true);
   step(s, [P(far), P(far)], 1 / 30); expect(s.held).toBe(false); expect(maskOf(s)).toBe(full);
 });
@@ -191,7 +193,7 @@ test('forceSolve and valid', () => {
 
 test('index: slice, dyn, prompt, flash, forceSolved, validity', () => {
   const S = createAll(9);
-  expect(S.marsh.path).toEqual(makePath(9));
+  expect(S.marsh.path).toEqual(pathFor(9, 0));
   expect(dynOf(S).marsh).toBe(0);
   forceSolved(S, 6);
   expect(solvedCount(S)).toBe(6);
@@ -271,4 +273,125 @@ test('sinksUnder: only a walker who is actually unsupported sinks a slab', () =>
   expect(sinksUnder(W(marshTileCentre(lone)), safe, dyn)).toBe(false);
   expect(sinksUnder({ present: false }, lone, dyn)).toBe(false);
   expect(sinksUnder(null, lone, dyn)).toBe(false);
+});
+
+// ---- the watch-stone's wall and its re-deal (issue 15)
+import { pathFor, pathOk } from '../src/puzzles/marsh.js';
+
+const SEEDS = [0, 1, -1, 12345, 2 ** 31 - 1, -(2 ** 31), Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER];
+const stepFor = (s, a, b) => step(s, [a, b], 1 / 30);
+const bar = M.barrier;
+
+test('the slice has seed, deal and up; create starts at deal 0 with the dealt path', () => {
+  const s = create(77);
+  expect(s.seed).toBe(77); expect(s.deal).toBe(0); expect(s.up).toBe(false);
+  expect(s.path).toEqual(pathFor(77, 0));
+});
+test('pathFor: always pathOk, never equal to the next deal, for the awkward seeds', () => {
+  const deals = [...Array(201).keys(), 1e9 - 1, 1e9];
+  for (const seed of SEEDS) {
+    let prev = pathFor(seed, deals[0]);
+    expect(pathOk(prev), `${seed}/0`).toBe(true);
+    for (const d of deals.slice(1)) {
+      const p = pathFor(seed, d);
+      expect(pathOk(p), `${seed}/${d}`).toBe(true);
+      if (d === 1e9) { expect(p).not.toEqual(pathFor(seed, d - 1)); }
+      else if (d === 1e9 - 1) { expect(p).not.toEqual(pathFor(seed, d + 1)); }
+      else expect(p, `${seed}/${d}`).not.toEqual(prev);
+      prev = p;
+    }
+    expect(pathFor(seed, 5)).toEqual(pathFor(seed, 5));
+  }
+});
+test('stepping off the plate re-deals once; back on does not; standing does not; solved never does', () => {
+  const s = create(9);
+  const first = s.path;
+  stepFor(s, P(plate), P(far));
+  for (let i = 0; i < 100; i++) stepFor(s, P(plate), P(far));
+  expect(s.deal).toBe(0); expect(s.path).toEqual(first);
+  stepFor(s, P(far), P(far));
+  expect(s.deal).toBe(1); expect(s.path).toEqual(pathFor(9, 1)); expect(s.path).not.toEqual(first);
+  for (let i = 0; i < 20; i++) stepFor(s, P(far), P(far));
+  expect(s.deal).toBe(1);
+  stepFor(s, P(plate), P(far)); expect(s.deal).toBe(1);
+  stepFor(s, P(far), P(far)); expect(s.deal).toBe(2);
+  stepFor(s, P(plate), P(M.lever, { pressed: true })); expect(s.solved).toBe(true);
+  stepFor(s, P(far), P(far)); expect(s.deal).toBe(2);
+});
+test('a watcher who stops being present counts as leaving', () => {
+  const s = create(9);
+  stepFor(s, P(plate), P(far)); expect(s.held).toBe(true);
+  stepFor(s, { ...P(plate), present: false }, P(far));
+  expect(s.held).toBe(false); expect(s.deal).toBe(1); expect(s.up).toBe(false);
+});
+test('two walkers swapping on the plate in one step keep it held, with no re-deal', () => {
+  const s = create(9);
+  stepFor(s, P(plate), P(far));
+  stepFor(s, P(far), P(plate));
+  expect(s.held).toBe(true); expect(s.deal).toBe(0);
+});
+test('the barrier: up while held, down when left, down when solved', () => {
+  const s = create(4);
+  stepFor(s, P(far), P(far)); expect(s.up).toBe(false);
+  stepFor(s, P(plate), P(far)); expect(s.up).toBe(true);
+  stepFor(s, P(plate), P(far)); expect(s.up).toBe(true);
+  stepFor(s, P(far), P(far)); expect(s.up).toBe(false);
+  stepFor(s, P(plate), P(far)); expect(s.up).toBe(true);
+  stepFor(s, P(plate), P(M.lever, { pressed: true })); expect(s.solved).toBe(true); expect(s.up).toBe(false);
+  stepFor(s, P(plate), P(far)); expect(s.up).toBe(false);
+});
+test('the barrier waits while a walker is within 0.9 m of it, and a far plate-stander does not stop it', () => {
+  const mid = [(bar.ax + bar.bx) / 2, (bar.az + bar.bz) / 2];
+  const s = create(4);
+  stepFor(s, P(plate), P([mid[0] - 0.5, mid[1]])); expect(s.held).toBe(true); expect(s.up).toBe(false);
+  stepFor(s, P(plate), P([mid[0] - 0.5, mid[1]])); expect(s.up).toBe(false);
+  stepFor(s, P(plate), P([mid[0] - 1.0, mid[1]])); expect(s.up).toBe(true);
+  const t = create(4);
+  const stander = [bar.ax + 0.9 + 0.01, mid[1]];
+  expect(onPlate(P(stander))).toBe(true);
+  stepFor(t, P(stander), P(far)); expect(t.up).toBe(true);
+  // an absent walker's position does not count
+  const u = create(4);
+  stepFor(u, P(plate), { ...P(mid), present: false }); expect(u.up).toBe(true);
+});
+test('valid: accepts every state a long random walk makes, survives JSON, rejects what the host could not deal', () => {
+  const r = rng(5);
+  for (const seed of [3, -7, Number.MAX_SAFE_INTEGER]) {
+    const s = create(seed);
+    const pos = [[...far], [...far]];
+    for (let n = 0; n < 4000; n++) {
+      for (const q of pos) {
+        const roll = r();
+        if (roll < 0.03) { q[0] = plate[0] + (r() - 0.5) * 3; q[1] = plate[1] + (r() - 0.5) * 3; }
+        else if (roll < 0.05) { q[0] = far[0]; q[1] = far[1]; }
+        else if (roll < 0.06) { q[0] = bar.ax + (r() - 0.5) * 2; q[1] = plate[1] + (r() - 0.5) * 3; }
+      }
+      stepFor(s, P(pos[0]), P(pos[1]));
+      expect(valid(s)).toBe(true);
+      if (n % 400 === 0) expect(valid(JSON.parse(JSON.stringify(s)))).toBe(true);
+      if (s.solved) break;
+    }
+    expect(s.deal).toBeGreaterThan(3);
+  }
+  const s = create(8);
+  expect(valid({ ...s, path: pathFor(8, 1) })).toBe(false);
+  expect(valid({ ...s, path: [...s.path].reverse() })).toBe(false);
+  for (const seed of [1.5, NaN, '3', undefined, 2 ** 60]) expect(valid({ ...s, seed })).toBe(false);
+  for (const deal of [-1, 1.5, NaN, 1e9 + 1, '0', undefined]) expect(valid({ ...s, deal })).toBe(false);
+  for (const up of [0, 1, 'true', undefined]) expect(valid({ ...s, up })).toBe(false);
+  expect(valid({ ...s, deal: 1e9, path: pathFor(8, 1e9) })).toBe(true);
+});
+test('forceSolve drops the barrier', () => {
+  const s = create(2); s.up = true; s.held = true;
+  forceSolve(s); expect(s.up).toBe(false); expect(s.solved).toBe(true);
+});
+
+test('the two fallback paths are legal and of opposite kinds', () => {
+  expect(FALLBACK.every(pathOk)).toBe(true);
+  expect(FALLBACK.map((p) => p.reduce((a, i) => a + i, 0) & 1)).toEqual([0, 1]);
+});
+test('dynOf exposes the barrier as watch', () => {
+  const S = createAll(9);
+  expect(dynOf(S).watch).toBe(false);
+  S.marsh.up = true; expect(dynOf(S).watch).toBe(true);
 });

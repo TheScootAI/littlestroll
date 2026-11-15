@@ -6,7 +6,7 @@ import { rng, pointSegDist } from '../core/math.js';
 
 export const SYMBOLS = GLYPHS.length;   // the eight two-part glyphs, see glyphs.js
 const DIAL_R = 1.0;             // a press this close to a dial turns it
-const BARRIER_CLEAR = 0.9;      // the barrier waits to rise while a walker is this close to it
+export const BARRIER_CLEAR = 0.9;      // the barrier waits to rise while a walker is this close to it
 const SWING_S = 2;              // seconds for the bridge to swing out
 
 const near = (p, xz, r) => Math.hypot(p.x - xz[0], p.z - xz[1]) <= r;
