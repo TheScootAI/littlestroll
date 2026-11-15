@@ -110,3 +110,9 @@ test('the wreck adds nothing to blockers(): no circle near its rock or any end',
     for (const s of segments) expect(pointSegDist(p[0], p[1], s.ax, s.az, s.bx, s.bz).d).toBeGreaterThan(0.5);
   }
 });
+test('debris keeps 1.2 m clear of every resting timber as drawn (slid toward the rock)', () => {
+  for (const p of W.pieces) {
+    const e = leanEnds(p.a, p.b, W.rock, p.len);
+    for (const o of DEBRIS) expect(pointSegDist(o.x, o.z, e.a[0], e.a[1], e.b[0], e.b[1]).d).toBeGreaterThanOrEqual(1.2);
+  }
+});

@@ -14,6 +14,8 @@ import { leanEnds, TIP_RISE } from '../../world/wreck.js';
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 const HIP = 0.75;          // carried ends ride this far above the ground under them
 const WIDTH = 0.9, THICK = 0.14;
+const GLOW = 0.4;          // the end caps' steady emissive strength
+const HALF = { plank: 0.07, spar: 0.16, board: 0.07, hatch: 0.05 };   // half a piece's thickness: laid flush on the ramp
 const REST = { plank: 0.12, spar: 0.17, board: 0.1, hatch: 0.1 };   // an end resting on the ground: half the piece's thickness, a little more
 
 export function createView(scene) {
@@ -57,12 +59,12 @@ export function createView(scene) {
   }
 
   // ---- the four timbers: each built at its own length along Z, end A at -Z and end B at +Z.
-  // The end caps glow with a soft pulse while free: that is what can be picked up.
+  // The end caps are a steady orange, free or held.
   const glow = new Color(ACCENT);
   const box = (w, h, d, m, x = 0, y = 0, z = 0) => { const o = new Mesh(new BoxGeometry(w, h, d), m); o.position.set(x, y, z); return o; };
   const timber = (len, kind) => {
     const g = new Group();
-    const capMats = [0, 1].map(() => mat(ACCENT, { emissive: glow.clone().multiplyScalar(0.35) }));
+    const capMats = [0, 1].map(() => mat(ACCENT, { emissive: glow.clone().multiplyScalar(GLOW) }));
     const wood = mat(WOOD), dark = mat(WOOD_DARK);
     if (kind === 'spar') {
       const r = 0.16;
@@ -127,19 +129,15 @@ export function createView(scene) {
   const spanLen = Math.hypot(sp.bx - sp.ax, sp.bz - sp.az);
   const ay0 = heightAt(sp.ax, sp.az), by0 = heightAt(sp.bx, sp.bz, { plank: true });
   const [rkx, rkz] = SITES.wreck.rock;
-  let pulse = 0;
 
   return {
-    sync(s, ctx, dt = 0) {
-      pulse += dt;
-      const soft = 0.35 + 0.25 * Math.sin(pulse * 3);
+    sync(s, ctx) {
       s.boards.forEach((b, i) => {
-        const p = pieces[i], len = lengthOf(i), rest = p.rest;
+        const p = pieces[i], len = lengthOf(i), rest = p.rest, hf = HALF[SITES.wreck.pieces[i].kind];
         if (s.placed === i) {
           // laid across the gap at its own length, centred on it
           const dx = (sp.bx - sp.ax) / spanLen, dz = (sp.bz - sp.az) / spanLen, ext = (len - spanLen) / 2, dy = (by0 - ay0) / spanLen;
-          place(p, sp.ax - dx * ext, ay0 - dy * ext + rest, sp.az - dz * ext, sp.bx + dx * ext, by0 + dy * ext + rest, sp.bz + dz * ext);
-          for (const m of p.capMats) m.emissive.copy(glow).multiplyScalar(0.1);
+          place(p, sp.ax - dx * ext, ay0 - dy * ext + hf, sp.az - dz * ext, sp.bx + dx * ext, by0 + dy * ext + hf, sp.bz + dz * ext);
           return;
         }
         // a carried end rides on its holder's (smoothed) position; a free one stays where S says
@@ -148,8 +146,9 @@ export function createView(scene) {
           if (q && q.present) { x = q.x; z = q.z; }
           return [x, z];
         };
-        const ha = b.holdA !== null, hb = b.holdB !== null;
-        let [ax, az] = end(b.holdA, b.ax, b.az), [bx, bz] = end(b.holdB, b.bx, b.bz);
+        // once something is laid nobody carries anything: draw the others where S says they lie
+        const ha = s.placed === null && b.holdA !== null, hb = s.placed === null && b.holdB !== null;
+        let [ax, az] = end(ha ? b.holdA : null, b.ax, b.az), [bx, bz] = end(hb ? b.holdB : null, b.bx, b.bz);
         let ya, yb;
         if (ha && hb) {
           // carried by two it is rigid: its full length, centred between the carriers
@@ -171,8 +170,6 @@ export function createView(scene) {
           ya = heightAt(ax, az) + rest; yb = heightAt(bx, bz) + rest;
         }
         place(p, ax, ya, az, bx, yb, bz);
-        p.capMats[0].emissive.copy(glow).multiplyScalar(ha ? 0.15 : soft);
-        p.capMats[1].emissive.copy(glow).multiplyScalar(hb ? 0.15 : soft);
       });
       // the splash
       const t = s.splash;
