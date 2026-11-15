@@ -114,13 +114,29 @@ function flowerGroup(k = 1) {
   return g;
 }
 
+// A pirate's hat: a low crown with a tall flap turned up at the front and the back, each an arch
+// of three plates wider than the head, white along the top, a skull and crossed bones in front.
 function hatMeshes(k = 1, y = 1.1) {
-  return [
-    cyl(0.3 * k, 0.3 * k, 0.04 * k, 8, C.black, 0, y - 0.03 * k, 0),                       // the wide brim
-    cyl(0.17 * k, 0.19 * k, 0.12 * k, 8, C.black, 0, y + 0.05 * k, 0),                     // the crown
-    cyl(0.192 * k, 0.192 * k, 0.035 * k, 8, C.white, 0, y + 0.035 * k, 0),                 // the white band
-    box(0.12 * k, 0.05 * k, 0.1 * k, C.black, 0, y - 0.01 * k, -0.27 * k, [0.25, 0, 0]),   // the brim's front point
+  const out = [
+    cyl(0.27 * k, 0.29 * k, 0.04 * k, 8, C.black, 0, y - 0.02 * k, 0),                     // the brim it sits on
+    cyl(0.18 * k, 0.22 * k, 0.15 * k, 8, C.black, 0, y + 0.06 * k, 0),                     // the crown
   ];
+  for (const f of [-1, 1]) {                                                              // front (-z) and back flap
+    const z = f * 0.2 * k, lean = -f * 0.22;
+    out.push(
+      box(0.3 * k, 0.27 * k, 0.04 * k, C.black, 0, y + 0.12 * k, z, [lean, 0, 0]),
+      box(0.24 * k, 0.17 * k, 0.04 * k, C.black, -0.22 * k, y + 0.075 * k, z, [lean, 0, 0.5]),
+      box(0.24 * k, 0.17 * k, 0.04 * k, C.black, 0.22 * k, y + 0.075 * k, z, [lean, 0, -0.5]),
+      box(0.3 * k, 0.03 * k, 0.05 * k, C.white, 0, y + 0.255 * k, z + f * -0.03 * k, [lean, 0, 0]),   // the white edge
+    );
+  }
+  const fz = -0.235 * k;
+  out.push(
+    ball(0.05 * k, C.white, 0, y + 0.15 * k, fz, 1, 6, 4),                                // the skull
+    box(0.17 * k, 0.024 * k, 0.02 * k, C.white, 0, y + 0.085 * k, fz + 0.005 * k, [0, 0, 0.6]),
+    box(0.17 * k, 0.024 * k, 0.02 * k, C.white, 0, y + 0.085 * k, fz + 0.005 * k, [0, 0, -0.6]),
+  );
+  return out;
 }
 
 // The pieces of find i as they sit on an avatar: [{ on: 'body' | 'legL' | 'legR' | 'armL' | 'armR', mesh }]

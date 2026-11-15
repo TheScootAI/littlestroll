@@ -10,7 +10,10 @@ describe('avatar', () => {
   test('is about 1.1 m tall, stands on its feet and casts shadows', () => {
     const a = createAvatar(0xf08a3c);
     run(a, view(), 0.2);
-    const box = new Box3().setFromObject(a.group);
+    // what is shown: the clothes it is not wearing are there but hidden, and a hat is tall
+    a.group.updateMatrixWorld(true);
+    const box = new Box3();
+    a.group.traverse((o) => { let on = o.isMesh; for (let q = o; q && on; q = q.parent) on = q.visible; if (on) box.expandByObject(o); });
     expect(box.max.y - box.min.y).toBeGreaterThan(0.95);
     expect(box.max.y - box.min.y).toBeLessThan(1.3);
     expect(box.min.y).toBeGreaterThan(-0.05);
@@ -294,10 +297,10 @@ describe('avatar', () => {
         }
       }
     });
-    test('clothing stays small and low: a worn avatar is still about 1.1 to 1.3 m tall and every mesh casts a shadow', () => {
+    test('clothing stays small and low: fully dressed, pirate hat and all, a walker is under 1.45 m and every mesh casts a shadow', () => {
       const a = wearing(0b1111111111);
       const box = new Box3().setFromObject(a.group);
-      expect(box.max.y - box.min.y).toBeLessThan(1.35);
+      expect(box.max.y - box.min.y).toBeLessThan(1.45);
       expect(box.min.y).toBeGreaterThan(-0.05);
       expect(clothes(a).every((m) => m.castShadow)).toBe(true);
       let tris = 0;
