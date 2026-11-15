@@ -277,7 +277,7 @@ describe('E. plank', () => {
     // a search over where the two carriers stand: the board never shorter or longer than 4 m,
     // kept 0.3 m off every stone, the carriers within 0.4 m of its length apart
     expect(carrySearch({ len: 4, slack: 0.4, margin: 0.3 }).done).toBe(true);
-  });
+  }, 120000);
 });
 
 // ---------------------------------------------------------------- F. lift

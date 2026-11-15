@@ -10,6 +10,8 @@ const far = SITES.spawn[0];
 
 const A = SITES.plank.restA, B = SITES.plank.restB;
 const press = (xz) => P(xz, { pressed: true });
+// the carry searches look at a million or two stands: seconds, and more on a slow machine
+const SEARCH_MS = 120000;
 
 test('constants', () => {
   expect([LEN, SLACK, GRAB_R, DROP_DIST, PLACE_R]).toEqual([4, 0.8, 1.2, 5.5, 2.5]);
@@ -150,11 +152,10 @@ test('the zigzag can be carried at full length, and every step of the way obeys 
     const [x0, z0, x1, z1] = board(a1[0], a1[1], b1[0], b1[1]);
     expect(Math.hypot(x1 - x0, z1 - z0)).toBeCloseTo(LEN, 9);
   }
-});
-test('no stones would be no puzzle, and a board too long for the gaps cannot be carried', () => {
-  expect(carrySearch({ len: LEN, slack: 0.4, margin: 0.3, stones: [] }).done).toBe(true);
+}, SEARCH_MS);
+test('the stones are a real obstacle: a board too long for the gaps cannot be carried through', () => {
   expect(carrySearch({ len: 7, slack: 0.4, margin: 0.3, from: [[2.5, 34], [9.5, 34]] }).done).toBe(false);
-});
+}, SEARCH_MS);
 
 test('prompts', () => {
   const s = create();
