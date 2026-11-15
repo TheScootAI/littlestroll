@@ -58,6 +58,11 @@ test('step returns the same array when nothing changed and never mutates its arg
 test('each find is found at its own site', () => {
   SITES.finds.forEach(([x, z], i) => expect(step(create(), [P(x, z), FAR])).toEqual(only(i, 0)));
 });
+test('finds are more than 2 x FOUND_R apart, so one walker never finds two at once (restored from the owl tests)', () => {
+  for (let i = 0; i < FINDS; i++) for (let j = i + 1; j < FINDS; j++) {
+    expect(Math.hypot(SITES.finds[i][0] - SITES.finds[j][0], SITES.finds[i][1] - SITES.finds[j][1]), `${i}, ${j}`).toBeGreaterThan(2 * FOUND_R);
+  }
+});
 test('count, countBy, wornMask on a mixed array', () => {
   const f = [0, -1, 1, 1, -1, -1, 0, -1, -1, 1];
   expect(count(create())).toBe(0);

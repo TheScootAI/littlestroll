@@ -246,7 +246,7 @@ export class Game {
       let at = Math.max(now + (flashed ? 3200 : 0), this.findFree ?? 0);   // when the next line may show
       for (const line of found.lines) {
         const wait = at - now;
-        if (wait <= 0) this.hud?.flash(line);
+        if (wait <= 0) { if (!this.S.ended) this.hud?.flash(line); }
         else setTimeout(() => { if (!this.S.ended) this.hud?.flash(line); }, wait);
         this.audio.find();
         at += 3200;
