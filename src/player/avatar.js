@@ -133,13 +133,14 @@ export function createAvatar(colour) {
     if (view.waveN !== lastWave) { lastWave = view.waveN; waveT = WAVE_SECS; }
     waveT = Math.max(0, waveT - dt);
 
-    // hop: a fresh jumpN starts one, but only on the ground and not while carrying something
-    // heavy (a mirror, a timber). A press in the air is dropped, never queued.
+    // hop: a fresh jumpN starts one, but only on the ground and with empty hands (no mirror,
+    // timber or flame: those are drawn from where the walker stands and would be left behind).
+    // A press in the air is dropped, never queued.
     let hopped = false;
     if (lastJump === null) lastJump = view.jumpN;
     if (view.jumpN !== lastJump) {
       lastJump = view.jumpN;
-      if (hopT < 0 && !view.carrying) { hopT = 0; hopped = true; }
+      if (hopT < 0 && !view.carrying && !view.torch) { hopT = 0; hopped = true; }
     }
     if (hopT >= 0) { hopT += dt; if (hopT >= HOP_SECS) hopT = -1; }
     lifter.position.y = hopT >= 0 ? hopHeight(hopT) : 0;

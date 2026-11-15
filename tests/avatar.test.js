@@ -164,17 +164,14 @@ describe('avatar', () => {
     expect(lift(a) - rest).toBeGreaterThan(0.5);
   });
 
-  test('a walker carrying something heavy does not hop; the flame carrier may', () => {
-    const a = createAvatar(0xf08a3c);
-    run(a, view({ carrying: true }), 0.2);
-    const rest = lift(a);
-    run(a, view({ carrying: true, jumpN: 1 }), 0.3);
-    expect(lift(a)).toBeCloseTo(rest, 3);
-    const b = createAvatar(0xf08a3c);
-    run(b, view({ torch: true }), 0.2);
-    const r2 = lift(b);
-    run(b, view({ torch: true, jumpN: 1 }), 0.25);
-    expect(lift(b) - r2).toBeGreaterThan(0.5);
+  test('a walker carrying something does not hop: a timber, a mirror, or the flame', () => {
+    for (const hands of [{ carrying: true }, { torch: true }]) {
+      const a = createAvatar(0xf08a3c);
+      run(a, view(hands), 0.2);
+      const rest = lift(a);
+      run(a, view({ ...hands, jumpN: 1 }), 0.25);
+      expect(lift(a)).toBeCloseTo(rest, 3);
+    }
   });
 
   test('hopping while pointing and waving: arms still do their jobs', () => {
