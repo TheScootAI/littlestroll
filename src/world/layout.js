@@ -437,11 +437,23 @@ export const SITES = {
     bridge: rampSeg('bridge'),
   },
   plank: {
-    restA: [3, 34],
+    restA: [3, 34],     // plain anchors now (the ground the scenery keeps clear): no piece rests here any more
     restB: [7, 34],
     stones,
     slot: SLOT,
     span: rampSeg('plank'),
+  },
+  // The shipwreck on the starting beach: four timbers lean on a scenery boulder (the one at
+  // about (12.11, 122.73)); `a` rests on the sand, `b` is up against the rock; index = piece id.
+  wreck: {
+    rock: [12.11, 122.73],
+    pieces: [
+      { kind: 'plank', len: 4,   a: [12.11, 116.83], b: [12.11, 120.83] },
+      { kind: 'spar',  len: 6.5, a: [5.39, 117.69],  b: [10.59, 121.59] },
+      { kind: 'board', len: 2.5, a: [15.63, 120.09], b: [13.63, 121.59] },
+      { kind: 'hatch', len: 1.8, a: [15.378, 123.684], b: [13.65, 123.18] },
+    ],
+    hull: { x: 14.2, z: 129, yaw: 0.6 },
   },
   lift: LIFT,
   beam: {

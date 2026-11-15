@@ -95,7 +95,7 @@ export function createView(scene) {
   return {
     sync(s, ctx, dt = 0) {
       pulse += dt;
-      if (s.placed) {
+      if (s.placed !== null) {
         const dx = (sp.bx - sp.ax) / spanLen, dz = (sp.bz - sp.az) / spanLen, ext = 0.2;
         place(sp.ax - dx * ext, ay0 + THICK / 2, sp.az - dz * ext, sp.bx + dx * ext, by0 + THICK / 2, sp.bz + dz * ext, spanLen + 2 * ext);
         for (const m of capMats) m.emissive.copy(glow).multiplyScalar(0.1);
@@ -107,14 +107,15 @@ export function createView(scene) {
         if (p && p.present) { x = p.x; z = p.z; }
         return [x, z, hold !== null];
       };
-      let [ax, az, ha] = end(s.holdA, s.ax, s.az), [bx, bz, hb] = end(s.holdB, s.bx, s.bz);
+      const p0 = s.boards[0];   // Task B draws every piece; for now only the plank
+      let [ax, az, ha] = end(p0.holdA, p0.ax, p0.az), [bx, bz, hb] = end(p0.holdB, p0.bx, p0.bz);
       // carried by two it is rigid: its full length, centred between the carriers
-      if (ha && hb) [ax, az, bx, bz] = rigid(ax, az, bx, bz, [1, 0]);
+      if (ha && hb) [ax, az, bx, bz] = rigid(LEN, ax, az, bx, bz, [1, 0]);
       const ya = heightAt(ax, az) + (ha ? HIP : REST), yb = heightAt(bx, bz) + (hb ? HIP : REST);
       place(ax, ya, az, bx, yb, bz, ha && hb ? LEN : Math.max(Math.hypot(bx - ax, bz - az, yb - ya), 0.5));
       const free = (h) => (h === null ? 0.35 + 0.25 * Math.sin(pulse * 3) : 0.15);
-      capMats[0].emissive.copy(glow).multiplyScalar(free(s.holdA));
-      capMats[1].emissive.copy(glow).multiplyScalar(free(s.holdB));
+      capMats[0].emissive.copy(glow).multiplyScalar(free(p0.holdA));
+      capMats[1].emissive.copy(glow).multiplyScalar(free(p0.holdB));
     },
   };
 }

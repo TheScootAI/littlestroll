@@ -221,3 +221,13 @@ test('validState rejects a bad or missing owls', () => {
   const S = createAll(3); delete S.owls; expect(validState(S)).toBe(false);
   const ok = createAll(3); ok.owls = 255; expect(validState(ok)).toBe(true);
 });
+
+test('the plank slice: one board per wreck piece, none laid, dyn follows placed', () => {
+  const S = createAll(1);
+  expect(S.plank.boards.length).toBe(SITES.wreck.pieces.length);
+  expect(S.plank.placed).toBeNull();
+  expect(dynOf(S).plank).toBe(false);
+  S.plank.placed = 0; S.plank.solved = true;
+  expect(dynOf(S).plank).toBe(true);              // piece 0 is laid: index 0 must still count as placed
+  expect(constraintFor(S, 0, [P(far), P(far)])).toBeNull();
+});

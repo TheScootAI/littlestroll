@@ -224,6 +224,11 @@ describe('D. signal', () => {
 
 describe('E. plank', () => {
   const { restA, restB, stones, slot, span } = SITES.plank;
+  test('the wreck: four timbers; the rests stay as plain anchors', () => {
+    expect(SITES.wreck.pieces.map((q) => q.len)).toEqual([4, 6.5, 2.5, 1.8]);
+    expect(SITES.plank.restA).toEqual([3, 34]);
+    expect(SITES.plank.restB).toEqual([7, 34]);
+  });
   test('rests, stones, slot, span', () => {
     expect(restB).toEqual([restA[0] + 4, restA[1]]);
     expect(zoneAt(...restA)).toBe('D');

@@ -76,7 +76,7 @@ export const solvedLine = (n) => ORDER[n]?.done ?? null;
 // What the puzzles currently do to the world.
 export const dynOf = (S) => ({
   gateOpen: S.gate.amt > 0.5 || S.gate.open,
-  bridge: S.signal.bridge >= 1, plank: S.plank.placed, lift: S.lift.y, ladder: S.lift.ladder,
+  bridge: S.signal.bridge >= 1, plank: S.plank.placed !== null, lift: S.lift.y, ladder: S.lift.ladder,
   causeway: S.beam.solved, bells: S.bells.steps >= 1, marsh: marsh.maskOf(S.marsh),
   pillars: pillars.maskOf(S.pillars), ring: S.ring.steps >= 1,
 });
@@ -93,7 +93,7 @@ export function promptFor(S, idx, players) {
 
 // A veto on walker idx's next step, or null. (Only the plank has one.)
 export function constraintFor(S, idx, players) {
-  return S.plank.placed ? null : plank.veto(S.plank, idx, players);
+  return S.plank.placed !== null ? null : plank.veto(S.plank, idx, players);
 }
 
 // Debug/test only: put the first n puzzles (trail order) in their solved, settled form.

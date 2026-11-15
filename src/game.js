@@ -231,6 +231,9 @@ export class Game {
     let flashed = false;
     if (n > this.solved) { this.hud?.flash(solvedLine(n - 1)); this.audio.riff(n - 1, !!this.S.ended); flashed = true; }
     this.solved = n;
+    // a too-short piece tipped into the water: splash restarts from 0 (host or joiner alike)
+    const sp = this.S.plank?.splash;
+    if (Number.isFinite(sp)) { if (sp < (this.splashPrev ?? Infinity)) this.audio.splash?.(); this.splashPrev = sp; }
     // an owl found (host or joiner alike); the first state after a welcome only sets the baseline.
     // Its line waits for a "solved" flash from the same update to finish (that one lasts 3 s),
     // unless the walk has ended by then: nothing is flashed over the ending.
@@ -340,10 +343,9 @@ export class Game {
     return this.S.beam.mirrors.some((m) => m.by === i);
   }
 
-  // Is walker i holding an end of the plank (and it not yet laid)?
+  // Is walker i holding an end of one of the wreck's timbers (and none yet laid)?
   holdsPlank(i) {
-    const pl = this.S.plank;
-    return !pl.placed && (pl.holdA === i || pl.holdB === i);
+    return carrying(this.S.plank, i);
   }
 
   // Is walker i carrying the relay's flame?
