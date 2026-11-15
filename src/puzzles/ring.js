@@ -1,4 +1,4 @@
-// The Ring: eight blank standing stones; each session carves a different sign on each (never
+// The Ring: eight blank standing stones (the eight glyphs of glyphs.js); each session carves a different sign on each (never
 // shown on them) and picks an order of four. Two far-apart seeing stones show the halves: one
 // the order (four signs), one a picture of the ring with every stone's sign. A face shows only
 // to a walker at its spot while the other walker is at the other spot (seesFace). Touching

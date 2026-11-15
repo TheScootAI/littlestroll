@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
 import { SYMBOLS, create, step, prompt, valid, forceSolve, draw, onPlate } from '../src/puzzles/signal.js';
+import { GLYPHS } from '../src/puzzles/glyphs.js';
 import { rng } from '../src/core/math.js';
 import { createAll, stepAll, solvedCount, dynOf, promptFor, forceSolved, validState } from '../src/puzzles/index.js';
 import { SITES } from '../src/world/layout.js';
@@ -9,12 +10,13 @@ const gone = { present: false };
 const far = SITES.spawn[0];
 
 test('the answer comes from the seed and is never all zeros', () => {
-  expect(SYMBOLS).toBe(6);
+  expect(SYMBOLS).toBe(8);
+  expect(SYMBOLS).toBe(GLYPHS.length);
   expect(create(5).answer).toEqual(create(5).answer);
   const seen = new Set();
   for (let seed = 0; seed < 500; seed++) {
     const a = create(seed).answer;
-    expect(a).toHaveLength(4); for (const v of a) expect(v >= 0 && v < 6).toBe(true);
+    expect(a).toHaveLength(4); for (const v of a) expect(v >= 0 && v < 8).toBe(true);
     expect(a.join('')).not.toBe('0000'); seen.add(a.join(''));
   }
   expect(seen.size).toBeGreaterThan(200);
@@ -26,28 +28,64 @@ const { barrier } = SITES.signal;
 const bmid = [(barrier.ax + barrier.bx) / 2, (barrier.az + barrier.bz) / 2];
 const T = 1 / 30;
 
-// the old generator, as it was before the plate
-function oldDraw(seed) {
-  const r = rng(seed);
-  const a = [0, 1, 2, 3].map(() => Math.floor(r() * SYMBOLS));
-  if (a.every((v) => v === 0)) a[3] = 1 + (a[0] + 3) % (SYMBOLS - 1);
+// the rule for every deal, deal 0 included, written out longhand
+function expected(seed, deal) {
+  const r = rng(Math.imul(seed | 0, 0x9e3779b1) ^ Math.imul(deal | 0, 0x85ebca6b) ^ 0x5bd1e995);
+  const a = [0, 1, 2].map(() => Math.floor(r() * 8));
+  a.push(2 * Math.floor(r() * 4) + ((deal + a[0] + a[1] + a[2]) & 1));
+  if (a.every((v) => v === 0)) a[3] = 2;
   return a;
 }
 
-test('draw(seed, 0) is the old first deal; each deal differs from the last; never all zeros', () => {
-  for (let seed = 0; seed <= 20; seed++) {
-    expect(draw(seed, 0)).toEqual(oldDraw(seed));
-    expect(draw(seed)).toEqual(oldDraw(seed));
-    expect(create(seed).answer).toEqual(oldDraw(seed));
-    for (let n = 1; n <= 50; n++) {
-      const a = draw(seed, n);
-      expect(a).toHaveLength(4); for (const v of a) expect(Number.isInteger(v) && v >= 0 && v < SYMBOLS).toBe(true);
-      expect(a).not.toEqual(draw(seed, n - 1));
-      expect(a.some((v) => v !== 0)).toBe(true);
-    }
+test('draw follows one rule for every deal, deal 0 included', () => {
+  for (const seed of [0, 1, 7, 12345, -3]) for (const deal of [0, 1, 2, 3, 50, 1e9]) expect(draw(seed, deal)).toEqual(expected(seed, deal));
+  expect(draw(9)).toEqual(draw(9, 0));
+  expect(create(9).answer).toEqual(draw(9, 0));
+});
+
+const SEEDS = [0, 1, -1, 12345, 2 ** 31 - 1, -(2 ** 31), Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER];
+test('every deal is four symbols 0..7, never all zero, and differs from the next', () => {
+  const deals = [...Array(301).keys(), 1e9 - 1, 1e9];
+  for (const seed of SEEDS) for (const d of deals) {
+    const a = draw(seed, d);
+    expect(a).toHaveLength(4);
+    for (const v of a) expect(Number.isInteger(v) && v >= 0 && v < 8).toBe(true);
+    expect(a.some((v) => v !== 0)).toBe(true);
+    expect(a).not.toEqual(draw(seed, d + 1));
   }
-  expect(draw(7, 3)).toEqual(draw(7, 3));
-  expect(draw(1e9 - 1, 1e9)).toHaveLength(4);
+});
+test('no position is parity-locked: each takes all eight values', () => {
+  const seen = [0, 1, 2, 3].map(() => new Set());
+  for (let d = 1; d <= 400; d++) draw(12345, d).forEach((v, i) => seen[i].add(v));
+  for (const set of seen) expect(set.size).toBe(8);
+});
+test('a slice stepped through several re-deals is valid at every step', () => {
+  const s = create(77);
+  expect(valid(s)).toBe(true);
+  for (let k = 0; k < 6; k++) {
+    step(s, [P(pl), P(far)], T); expect(valid(s)).toBe(true);
+    step(s, [P(far), P(far)], T); expect(valid(s)).toBe(true);
+    expect(valid(JSON.parse(JSON.stringify(s)))).toBe(true);
+  }
+  expect(s.deal).toBe(6);
+});
+test('a walker on the plate who disconnects counts as leaving: barrier drops, one re-deal', () => {
+  const s = create(8);
+  step(s, [P(pl), P(far)], T); expect(s.held).toBe(true); expect(s.up).toBe(true);
+  step(s, [{ ...P(pl), present: false }, P(far)], T);
+  expect(s.held).toBe(false); expect(s.up).toBe(false); expect(s.deal).toBe(1);
+  step(s, [{ ...P(pl), present: false }, P(far)], T); expect(s.deal).toBe(1);
+});
+test('a same-tick swap on the plate keeps it held: no re-deal, barrier stays up', () => {
+  const s = create(8); const beside = [plate.x + 0.1, plate.z];
+  step(s, [P(pl), P(beside)], T); expect(s.held).toBe(true); expect(s.up).toBe(true);
+  step(s, [P(far), P(pl)], T);
+  expect(s.held).toBe(true); expect(s.deal).toBe(0); expect(s.up).toBe(true);
+});
+test('a dial pressed eight times is back where it started', () => {
+  const s = create(1); const d0 = SITES.signal.dials[0];
+  for (let i = 0; i < 8; i++) step(s, [P(d0, { pressed: true }), P(far)], 0.03);
+  expect(s.dials).toEqual([0, 0, 0, 0]);
 });
 test('onPlate: a present walker within the radius', () => {
   expect(onPlate(P(pl))).toBe(true);
@@ -131,7 +169,7 @@ test('a walker beside the barrier but past its end does not hold it down', () =>
 });
 test('pressing at a dial turns that dial only, and wraps', () => {
   const s = create(1); const d2 = SITES.signal.dials[2];
-  for (let i = 0; i < 7; i++) step(s, [P(d2, { pressed: true }), P(far)], 0.03);
+  for (let i = 0; i < 9; i++) step(s, [P(d2, { pressed: true }), P(far)], 0.03);
   expect(s.dials).toEqual([0, 0, 1, 0]);
   step(s, [P(far, { pressed: true }), P(far)], 0.03);
   expect(s.dials).toEqual([0, 0, 1, 0]);
@@ -162,7 +200,7 @@ test('valid, forceSolve, and wiring into index', () => {
   const s = create(3);
   expect(valid(s)).toBe(true);
   expect(valid({ ...s, answer: [0, 1, 2] })).toBe(false);
-  expect(valid({ ...s, dials: [0, 0, 0, 6] })).toBe(false);
+  expect(valid({ ...s, dials: [0, 0, 0, 8] })).toBe(false);
   expect(valid({ ...s, bridge: NaN })).toBe(false);
   expect(valid({ ...s, lit: 1 })).toBe(false);
   expect(valid(null)).toBe(false);

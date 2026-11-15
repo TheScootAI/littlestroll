@@ -1,31 +1,26 @@
 // The Signal: one reads four symbols off the back of a wall, the other sets four dials.
 // Pure rules, no three.js.
 import { SITES } from '../world/layout.js';
+import { GLYPHS } from './glyphs.js';
 import { rng, pointSegDist } from '../core/math.js';
 
-export const SYMBOLS = 6;       // circle, triangle, square, cross, crescent, zigzag
+export const SYMBOLS = GLYPHS.length;   // the eight two-part glyphs, see glyphs.js
 const DIAL_R = 1.0;             // a press this close to a dial turns it
 const BARRIER_CLEAR = 0.9;      // the barrier waits to rise while a walker is this close to it
 const SWING_S = 2;              // seconds for the bridge to swing out
 
 const near = (p, xz, r) => Math.hypot(p.x - xz[0], p.z - xz[1]) <= r;
 
-// The four symbols for a deal. Deal 0 is the first four of a stroll. Each later deal is
-// drawn from its own stream and differs from the one before: the first symbol's parity
-// follows the deal's (so consecutive deals from 1 on cannot match), and deal 1 is nudged
-// if it happens to equal deal 0. No walk down the deals, so any deal number is O(1).
+// The four symbols for a deal. Every deal, deal 0 included, comes from its own stream, so any
+// deal number is O(1). The first three symbols are free; the fourth is chosen so the sum of all
+// four has the parity of the deal number. Consecutive deals therefore always differ, and no
+// position is tied to a parity. All zeros (possible only on an even deal) becomes 0,0,0,2.
 export function draw(seed, deal = 0) {
-  const first = () => {
-    const r = rng(seed);
-    const a = [0, 1, 2, 3].map(() => Math.floor(r() * SYMBOLS));
-    if (a.every((v) => v === 0)) a[3] = 1 + (a[0] + 3) % (SYMBOLS - 1);   // deterministic fix-up
-    return a;
-  };
-  if (deal === 0) return first();
-  const r = rng(Math.imul(seed | 0, 0x9e3779b1) ^ Math.imul(deal | 0, 0x85ebca6b) ^ 0x5bd1e995);
-  const a = [2 * Math.floor(r() * (SYMBOLS / 2)) + (deal % 2), ...[1, 2, 3].map(() => Math.floor(r() * SYMBOLS))];
-  if (a.every((v) => v === 0)) a[3] = 1 + (a[0] + 3) % (SYMBOLS - 1);
-  if (deal === 1) { const f = first(); if (a.every((v, i) => v === f[i])) a[3] = (a[3] + 1) % SYMBOLS; }
+  const d = deal | 0;
+  const r = rng(Math.imul(seed | 0, 0x9e3779b1) ^ Math.imul(d, 0x85ebca6b) ^ 0x5bd1e995);
+  const a = [0, 1, 2].map(() => Math.floor(r() * SYMBOLS));
+  a.push(2 * Math.floor(r() * (SYMBOLS / 2)) + ((d + a[0] + a[1] + a[2]) & 1));
+  if (a.every((v) => v === 0)) a[3] = 2;
   return a;
 }
 
