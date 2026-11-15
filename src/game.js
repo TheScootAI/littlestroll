@@ -258,6 +258,10 @@ export class Game {
       if (this.bellPrev) { if (b.a < this.bellPrev[0]) this.audio.bell(0); if (b.b < this.bellPrev[1]) this.audio.bell(1); }
       this.bellPrev = [b.a, b.b];
     }
+    // the lookout barrier rising or sinking (host or joiner alike); the first state after a welcome only sets the baseline
+    const up = !!this.S.signal?.up;
+    if (this.spurPrev != null && up !== this.spurPrev) this.audio.creak();
+    this.spurPrev = up;
     // a pillar newly rising: a soft knock, at most one per 0.15 s
     const pm = this.dyn.pillars | 0;
     if (pm & ~(this.pillarPrev | 0)) {
@@ -332,7 +336,7 @@ export class Game {
       this.S = createAll(m.seed);
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
-      this.bellPrev = null; this.pillarPrev = 0; this.ringPrev = null;
+      this.bellPrev = null; this.spurPrev = null; this.pillarPrev = 0; this.ringPrev = null;
       this.relayPrev = null; this.lanternPrev = null; this.owlPrev = null; this.splashPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);

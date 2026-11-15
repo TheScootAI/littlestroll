@@ -1,6 +1,6 @@
 // The Signal on screen: a standing wall whose BACK shows four big glowing symbols
-// (only while someone stands at the dials), four dial posts, a cairn at the lookout and
-// a bridge that slides out with s.bridge. Never writes to S.
+// (only while someone stands on the lookout's plate), four dial posts, the plate and a
+// barrier across the spur, and a bridge that slides out with s.bridge. Never writes to S.
 import {
   Group, Mesh, MeshLambertMaterial, MeshBasicMaterial, BoxGeometry, CylinderGeometry, SphereGeometry,
   PlaneGeometry, DoubleSide, Color, Vector3,
@@ -16,7 +16,7 @@ export function createView(scene) {
   const root = new Group();
   root.name = 'signal-view';
   scene.add(root);
-  const { wall, dials, lookout, bridge } = SITES.signal;
+  const { wall, dials, bridge } = SITES.signal;
   const STONE = 0x8f8880, DARK = 0x4a4540, ACCENT = 0xf08a3c, GLOW = 0xffe3a0, WOOD = 0xa9774c;
   const glowCol = new Color(GLOW), dimCol = new Color(0x3a3632);
   const tex = Array.from({ length: SYMBOLS }, (_, i) => signTexture(i));
@@ -100,21 +100,45 @@ export function createView(scene) {
     return { head, fm, shown: -1, spin: 0 };
   });
 
-  // ---- lookout: a ring of stones and a little cairn beside it
+  // ---- lookout: the plate (stand here and the symbols show) and a little cairn beside it
+  const { plate, barrier } = SITES.signal;
+  const plateBase = heightAt(plate.x, plate.z);
+  const plateG = new Group();
+  plateG.position.set(plate.x, plateBase, plate.z);
+  const slabMat = mat(STONE);
+  const discP = new Mesh(new CylinderGeometry(plate.r - 0.1, plate.r, 0.16, 14), slabMat);
+  discP.position.y = 0.05;
+  const inlayMat = mat(ACCENT, { emissive: new Color(ACCENT).multiplyScalar(0.15) });
+  const inlay = new Mesh(new CylinderGeometry(plate.r * 0.62, plate.r * 0.62, 0.18, 14), inlayMat);
+  inlay.position.y = 0.055;
+  plateG.add(discP, inlay);
+  root.add(plateG);
   {
-    const [x, z] = lookout;
-    const y = heightAt(x, z);
-    const ring = new Mesh(new CylinderGeometry(0.9, 1.0, 0.1, 12),
-      mat(ACCENT, { emissive: new Color(ACCENT).multiplyScalar(0.3) }));
-    ring.position.set(x, y + 0.03, z);
-    root.add(ring);
+    const y = plateBase;
     [[0.5, 0.45], [0.35, 0.4], [0.22, 0.34]].reduce((h, [r, ht]) => {
       const st = new Mesh(new CylinderGeometry(r * 0.8, r, ht, 7), mat(STONE));
-      st.position.set(x - 1.4, y + h + ht / 2, z + 0.9);
+      st.position.set(plate.x - 1.4, y + h + ht / 2, plate.z + 2.3);
       root.add(st);
       return h + ht;
     }, 0);
   }
+
+  // ---- the barrier across the spur: a stone slab that rises out of the ramp (matches the blocker segment)
+  const BAR_H = 2.2, BAR_T = 0.5, BAR_DEEP = 1.6, BAR_S = 0.5;
+  const bmx = (barrier.ax + barrier.bx) / 2, bmz = (barrier.az + barrier.bz) / 2;
+  const blen = Math.hypot(barrier.bx - barrier.ax, barrier.bz - barrier.az);
+  let barBase = -Infinity;                       // the ramp's surface, the highest ground along the segment
+  for (let k = 0; k <= 8; k++) barBase = Math.max(barBase, heightAt(barrier.ax + (barrier.bx - barrier.ax) * k / 8, barrier.az + (barrier.bz - barrier.az) * k / 8));
+  const barG = new Group();
+  barG.position.set(bmx, barBase, bmz);
+  barG.rotation.y = Math.atan2(-(barrier.bz - barrier.az), barrier.bx - barrier.ax);   // local +X along the segment
+  const barBody = new Mesh(new BoxGeometry(blen, BAR_H + BAR_DEEP, BAR_T), mat(DARK));
+  const barCap = new Mesh(new BoxGeometry(blen + 0.1, 0.2, BAR_T + 0.1), mat(STONE));
+  barG.add(barBody, barCap);
+  barG.visible = false;
+  root.add(barG);
+  let barT = 0, plateSink = 0;
+  const accentCol = new Color(ACCENT);
 
   // ---- bridge: slides out from the B end; the slab is a unit-length box scaled along +Z
   const a = new Vector3(bridge.ax, heightAt(bridge.ax, bridge.az), bridge.az);
@@ -156,6 +180,17 @@ export function createView(scene) {
         p.spin = Math.max(0, p.spin - dt);
         p.head.rotation.y = (p.spin / 0.35) * Math.PI * 2;
       }
+      // the plate sinks a little and glows while held; the barrier rises and sinks over BAR_S
+      const kk = dt > 0 ? 1 - Math.exp(-dt / 0.06) : 1;
+      plateSink += ((s.held ? 0.05 : 0) - plateSink) * kk;
+      plateG.position.y = plateBase - plateSink;
+      inlayMat.emissive.copy(accentCol).multiplyScalar(s.held ? 0.8 : 0.15);
+      barT = dt > 0 ? clamp(barT + (s.up ? dt : -dt) / BAR_S, 0, 1) : (s.up ? 1 : 0);
+      barG.visible = barT > 0.001;
+      const top = -0.05 + barT * (BAR_H + 0.05);                 // top face above the ramp
+      barBody.position.y = top - (BAR_H + BAR_DEEP) / 2;
+      barCap.position.y = top + 0.1;
+      barG.position.y = barBase;
       const t = clamp(s.bridge, 0, 1);
       bg.visible = t > 0.001;
       bg.scale.set(1, 1, Math.max(t, 0.001) * len);

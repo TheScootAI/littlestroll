@@ -39,7 +39,7 @@ import { clamp } from '../core/math.js';
 
 export const DYN_NONE = Object.freeze({
   gateOpen: false, bridge: false, plank: false, lift: 0, ladder: false,
-  causeway: false, bells: false, marsh: 0, pillars: 0, ring: false,
+  causeway: false, bells: false, marsh: 0, pillars: 0, ring: false, spur: false,
 });
 
 const SEA_Y = -4;
@@ -434,6 +434,8 @@ export const SITES = {
     wall: WALL,
     dials: [[-10, 74.5], [-10, 77.5], [-7, 74.5], [-7, 77.5]],
     dialZone: { x: -8.5, z: 76, r: 3.5 },
+    plate: { x: -26, z: 76, r: 1.5 },                 // stand here and the symbols show
+    barrier: seg(-17, 64.45, -17, 67.55),             // across the spur (z = 66, hw 1.25) over open sea, up while the plate is held
     bridge: rampSeg('bridge'),
   },
   plank: {
@@ -547,5 +549,6 @@ const WALL_SEG = seg(WALL.x, WALL.z - WALL_HALF, WALL.x, WALL.z + WALL_HALF);
 export function blockers(dyn = DYN_NONE) {
   const segments = [WALL_SEG];
   if (!dyn.gateOpen) segments.push(SITES.gate.door);
+  if (dyn.spur) segments.push(SITES.signal.barrier);
   return { circles: STATIC_CIRCLES, segments };
 }

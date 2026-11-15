@@ -231,3 +231,12 @@ test('the plank slice: one board per wreck piece, none laid, dyn follows placed'
   expect(dynOf(S).plank).toBe(true);              // piece 0 is laid: index 0 must still count as placed
   expect(constraintFor(S, 0, [P(far), P(far)])).toBeNull();
 });
+
+test('dynOf carries the lookout barrier: up with signal.up, and the signal slice has its new keys', () => {
+  const S = createAll(4);
+  expect(dynOf(S).spur).toBe(false);
+  S.signal.up = true; expect(dynOf(S).spur).toBe(true);
+  expect(Object.keys(S.signal).sort()).toEqual(['answer', 'bridge', 'deal', 'dials', 'held', 'lit', 'seed', 'solved', 'up']);
+  expect(S.signal.seed).toBe(4);
+  expect(validState(JSON.parse(JSON.stringify(S)))).toBe(true);
+});

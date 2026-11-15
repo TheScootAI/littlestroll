@@ -29,6 +29,12 @@ function walkable(a, b, dyn) {
 }
 
 describe('findPath', () => {
+  it('the lookout is reachable from B while the spur barrier is down, and not while it is up', () => {
+    expect(findPath([0, 76], SITES.signal.lookout, open)).not.toBeNull();
+    expect(findPath([0, 76], SITES.signal.lookout, { ...open, spur: true })).toBeNull();
+    expect(findPath(SITES.signal.lookout, [0, 76], { ...open, spur: true })).toBeNull();
+  });
+
   it('spawn to plate A', () => {
     const p = findPath(spawn, SITES.gate.plateA, DYN_NONE);
     expect(p).not.toBeNull();

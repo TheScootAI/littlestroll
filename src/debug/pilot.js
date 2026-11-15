@@ -95,7 +95,7 @@ export function createPilot(game) {
         const p = game.player, S = game.S, f = game.remote;
         const puzzles = S && S.gate ? {
           gate: { open: !!S.gate.open, solved: !!S.gate.solved },
-          signal: { lit: !!S.signal.lit, dials: [...S.signal.dials], solved: !!S.signal.solved },
+          signal: { lit: !!S.signal.lit, held: !!S.signal.held, up: !!S.signal.up, dials: [...S.signal.dials], solved: !!S.signal.solved },
           plank: { boards: S.plank.boards.map((b, i) => ({ len: lengthOf(i), ends: [r2(b.ax), r2(b.az), r2(b.bx), r2(b.bz)], holdA: b.holdA, holdB: b.holdB })), placed: S.plank.placed, fell: S.plank.fell },
           lift: { y: r2(S.lift.y), cranking: !!S.lift.cranking, ladder: !!S.lift.ladder },
           beam: { mirrors: S.beam.mirrors.map((m) => ({ x: r2(m.x), z: r2(m.z), by: m.by })), onLens: !!S.beam.onLens, charge: r2(S.beam.charge), solved: !!S.beam.solved },
