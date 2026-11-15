@@ -6,7 +6,7 @@ import {
   PlaneGeometry, Color, Vector3,
 } from 'three';
 import { SITES, heightAt } from '../../world/layout.js';
-import { LEN } from '../plank.js';
+import { LEN, board as rigid } from '../plank.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 const HIP = 0.75;          // carried ends ride this far above the ground under them
@@ -107,9 +107,11 @@ export function createView(scene) {
         if (p && p.present) { x = p.x; z = p.z; }
         return [x, z, hold !== null];
       };
-      const [ax, az, ha] = end(s.holdA, s.ax, s.az), [bx, bz, hb] = end(s.holdB, s.bx, s.bz);
+      let [ax, az, ha] = end(s.holdA, s.ax, s.az), [bx, bz, hb] = end(s.holdB, s.bx, s.bz);
+      // carried by two it is rigid: its full length, centred between the carriers
+      if (ha && hb) [ax, az, bx, bz] = rigid(ax, az, bx, bz, [1, 0]);
       const ya = heightAt(ax, az) + (ha ? HIP : REST), yb = heightAt(bx, bz) + (hb ? HIP : REST);
-      place(ax, ya, az, bx, yb, bz, Math.max(Math.hypot(bx - ax, bz - az, yb - ya), 0.5));
+      place(ax, ya, az, bx, yb, bz, ha && hb ? LEN : Math.max(Math.hypot(bx - ax, bz - az, yb - ya), 0.5));
       const free = (h) => (h === null ? 0.35 + 0.25 * Math.sin(pulse * 3) : 0.15);
       capMats[0].emissive.copy(glow).multiplyScalar(free(s.holdA));
       capMats[1].emissive.copy(glow).multiplyScalar(free(s.holdB));

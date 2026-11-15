@@ -5,6 +5,7 @@ import {
 } from '../src/world/layout.js';
 import { occluded } from '../src/world/sight.js';
 import { reachable, walkDistance } from './helpers/reach.js';
+import { carrySearch } from './helpers/carry.js';
 import { DROWN_Y, STEP_UP, PLAYER_R } from '../src/config.js';
 import { pointSegDist, segCircle, rayPointDist } from '../src/core/math.js';
 
@@ -271,21 +272,11 @@ describe('E. plank', () => {
       }
     }
   });
-  test('two walkers can carry the plank from its rests through the zigzag to the slot', () => {
-    const route = [restA, restB, ...PLANK_ROUTE];
+  test('two walkers can carry a rigid 4 m board from its rests through the zigzag to the slot', () => {
     expect(PLANK_ROUTE[PLANK_ROUTE.length - 1]).toEqual(slot);
-    const L = polyLen(route);
-    const dyn = D({ gateOpen: true, bridge: true });
-    for (let sL = 4; sL <= L + 1e-9; sL += 0.05) {
-      const gap = Math.max(1.2, 4 - (sL - 4));            // close up from 4 m to 1.2 m after pickup
-      const lead = along(route, sL), tail = along(route, Math.max(0, sL - gap));
-      for (const w of [lead, tail]) {
-        expect(zoneAt(...w)).toBe('D');
-        expect(clearOf(...w, dyn)).toBe(true);
-      }
-      expect(Math.hypot(lead[0] - tail[0], lead[1] - tail[1])).toBeLessThanOrEqual(5.5);
-      for (const s of stones) expect(segCircle(lead[0], lead[1], tail[0], tail[1], s.x, s.z, s.r)).toBe(false);
-    }
+    // a search over where the two carriers stand: the board never shorter or longer than 4 m,
+    // kept 0.3 m off every stone, the carriers within 0.4 m of its length apart
+    expect(carrySearch({ len: 4, slack: 0.4, margin: 0.3 }).done).toBe(true);
   });
 });
 

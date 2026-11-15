@@ -34,6 +34,7 @@ import { OWLS, count as owlCount, news as owlNews } from './puzzles/owls.js';
 import { createView as createOwlsView } from './puzzles/views/owls.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
+import { carrying } from './puzzles/plank.js';
 
 export const SCARF = [0xf08a3c, 0x2fb5a6];   // host orange, joiner teal
 
@@ -115,8 +116,8 @@ export class Game {
       { key: 'owls', view: createOwlsView(this.scene) },
     ];
     this.input = createInput(canvas);
-    // carrying the relay's flame: no running, whoever asks (see readInput)
-    this.input.mustWalk = () => !!this.S.relay && mustWalk(this.S.relay, this.idx);
+    // carrying the relay's flame or an end of the plank: no running, whoever asks (see readInput)
+    this.input.mustWalk = () => (!!this.S.relay && mustWalk(this.S.relay, this.idx)) || (!!this.S.plank && carrying(this.S.plank, this.idx));
     this.player = createPlayer(...SITES.spawn[this.idx]);
     this.avatar = createAvatar(SCARF[this.idx]);
     this.scene.add(this.avatar.group);
