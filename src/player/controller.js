@@ -6,6 +6,7 @@ import { obstacles } from '../world/solids.js';
 import { HOP_SECS, hopHeight } from './hop.js';
 
 const GRAVITY = 20;
+const TAKE_OFF_SLACK = 0.1;  // a walker this close above its support counts as standing on it
 const MAX_SUBSTEP = 0.1;   // metres of horizontal travel per sub-step
 const TURN_RATE = 14;
 
@@ -94,7 +95,10 @@ export function stepPlayer(p, input, dt, dyn, veto = null, world = null) {
   if (p.lastJump === null) p.lastJump = j;
   if (j !== p.lastJump) {
     p.lastJump = j;
-    if (p.hopT < 0 && !input.noHop && p.y <= supportAt(bl, p.x, p.z, p.y, dyn) + 1e-6) { p.hopT = 0; p.hopBase = p.y; p.hopN++; }
+    // "Standing" allows a hand's breadth: walking downhill, gravity trails the ground by a few
+    // millimetres every frame, and that must not read as falling.
+    const sup = supportAt(bl, p.x, p.z, p.y, dyn);
+    if (p.hopT < 0 && !input.noHop && p.y - sup <= TAKE_OFF_SLACK) { p.y = Math.max(p.y - TAKE_OFF_SLACK, sup); p.vy = 0; p.hopT = 0; p.hopBase = p.y; p.hopN++; }
   }
   if (input.noHop) p.hopT = -1;
 

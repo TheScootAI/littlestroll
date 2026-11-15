@@ -256,20 +256,52 @@ describe('perches', () => {
     expect(b.y).toBeCloseTo(G(1.5, 130) + tall.top, 2);
   });
 
-  test('a hop beside a ledge higher than STEP_UP does not climb it', () => {
-    const north = { mx: 0, mz: 1, run: true, camYaw: 0 };
-    const still = createPlayer(11, -28.5); tryHop(still, north, 120, null, 0);
-    const hop = createPlayer(11, -28.5); tryHop(hop, north, 120, null);
-    expect(hop.y).toBeLessThan(8.5 + STEP_UP);
-    expect([hop.x, hop.z, hop.y]).toEqual([still.x, still.z, still.y]);
+  // Walk north (-z) from (x, z0), pressing jump once when z first passes `pressAt`. Returns the
+  // walker and every frame's [x, z, y], so a run with the press can be set beside one without.
+  const northRun = (z0, pressAt, n, dyn, press) => {
+    const p = createPlayer(6, z0), north = { mx: 0, mz: 1, run: false, camYaw: 0 }, track = [];
+    p.y = heightAt(6, z0, dyn);
+    let jumpN = 0;
+    for (let i = 0; i < n; i++) {
+      if (press && jumpN === 0 && p.z <= pressAt) jumpN = 1;
+      stepPlayer(p, { ...north, jumpN }, 1 / 60, dyn);
+      track.push([p.x, p.z, p.y]);
+    }
+    return { p, track };
+  };
+
+  test('a hop does not climb a ledge it could reach if hops counted for terrain (the lift, 0.84 m up)', () => {
+    const dyn = { ...DYN_NONE, lift: 0.16 };             // the platform's deck 0.84 m above E: more than a step, less than step + hop
+    const rise = heightAt(6, -29.5, dyn) - heightAt(6, -28.5, dyn);
+    expect(rise).toBeGreaterThan(STEP_UP + 0.1); expect(rise).toBeLessThan(STEP_UP + 0.7 - 0.1);
+    const walk = northRun(-27, -28.3, 120, dyn, false), hop = northRun(-27, -28.3, 120, dyn, true);
+    expect(hop.p.hopN).toBe(1);                           // the press was taken, half a metre short of the ledge
+    expect(walk.p.z).toBeLessThan(-28.9); expect(walk.p.z).toBeGreaterThan(-29.05);   // walking is stopped at its foot
+    expect(hop.track).toEqual(walk.track);                // and hopping changes nothing: same place, same height, every frame
+    expect(hop.p.y).toBeLessThan(heightAt(6, -28.5, dyn) + 0.05);
   });
 
-  test('a hop at a gap\'s edge carries the walker no further than walking', () => {
-    const north = { mx: 0, mz: 1, run: false, camYaw: 0 };
-    const still = createPlayer(6, -4); tryHop(still, north, 90, null, 0);
-    const hop = createPlayer(6, -4); tryHop(hop, north, 90, null);
-    expect(hop.z).toBeCloseTo(still.z, 6);
-    expect(hop.y).toBeCloseTo(still.y, 6);
+  test('a hop at a real gap (the plank gap, no plank) carries the walker no further than walking', () => {
+    expect(heightAt(6, -9, DYN_NONE)).toBeGreaterThan(6); expect(heightAt(6, -9.5, DYN_NONE)).toBeLessThan(0);   // the lip
+    const walk = northRun(-7.5, -8.6, 150, DYN_NONE, false), hop = northRun(-7.5, -8.6, 150, DYN_NONE, true);
+    expect(hop.p.hopN).toBe(1);                           // pressed 0.4 m short of the lip
+    expect(walk.p.z).toBeLessThan(-9.3);                  // walking goes over the edge
+    expect(walk.p.y).toBeLessThan(0);                     // and into the water
+    expect(hop.track).toEqual(walk.track);                // hopping: the very same fall
+    expect(hop.p.z).toBeGreaterThan(-13.5);               // nowhere near the far bank
+  });
+
+  test('a press is taken while walking downhill (the beach), not mistaken for falling', () => {
+    const p = createPlayer(13, 129);
+    let jumpN = 0, taken = 0, asked = 0;
+    for (let i = 0; i < 70; i++) {
+      if (i > 0 && i % 35 === 20) { jumpN++; asked++; }   // two presses, each well after the last hop is over
+      const before = p.hopN;
+      stepPlayer(p, { ...south, jumpN }, 1 / 60, DYN_NONE);
+      if (p.hopN > before) taken++;
+    }
+    expect(heightAt(13, 129, DYN_NONE) - heightAt(p.x, p.z, DYN_NONE)).toBeGreaterThan(0.3);   // it really went downhill
+    expect(asked).toBe(2); expect(taken).toBe(2);
   });
 
   test('noHop ignores the press; hopN does not rise', () => {
