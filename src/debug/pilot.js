@@ -1,8 +1,13 @@
-// ?pilot only: a console handle (window.__pilot) that lets an AI assistant play the walker in
-// this tab by the same rules as a human. It does nothing a keyboard and mouse could not: it
-// sets the input fields (mx, mz, run, hold, eN, q, shoutN, waveN, camYaw, camPitch) through
-// input.forced, so stepPlayer, the plank veto and the blockers all still apply. It never
-// writes to S and never moves the walker directly. main.js imports this only under ?pilot.
+// ?pilot only: a handle (window.__pilot, and the typed command box in panel.js) that lets an
+// AI assistant play the walker in this tab by the same rules as a human. It does nothing a
+// keyboard and mouse could not: it works the input fields (mx, mz, run, hold, eN, q, shoutN,
+// waveN, camYaw, camPitch), so stepPlayer, the plank veto and the blockers all still apply. It
+// never writes to S and never moves the walker directly. main.js imports this only under ?pilot.
+//
+// The pilot and the keyboard share the walker. input.forced holds only what the pilot is
+// asserting right now: movement while it walks somewhere, E or the pointing arm while it holds
+// them. Everything else stays the keyboard's and the mouse's, so an agent that can only press
+// keys is never frozen. Presses, shouts, waves and the view go straight into the live state.
 import { SITES, zoneAt, marshTileCentre, pillarCentre } from '../world/layout.js';
 import { findPath, steer, planningDyn } from './path.js';
 import { PITCH_MIN, PITCH_MAX } from '../player/input.js';
@@ -22,26 +27,14 @@ const PROGRESS = 0.15;       // metres that count as progress within the stall w
 const now = () => performance.now();
 
 export function createPilot(game) {
-  const input = game.input;
-  const forced = {
-    mx: 0, mz: 0, run: false, hold: false, eN: input.state.eN, q: false,
-    shoutN: input.state.shoutN, waveN: input.state.waveN, camYaw: input.state.camYaw, camPitch: input.state.camPitch,
-  };
+  const input = game.input, live = input.state;
+  const forced = {};
   input.forced = forced;
-
-  const badge = document.createElement('div');
-  badge.textContent = 'Piloted by Claude';
-  Object.assign(badge.style, {
-    position: 'fixed', right: '60px', top: '17px', padding: '5px 12px', borderRadius: '999px',
-    background: 'rgba(60, 48, 40, 0.7)', color: '#ffe3a0', font: '600 13px/1.3 system-ui, sans-serif',
-    letterSpacing: '0.03em', pointerEvents: 'none', zIndex: 20,
-  });
-  (document.getElementById('ui') || document.body).appendChild(badge);
 
   let job = null;     // { kind: 'goTo' | 'follow', ... }
 
   const yawTo = (dx, dz) => Math.atan2(-dx, -dz);   // yaw 0 faces -Z
-  const halt = () => { forced.mx = 0; forced.mz = 0; forced.run = false; };
+  const halt = () => { delete forced.mx; delete forced.mz; delete forced.run; };   // the keys take over
   const finish = (res) => {
     const j = job;
     job = null;
@@ -74,10 +67,10 @@ export function createPilot(game) {
       return;
     }
     // waypoint to waypoint (steer is pure and simulated in tests/path.test.js)
-    const s = steer({ x: p.x, z: p.z }, j.path, j.i, { dyn: j.dyn, run: j.run, within: j.within, camYaw: forced.camYaw });
+    const s = steer({ x: p.x, z: p.z }, j.path, j.i, { dyn: j.dyn, run: j.run, within: j.within, camYaw: live.camYaw });
     j.i = s.i;
     if (s.done) return finish({ arrived: true });
-    forced.camYaw = s.camYaw;
+    live.camYaw = s.camYaw;
     forced.mx = 0; forced.mz = s.mz; forced.run = s.run;
   }
 
@@ -86,7 +79,7 @@ export function createPilot(game) {
     if (!f) return halt();
     const dx = f.x - p.x, dz = f.z - p.z;
     if (Math.hypot(dx, dz) > j.dist) {
-      forced.camYaw = yawTo(dx, dz);
+      live.camYaw = yawTo(dx, dz);
       forced.mx = 0; forced.mz = 1; forced.run = Math.hypot(dx, dz) > j.dist + 6;
     } else halt();
   }
@@ -154,24 +147,24 @@ export function createPilot(game) {
       try { if (job) finish({ arrived: false, reason: 'cancelled' }); halt(); } catch { /* */ }
     },
 
-    hold(on) { forced.hold = !!on; },
-    press() { forced.eN++; },
+    hold(on) { if (on) forced.hold = true; else delete forced.hold; },
+    press() { live.eN++; },
     look(yaw, pitch) {
-      if (Number.isFinite(yaw)) forced.camYaw = yaw;
-      if (Number.isFinite(pitch)) forced.camPitch = clamp(pitch, PITCH_MIN, PITCH_MAX);
+      if (Number.isFinite(yaw)) live.camYaw = yaw;
+      if (Number.isFinite(pitch)) live.camPitch = clamp(pitch, PITCH_MIN, PITCH_MAX);
     },
     aimAt(pt) {
       try {
         const p = game.player;
         const dx = pt[0] - p.x, dy = pt[1] - (p.y + CHEST), dz = pt[2] - p.z;
         if (![dx, dy, dz].every(Number.isFinite)) return;
-        if (Math.hypot(dx, dz) > 1e-6) forced.camYaw = yawTo(dx, dz);
-        forced.camPitch = clamp(Math.atan2(dy, Math.hypot(dx, dz)), PITCH_MIN, PITCH_MAX);
+        if (Math.hypot(dx, dz) > 1e-6) live.camYaw = yawTo(dx, dz);
+        live.camPitch = clamp(Math.atan2(dy, Math.hypot(dx, dz)), PITCH_MIN, PITCH_MAX);
       } catch { /* */ }
     },
-    point(on) { forced.q = !!on; },
-    shout() { forced.shoutN++; },
-    wave() { forced.waveN++; },
+    point(on) { if (on) forced.q = true; else delete forced.q; },
+    shout() { live.shoutN++; },
+    wave() { live.waveN++; },
 
     // chat: say() goes through the same rules as the box (cleaning, flood gate, no friend)
     say(text) { try { return !!game.say(text); } catch { return false; } },
@@ -183,6 +176,7 @@ export function createPilot(game) {
     },
 
     help: () => [
+      'No console? Type the same things as words in the "Pilot command" box on the page: try "help" there.',
       '__pilot.sites()                    SITES (where everything is)',
       '__pilot.tile(i)                    [x, z] centre of marsh tile i; tiles are numbered row*5+col from the near-left corner',
       '__pilot.pillar(line, r)            [x, z] centre of pillar r (0 = nearest) on line 0 (west) or 1 (east)',
@@ -211,9 +205,12 @@ export function createPilot(game) {
   return api;
 }
 
-export function attachPilot(game) {
+// The handle, its badge and its typed command box. `name` is who is piloting (shown on the badge).
+export async function attachPilot(game, { name = '', box = true } = {}) {
   const pilot = createPilot(game);
   game.pilot = pilot;
   window.__pilot = pilot;
+  const { createPilotPanel } = await import('./panel.js');
+  createPilotPanel(pilot, { name, box });
   return pilot;
 }

@@ -6,6 +6,7 @@ import { createFeedback, snapshot } from './ui/feedback.js';
 import { Session } from './net/session.js';
 import { makeCode, normalizeCode } from './net/code.js';
 import { heightAt } from './world/layout.js';
+import { clean } from './core/chat.js';
 import { count as owlCount } from './puzzles/owls.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -14,10 +15,13 @@ const params = new URLSearchParams(window.location.search);
 const debug = import.meta.env.DEV && params.has('debug');
 const pilotMode = params.has('pilot');
 
-// ?pilot only: give an AI assistant a console handle to this tab's walker
+// ?pilot only: give an AI assistant a handle on this tab's walker (a console handle, and a
+// command box on the page for agents that can only click and type). ?pilot=Name puts that
+// name on the badge; &box=0 leaves the command box off.
 async function attachPilot(game) {
   const { attachPilot: attach } = await import('./debug/pilot.js');
-  attach(game);
+  const name = Array.from(clean(params.get('pilot') || '')).slice(0, 24).join('');
+  await attach(game, { name, box: params.get('box') !== '0' });
 }
 const canvas = document.getElementById('view');
 const ui = document.getElementById('ui');

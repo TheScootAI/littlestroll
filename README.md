@@ -44,6 +44,12 @@ npm run build
 
 `npm run build` writes a static site to `dist/` that any static host can serve.
 
+## Playing with an AI partner
+
+Add `?pilot` to the address and an AI assistant can be the second player. It gets a small command box in the top-right corner of its page: click it, type a command such as `help`, `where`, `goto gate.plateA`, `press` or `say hello`, and press Enter. The answers appear above the box as ordinary text. An assistant that can run JavaScript in the page can use the same controls as `window.__pilot` (`__pilot.help()` lists them). `?pilot=Name` puts a name on the badge, `&join=CODE` joins a stroll directly, and `&box=0` hides the command box.
+
+The pilot plays by the same rules as a person: it can only do what the keys and the mouse can.
+
 On the dev server, add `?debug` to the address to get a keyboard-driven stand-in second player for testing in one tab.
 
 ## How it's made
