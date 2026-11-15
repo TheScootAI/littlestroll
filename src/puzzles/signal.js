@@ -74,6 +74,7 @@ export function onBackSide(wall, x, z, margin = 1) {
   return (x - wall.x) * fx + (z - wall.z) * fz < -margin;
 }
 
+const sameFour = (a, b) => a.every((v, i) => v === b[i]);
 const int4 = (a) => Array.isArray(a) && a.length === 4 && a.every((v) => Number.isInteger(v) && v >= 0 && v < SYMBOLS);
 
 // Is `s` a well-formed signal slice? (checked on every state a joiner receives)
@@ -82,6 +83,6 @@ export const valid = (s) => !!s && typeof s === 'object' && int4(s.answer) && in
   Number.isFinite(s.bridge) && s.bridge >= 0 && s.bridge <= 1 &&
   Number.isSafeInteger(s.seed) && Number.isInteger(s.deal) && s.deal >= 0 && s.deal <= 1e9 &&
   typeof s.held === 'boolean' && typeof s.up === 'boolean' &&
-  s.answer.every((v, i) => v === draw(s.seed, s.deal)[i]);
+  sameFour(s.answer, draw(s.seed, s.deal));   // never adopt symbols the host could not have dealt
 
 export function forceSolve(s) { s.dials = [...s.answer]; s.solved = true; s.bridge = 1; s.held = false; s.up = false; s.lit = true; }
