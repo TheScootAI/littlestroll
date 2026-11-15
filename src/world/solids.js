@@ -1,10 +1,10 @@
 // The trees and boulders a walker cannot pass: one circle each, from the same seeded placement
 // both browsers deal. Pure: no three.js, no DOM.
 import { blockers } from './layout.js';
-import { placeScenery, placeFarScenery, placeLanternScenery } from './scenery.js';
+import { placeScenery, placeFarScenery, placeLanternScenery, TREE_R, BOULDER_R } from './scenery.js';
 
-export const TREE_R = { pine: 0.7, round: 0.3 };   // times the tree's s
-export const BOULDER_R = 1.3;                      // times the boulder's s
+export { TREE_R, BOULDER_R };
+
 
 // Every tree and boulder of the three islands, built once. Rocks, tufts and the tor's crag are not solid.
 export const SOLIDS = (() => {

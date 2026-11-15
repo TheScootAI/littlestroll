@@ -3,7 +3,10 @@
 // deterministic, so both browsers deal the same items. terrain.js draws them.
 import { heightAt, zoneAt, ZONES, RAMPS, TRAIL, PLANK_CORRIDOR, SITES, WATCH_STONE, DYN_NONE, LANTERN_ZONES, LANTERN_RAMPS } from './layout.js';
 import { pointSegDist, lerp } from '../core/math.js';
-import { WATER_Y } from '../config.js';
+import { WATER_Y, PLAYER_R } from '../config.js';
+
+export const TREE_R = { pine: 0.7, round: 0.3 };   // a tree's solid radius, times its s
+export const BOULDER_R = 1.3;                      // a boulder's, times its s
 
 const BEACH_RUN = 10;                 // the beach slope runs this far past A's rim
 const WALL_HALF = 2.5;                // the signal wall's half-length (layout's WALL_HALF)
@@ -212,7 +215,24 @@ const FAR_RULES = {
   tufts: { count: 200, ok: (x, z) => FAR_GREEN.has(zoneAt(x, z)) && level(x, z, 0.3, 0.2) },
 };
 
-export function placeFarScenery(seed = 20261114) {
+// The approach to each bell: G's landing centre, then that neck's disc centre, then the bell. Taken
+// from the zone discs and SITES.bells. The landing is G's widest disc, a bell's neck the other G disc
+// nearest to it.
+const G_DISCS = ZONES.filter((d) => d.zone === 'G');
+const G_LANDING = G_DISCS.reduce((a, d) => (d.r > a.r ? d : a));
+const BELL_WAYS = [SITES.bells.a, SITES.bells.b].map((bell) => {
+  const neck = G_DISCS.filter((d) => d !== G_LANDING && Math.hypot(d.x - bell[0], d.z - bell[1]) > 0.5)
+    .reduce((a, d) => (Math.hypot(d.x - bell[0], d.z - bell[1]) < Math.hypot(a.x - bell[0], a.z - bell[1]) ? d : a));
+  return [[G_LANDING.x, G_LANDING.z], [neck.x, neck.z], [...bell]];
+});
+const NECK_KEEP = 0.6;   // metres a solid keeps off the walker's edge along those lines
+function blocksBell(it, radius) {
+  const lim = radius + PLAYER_R + NECK_KEEP;
+  return BELL_WAYS.some((w) => pointSegDist(it.x, it.z, ...w[0], ...w[1]).d < lim || pointSegDist(it.x, it.z, ...w[1], ...w[2]).d < lim);
+}
+
+// keepOpen = false gives the deal as dealt, before the bells' approaches are cleared (for the tests).
+export function placeFarScenery(seed = 20261114, keepOpen = true) {
   const rnd = mulberry32(seed);
   const e = OLD_EXTENT;
   const out = {};
@@ -229,6 +249,11 @@ export function placeFarScenery(seed = 20261114) {
       list.push(item);
     }
     out[kind] = list;
+  }
+  // Taken out afterwards, not skipped while dealing, so no other item moves.
+  if (keepOpen) {
+    out.trees = out.trees.filter((t) => !blocksBell(t, TREE_R[t.kind] * t.s));
+    out.boulders = out.boulders.filter((b) => !blocksBell(b, BOULDER_R * b.s));
   }
   return out;
 }

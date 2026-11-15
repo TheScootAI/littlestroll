@@ -204,6 +204,21 @@ describe('Far Isle scenery', () => {
       expect(far[k].map((i) => [i.x, i.z, i.rot].map(r6))).toEqual(island2[k].all);
     }
   });
+  test('the Far Isle keeps the bells\' necks open by taking items out, and moves nothing else', () => {
+    const raw = placeFarScenery(undefined, false);
+    for (const k of Object.keys(raw)) {
+      // the new output is the unfiltered one with items removed: same items, same order
+      let j = 0;
+      for (const it of far[k]) {
+        while (j < raw[k].length && JSON.stringify(raw[k][j]) !== JSON.stringify(it)) j++;
+        expect(j, `${k} ${it.x}, ${it.z} is in the unfiltered deal`).toBeLessThan(raw[k].length);
+        j++;
+      }
+    }
+    expect(far.rocks).toEqual(raw.rocks);
+    expect(far.tufts).toEqual(raw.tufts);
+    expect(far.trees.length + far.boulders.length).toBeLessThan(raw.trees.length + raw.boulders.length);
+  });
   test('is deterministic, covers trees, boulders, rocks and tufts, all on zones G to J', () => {
     expect(placeFarScenery()).toEqual(far);
     expect(far.trees.length).toBeGreaterThan(8);
