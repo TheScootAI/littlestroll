@@ -19,6 +19,7 @@ const WATER_Y = MARSH_SURFACE - 0.3;       // the pond's surface, just under the
 const SLAB = 2.2, THICK = 0.55;
 const SINK = 0.55;                          // metres a non-solid slab drops under a walker
 const PLATE_SINK = 0.06;
+const BAR_H = 1.15, BAR_DEEP = 1.2, BAR_S = 0.5;   // the watch-stone's barrier: height, depth sunk below the ground, seconds to rise
 const smooth = (t) => t * t * (3 - 2 * t);
 
 export function createView(scene) {
@@ -106,6 +107,7 @@ export function createView(scene) {
 
   // ---- the watch-stone: a rough cairn column with the plate on top and a carved standing stone
   const ws = new Group();
+  let barG, barBody, barCap, barT = 0;
   const baseH = MARSH_SURFACE - 0.15;           // H, the ground the stone stands on (heightAt here would say the stone's own top)
   // the column stops just short of the top: its own top face must not share the cap's plane
   const colTop = WATCH_STONE.h - 0.08;
@@ -142,6 +144,34 @@ export function createView(scene) {
   const eyeM = mat(ACCENT, { emissive: glow.clone().multiplyScalar(0.5) });
   box(0.3, 0.3, 0.06, eyeM, 0, 1.1, 0.26, mono);
   ws.add(mono);
+
+  // ---- the railing round the top: a post at each of the ring's vertices, a top rail and a mid rail
+  // between them; the ring is open where the ramp comes up, and the barrier closes that gap
+  {
+    const { rail, barrier } = SITES.marsh;
+    const woodM = mat(WOOD), darkM = mat(WOOD_DARK);
+    const POST_H = 1.15, POST_W = 0.16, RAIL_W = 0.1;
+    const pts = [[rail[0].ax, rail[0].az], ...rail.map((s) => [s.bx, s.bz])];
+    for (const [x, z] of pts) box(POST_W, POST_H, POST_W, darkM, x, WATCH_STONE.h + POST_H / 2, z, ws);
+    for (const s of rail) {
+      const len = Math.hypot(s.bx - s.ax, s.bz - s.az);
+      const yaw = Math.atan2(-(s.bz - s.az), s.bx - s.ax);     // local +X along the segment
+      for (const y of [POST_H - 0.07, POST_H * 0.5]) {
+        const b = box(len, RAIL_W, RAIL_W, woodM, (s.ax + s.bx) / 2, WATCH_STONE.h + y, (s.az + s.bz) / 2, ws);
+        b.rotation.y = yaw;
+      }
+    }
+    // the barrier: a boarded gate that rises out of the ground across the opening and sinks back
+    const blen = Math.hypot(barrier.bx - barrier.ax, barrier.bz - barrier.az);
+    barG = new Group();
+    barG.position.set((barrier.ax + barrier.bx) / 2, WATCH_STONE.h, (barrier.az + barrier.bz) / 2);
+    barG.rotation.y = Math.atan2(-(barrier.bz - barrier.az), barrier.bx - barrier.ax);
+    barBody = new Mesh(new BoxGeometry(blen, BAR_H + BAR_DEEP, 0.14), woodM);
+    barCap = new Mesh(new BoxGeometry(blen + 0.1, 0.12, 0.2), darkM);
+    barG.add(barBody, barCap);
+    barG.visible = false;
+    ws.add(barG);
+  }
   shadowed(ws);
   root.add(ws);
 
@@ -191,6 +221,12 @@ export function createView(scene) {
       const on = players.some((p) => p && p.present && Math.hypot(p.x - WATCH_STONE.x, p.z - WATCH_STONE.z) <= SITES.marsh.plate.r);
       plateSink += ((on ? PLATE_SINK : 0) - plateSink) * (dt > 0 ? 1 - Math.exp(-dt / 0.06) : 1);
       plateG.position.y = WATCH_STONE.h - plateSink;
+      // the barrier rises and sinks over BAR_S, as the Signal's does
+      barT = dt > 0 ? clamp(barT + (s.up ? dt : -dt) / BAR_S, 0, 1) : (s.up ? 1 : 0);
+      barG.visible = barT > 0.001;
+      const top = -0.05 + barT * (BAR_H + 0.05);
+      barBody.position.y = top - (BAR_H + BAR_DEEP) / 2;
+      barCap.position.y = top + 0.06;
       // the lever throws from leaning back to leaning forward (towards the marsh) when solved
       leverAmt += ((s.solved ? 1 : 0) - leverAmt) * (dt > 0 ? 1 - Math.exp(-dt / 0.15) : 1);
       arm.rotation.z = clamp(0.7 - 1.4 * smooth(clamp(leverAmt, 0, 1)), -0.7, 0.7);

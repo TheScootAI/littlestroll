@@ -259,6 +259,10 @@ export class Game {
     const up = !!this.S.signal?.up;
     if (this.spurPrev != null && up !== this.spurPrev) this.audio.creak();
     this.spurPrev = up;
+    // the watch-stone's barrier, the same way
+    const watchUp = !!this.S.marsh?.up;
+    if (this.watchPrev != null && watchUp !== this.watchPrev) this.audio.creak();
+    this.watchPrev = watchUp;
     // a pillar newly rising: a soft knock, at most one per 0.15 s
     const pm = this.dyn.pillars | 0;
     if (pm & ~(this.pillarPrev | 0)) {
@@ -333,7 +337,7 @@ export class Game {
       this.S = createAll(m.seed);
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
-      this.bellPrev = null; this.spurPrev = null; this.pillarPrev = 0; this.ringPrev = null;
+      this.bellPrev = null; this.spurPrev = null; this.watchPrev = null; this.pillarPrev = 0; this.ringPrev = null;
       this.relayPrev = null; this.lanternPrev = null; this.findPrev = null; this.splashPrev = null;
       this.findLines.clear();
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
