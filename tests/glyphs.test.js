@@ -25,11 +25,20 @@ test('no two glyphs are the same, and none is the mirror of another', () => {
     expect(same(GLYPHS[i], mirrored(GLYPHS[j])), `${i} vs mirror ${j}`).toBe(false);
   }
 });
-test('3 is 2 turned upside down, 5 is 4; the pairs are still different glyphs', () => {
-  expect(same(GLYPHS[3], flipY(GLYPHS[2]))).toBe(true);
-  expect(same(GLYPHS[5], flipY(GLYPHS[4]))).toBe(true);
-  expect(same(GLYPHS[2], GLYPHS[3])).toBe(false);
-  expect(same(GLYPHS[4], GLYPHS[5])).toBe(false);
+// The dial tops lie flat: a walker on the far side reads a glyph upside down. That must never
+// turn it into a different glyph of the set (a wrong answer that looks right).
+test('no glyph turned upside down is another glyph of the set', () => {
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) if (i !== j) {
+    expect(same(GLYPHS[i], flipY(GLYPHS[j])), `${i} vs upside-down ${j}`).toBe(false);
+  }
+});
+test('the look-alike pairs share a part and differ in the other', () => {
+  const part = (g, k) => ({ lines: [], arcs: [], dots: [], [k]: g[k] });
+  expect(same(part(GLYPHS[2], 'arcs'), part(GLYPHS[3], 'arcs'))).toBe(true);     // the same arch
+  expect(same(part(GLYPHS[2], 'lines'), part(GLYPHS[3], 'lines'))).toBe(true);
+  expect(GLYPHS[2].dots).toHaveLength(1); expect(GLYPHS[3].dots).toHaveLength(2);   // one dot under one arch, two under the other
+  const prongs = (g) => g.lines.filter((l) => l.length === 4 && l[0] === l[2] && Math.min(l[1], l[3]) === 30).length;
+  expect(prongs(GLYPHS[4])).toBe(3); expect(prongs(GLYPHS[5])).toBe(2);
 });
 test('same ignores order and line direction, and notices a real difference', () => {
   const a = { lines: [[0, 0, 10, 10], [5, 5, 9, 9]], arcs: [], dots: [[1, 1, 2]] };

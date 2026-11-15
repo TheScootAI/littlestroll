@@ -13,33 +13,25 @@ const norm = (a) => ((a % TAU) + TAU) % TAU;
 // { lines: [[x0,y0, x1,y1, ...], ...], arcs: [[cx, cy, r, a0, a1], ...], dots: [[cx, cy, r], ...] }
 // An arc is stroked from a0 to a1 clockwise on screen (canvas convention); a full circle is 0..2pi.
 
-// Turn a glyph upside down (y -> 256 - y). An arc's angles negate and swap to keep it clockwise.
-const flipped = (g) => ({
-  lines: g.lines.map((l) => l.map((v, i) => (i % 2 ? GLYPH_SIZE - v : v))),
-  arcs: g.arcs.map(([cx, cy, r, a0, a1]) => [cx, GLYPH_SIZE - cy, r, norm(-a1), norm(-a1) + (a1 - a0)]),
-  dots: g.dots.map(([cx, cy, r]) => [cx, GLYPH_SIZE - cy, r]),
-});
-
-const arch = {
-  lines: [[44, 214, 44, 140], [212, 140, 212, 214]],
-  arcs: [[128, 140, 84, Math.PI, TAU]],
-  dots: [[128, 172, DOT]],
-};
-const fork = {
-  lines: [[52, 30, 52, 120], [128, 30, 128, 120], [204, 30, 204, 120], [52, 120, 204, 120], [128, 120, 128, 226]],
+const ARCH = { lines: [[44, 214, 44, 140], [212, 140, 212, 214]], arcs: [[128, 140, 84, Math.PI, TAU]] };
+// a fork: prongs at the given x, joined by a bar, on one stem
+const fork = (xs) => ({
+  lines: [...xs.map((x) => [x, 30, x, 120]), [xs[0], 120, xs[xs.length - 1], 120], [128, 120, 128, 226]],
   arcs: [],
   dots: [],
-};
+});
 
+// The pairs differ in what they hold, never in which way up they are: the dial tops lie flat,
+// and a glyph read from the far side must not become its twin.
 export const GLYPHS = [
   { lines: [], arcs: [[128, 128, 80, 0, TAU]], dots: [[128, 128, DOT]] },                  // ring, dot inside
   { lines: [], arcs: [[128, 152, 66, 0, TAU]], dots: [[128, 38, DOT]] },                   // ring, dot above
-  arch,                                                                                    // arch over a dot
-  flipped(arch),                                                                           // cup under a dot
-  fork,                                                                                    // fork, prongs up
-  flipped(fork),                                                                           // fork, prongs down
+  { ...ARCH, dots: [[128, 172, DOT]] },                                                    // arch over a dot
+  { ...ARCH, dots: [[94, 172, DOT], [162, 172, DOT]] },                                    // arch over two dots
+  fork([52, 128, 204]),                                                                    // fork, three prongs
+  fork([72, 184]),                                                                         // fork, two prongs
   { lines: [[40, 128, 128, 40, 216, 128], [40, 216, 128, 128, 216, 216]], arcs: [], dots: [] },   // two chevrons, both up
-  { lines: [[40, 40, 128, 112, 216, 40], [40, 216, 128, 144, 216, 216]], arcs: [], dots: [] },    // chevrons facing each other
+  { lines: [[40, 36, 128, 100, 216, 36], [40, 220, 128, 156, 216, 220]], arcs: [], dots: [] },    // chevrons facing each other, a clear gap between the points
 ];
 
 // The same glyph seen in a mirror: x -> 256 - x. An arc's angle a becomes pi - a, and it stays clockwise.
