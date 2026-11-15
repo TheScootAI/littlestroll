@@ -60,7 +60,10 @@ export function createView(scene) {
   }
 
   // ---- the four timbers: each built at its own length along Z, end A at -Z and end B at +Z.
-  // The end caps are a steady orange, free or held.
+  // The end caps are a steady orange, free or held. Each cap is a sleeve clearly thicker than
+  // the wood inside it (CAP_FAT more on every side) and reaches CAP_PAST beyond the wood's end,
+  // so no wood shows through a cap's sides or its end face.
+  const CAP_FAT = 0.07, CAP_PAST = 0.05;
   const glow = new Color(ACCENT);
   const box = (w, h, d, m, x = 0, y = 0, z = 0) => { const o = new Mesh(new BoxGeometry(w, h, d), m); o.position.set(x, y, z); return o; };
   const timber = (len, kind) => {
@@ -77,7 +80,7 @@ export function createView(scene) {
         band.position.z = z;
         g.add(band);
       }
-      capMats.forEach((m, i) => { const c = new Mesh(new CylinderGeometry(r * 1.25, r * 1.25, 0.3, 10).rotateX(Math.PI / 2), m); c.position.z = (i ? 1 : -1) * (len / 2 - 0.15); g.add(c); });
+      capMats.forEach((m, i) => { const c = new Mesh(new CylinderGeometry(r + CAP_FAT, r + CAP_FAT, 0.34, 10).rotateX(Math.PI / 2), m); c.position.z = (i ? 1 : -1) * (len / 2 - 0.17 + CAP_PAST); g.add(c); });
     } else if (kind === 'board') {
       const body = len - 0.3;   // the last 0.3 m is splintered
       g.add(box(0.7, THICK, body, mat(0x9c7249), 0, 0, -0.15));
@@ -90,17 +93,17 @@ export function createView(scene) {
         sh.rotation.y = ry;
         g.add(sh);
       });
-      capMats.forEach((m, i) => g.add(box(0.76, THICK + 0.06, 0.26, m, 0, 0, i ? len / 2 - 0.43 : -len / 2 + 0.13)));
+      capMats.forEach((m, i) => g.add(box(0.7 + 2 * CAP_FAT, THICK + 2 * CAP_FAT, 0.3, m, 0, 0, i ? len / 2 - 0.45 : -len / 2 + 0.15 - CAP_PAST)));
     } else if (kind === 'hatch') {
       const w = 1.2;
       [-0.45, -0.15, 0.15, 0.45].forEach((x, i) => g.add(box(w / 4 - 0.02, 0.1, len, mat(i % 2 ? HATCH : 0xa27c4d), x, 0, 0)));
       const bat = mat(HATCH_DARK);
       for (const z of [-0.4, 0.4]) g.add(box(w, 0.07, 0.16, bat, 0, 0.07, z));
-      capMats.forEach((m, i) => g.add(box(w + 0.04, 0.14, 0.2, m, 0, 0, (i ? 1 : -1) * (len / 2 - 0.1))));
+      capMats.forEach((m, i) => g.add(box(w + 2 * CAP_FAT, 0.1 + 2 * CAP_FAT, 0.24, m, 0, 0, (i ? 1 : -1) * (len / 2 - 0.12 + CAP_PAST))));
     } else {
       g.add(box(WIDTH, THICK, len, wood));
       for (const sx of [-0.2, 0.2]) g.add(box(0.06, THICK + 0.02, len, dark, sx));
-      capMats.forEach((m, i) => g.add(box(WIDTH + 0.06, THICK + 0.06, 0.28, m, 0, 0, (i ? 1 : -1) * (len / 2 - 0.14))));
+      capMats.forEach((m, i) => g.add(box(WIDTH + 2 * CAP_FAT, THICK + 2 * CAP_FAT, 0.32, m, 0, 0, (i ? 1 : -1) * (len / 2 - 0.16 + CAP_PAST))));
     }
     g.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
     root.add(g);
