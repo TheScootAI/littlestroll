@@ -51,4 +51,8 @@ export function news(prev, finds, idx) {
   return { lines, next: finds };
 }
 
-export const valid = (finds) => Array.isArray(finds) && finds.length === FINDS && finds.every((v) => v === -1 || v === 0 || v === 1);
+export function valid(finds) {
+  if (!Array.isArray(finds) || finds.length !== FINDS) return false;
+  for (let i = 0; i < FINDS; i++) { const v = finds[i]; if (v !== -1 && v !== 0 && v !== 1) return false; }   // a hole reads as undefined
+  return true;
+}

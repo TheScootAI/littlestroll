@@ -98,3 +98,10 @@ test('the ninth find hides behind the boulder and the round tree east of the Sig
   expect(SITES.finds[8]).toEqual([11.1, 80.2]);
   expect(step(create(), [P(...SITES.finds[8]), FAR])).toEqual(only(8, 0));
 });
+
+test('valid: an array with holes in it is not a state', () => {
+  const holes = new Array(10);
+  expect(valid(holes)).toBe(false);
+  const one = Array(10).fill(-1); delete one[4];
+  expect(valid(one)).toBe(false);
+});

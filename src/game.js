@@ -32,6 +32,7 @@ import { createView as createPillarsView } from './puzzles/views/pillars.js';
 import { createView as createRingView } from './puzzles/views/ring.js';
 import { createView as createLanternsView } from './puzzles/views/lanterns.js';
 import { FINDS, countBy as findsBy, wornMask, news as findNews } from './puzzles/finds.js';
+import { createLineQueue } from './core/lines.js';
 import { createView as createFindsView } from './puzzles/views/finds.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
@@ -80,6 +81,8 @@ export class Game {
     this.pulseUntil = 0;
     this.stepAcc = 0;
     this.gateAmt = 0;
+    // "You found the …" lines, one at a time; the little fanfare plays as each one shows
+    this.findLines = createLineQueue((line) => { if (!this.S?.ended) { this.hud?.flash(line); this.audio.find(); } });
     this.ending = null;     // set once S.ended appears: { t, shown, from, fromLook, look, fog }
     this.tick = 0;
     this.lastFrame = null;  // performance.now() of the last animation frame (null until start())
@@ -241,18 +244,7 @@ export class Game {
     // baseline. Each line waits for a "solved" flash from the same update to finish (that one lasts
     // 3 s), and two found at once show one after the other, 3.2 s apart; nothing is flashed over the ending.
     const found = findNews(this.findPrev, this.S.finds, this.idx);
-    if (found.lines.length) {
-      const now = Date.now();
-      let at = Math.max(now + (flashed ? 3200 : 0), this.findFree ?? 0);   // when the next line may show
-      for (const line of found.lines) {
-        const wait = at - now;
-        if (wait <= 0) { if (!this.S.ended) this.hud?.flash(line); }
-        else setTimeout(() => { if (!this.S.ended) this.hud?.flash(line); }, wait);
-        this.audio.find();
-        at += 3200;
-      }
-      this.findFree = at;
-    }
+    for (const line of found.lines) this.findLines.push(line, flashed ? 3200 : 0);
     this.findPrev = found.next;
     const amt = this.S.gate?.amt ?? 0;
     if (Math.abs(amt - this.gateAmt) > 1e-4) this.audio.creak();
@@ -343,6 +335,7 @@ export class Game {
       this.solved = m.solved;
       this.bellPrev = null; this.spurPrev = null; this.pillarPrev = 0; this.ringPrev = null;
       this.relayPrev = null; this.lanternPrev = null; this.findPrev = null; this.splashPrev = null;
+      this.findLines.clear();
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);
       this.welcomedOnce = true;
