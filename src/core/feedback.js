@@ -2,11 +2,11 @@
 // in. Nothing is sent from the game: the player posts it on GitHub themselves. A link cannot
 // carry a picture, so a screenshot goes beside it (on the clipboard, or saved as a file) and the
 // note says how to attach it. Pure, no DOM.
-export const REPO = 'TheScootAI/littlerun';
+export const REPO = 'TheScootAI/littlerun';   // the repository kept its first name
 export const MAX_CHARS = 1500;   // characters (code points) of a note that are kept
 export const MAX_URL = 6000;     // GitHub turns away much longer links
 const TITLE_CHARS = 60;
-export const SHOT_FILE = 'little-run-screenshot.png';
+export const SHOT_FILE = 'little-stroll-screenshot.png';
 const SHOT_MAX = 1280;           // longest side of a screenshot, in pixels
 
 // How to attach the screenshot, by where it went.

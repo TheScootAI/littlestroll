@@ -1,4 +1,4 @@
-// Little Run entry point: menu → session → Game.
+// Little Stroll entry point: menu → session → Game.
 import { Game } from './game.js';
 import { showMenu } from './ui/menu.js';
 import { createHud } from './ui/hud.js';

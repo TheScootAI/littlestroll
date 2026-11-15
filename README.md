@@ -1,4 +1,4 @@
-# Little Run
+# Little Stroll
 
 A two-player co-operative puzzle walk that runs in the browser. Two friends, each on their own computer, walk a trail across three small islands and meet eleven puzzles on the way. No puzzle can be solved by one person. Eight stone owls are hidden off the trail for the curious.
 

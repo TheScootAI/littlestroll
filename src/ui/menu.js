@@ -29,8 +29,8 @@ export function showMenu(root) {
   return new Promise((resolve) => {
     const menu = el('div', 'lr-menu');
     const card = el('div', 'lr-card');
-    card.appendChild(el('h1', 'lr-title', 'Little Run'));
-    card.appendChild(el('p', 'lr-sub', 'A walk up the island, for two.'));
+    card.appendChild(el('h1', 'lr-title', 'Little Stroll'));
+    card.appendChild(el('p', 'lr-sub', 'A walk across three small islands, for two.'));
 
     const start = el('button', 'lr-btn', 'Start a walk');
     const joinBtn = el('button', 'lr-btn alt', 'Join a walk');

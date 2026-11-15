@@ -74,7 +74,7 @@ describe('feedback: a screenshot travels beside the link, never in it', () => {
   });
   test('saved as a file instead: the body names the file to drag in', () => {
     const { body } = parts(issueUrl('The gate is stuck', '', 'file'));
-    expect(SHOT_FILE).toBe('little-run-screenshot.png');
+    expect(SHOT_FILE).toBe('little-stroll-screenshot.png');
     expect(body).toContain(SHOT_FILE);
     expect(body).toMatch(/drag/i);
     expect(body).not.toMatch(/Ctrl\+V/);

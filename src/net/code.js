@@ -12,4 +12,5 @@ export function normalizeCode(text) {
   return new RegExp(`^[${ALPHABET}]{5}$`).test(s) ? s : null;
 }
 
+// the game's first name, kept: it is only how two browsers find each other
 export const peerIdFor = (code) => `littlerun-${code}`;
