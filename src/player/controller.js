@@ -31,6 +31,16 @@ function blocked(bl, ox, oz, nx, nz) {
   return false;
 }
 
+// The first circle a move from (ox, oz) to (nx, nz) would enter, or null.
+function circleEntered(bl, ox, oz, nx, nz) {
+  const cs = bl.circles;
+  for (let i = 0; i < cs.length; i++) {
+    const c = cs[i];
+    if (enters(Math.hypot(ox - c.x, oz - c.z), Math.hypot(nx - c.x, nz - c.z), c.r + PLAYER_R)) return c;
+  }
+  return null;
+}
+
 export function stepPlayer(p, input, dt, dyn, veto = null) {
   let dx = 0, dz = 0;
   const sy = Math.sin(input.camYaw), cy = Math.cos(input.camYaw);
@@ -64,6 +74,18 @@ export function stepPlayer(p, input, dt, dyn, veto = null) {
       };
       if (sx !== 0) tryMove(p.x + sx, p.z);
       if (sz !== 0) tryMove(p.x, p.z + sz);
+      // Stopped dead by something round (a trunk, a boulder, a standing stone): glance off it,
+      // going along its rim by as much of the step as points that way. Dead centre still stops.
+      if (p.x === ox && p.z === oz) {
+        const c = circleEntered(bl, ox, oz, ox + sx, oz + sz);
+        if (c) {
+          const rx = ox - c.x, rz = oz - c.z, rl = Math.hypot(rx, rz);
+          if (rl > 1e-9) {
+            const tx = -rz / rl, tz = rx / rl, along = sx * tx + sz * tz;
+            if (Math.abs(along) > 1e-6) tryMove(ox + tx * along, oz + tz * along);
+          }
+        }
+      }
       const d = Math.hypot(p.x - ox, p.z - oz);
       if (d > 0) { p.dist += d; moved = true; }
     }

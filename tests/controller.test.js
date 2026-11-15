@@ -144,6 +144,13 @@ describe.each(['boulder', 'pine', 'round'])('a %s is solid', (kind) => {
     for (let i = 0; i < 720; i++) { stepPlayer(q, aslant, 1 / 60, DYN_NONE); min = Math.min(min, Math.hypot(q.x - s.x, q.z - s.z)); }
     expect(min).toBeGreaterThan(lim - 1e-6);
   });
+  test('walking dead straight at it a little off-centre glances round it, never sticks', () => {
+    const p = createPlayer(s.x + 0.25 * lim, s.z - 5);
+    let min = Infinity;
+    for (let i = 0; i < 900; i++) { stepPlayer(p, toward(0, 1), 1 / 60, DYN_NONE); min = Math.min(min, Math.hypot(p.x - s.x, p.z - s.z)); }
+    expect(p.z).toBeGreaterThan(s.z + lim);      // past it
+    expect(min).toBeGreaterThan(lim - 1e-6);     // without ever cutting into it
+  });
   test('a walker put at its centre can walk out any of eight ways, and standing still moves nobody', () => {
     const idle = createPlayer(s.x, s.z);
     run(idle, { mx: 0, mz: 0, run: false, camYaw: 0 }, 2);
