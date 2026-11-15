@@ -9,7 +9,7 @@ describe('feedback: the text a player typed becomes a GitHub new-issue link', ()
   });
   test('the link opens a new issue on the game\'s own repository', () => {
     const { u } = parts(issueUrl('The gate is stuck'));
-    expect(REPO).toBe('TheScootAI/littlerun');
+    expect(REPO).toBe('TheScootAI/littlestroll');
     expect(u.origin).toBe('https://github.com');
     expect(u.pathname).toBe(`/${REPO}/issues/new`);
     expect([...u.searchParams.keys()].sort()).toEqual(['body', 'title']);
