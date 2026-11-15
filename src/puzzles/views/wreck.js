@@ -7,7 +7,7 @@ import {
   BoxGeometry, CylinderGeometry, TorusGeometry, ConeGeometry,
 } from 'three';
 import { SITES, heightAt } from '../../world/layout.js';
-import { DEBRIS } from '../../world/wreck.js';
+import { DEBRIS, WRECK_PERCH } from '../../world/wreck.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 const WOOD = 0xa9774c, WOOD_DARK = 0x7d5638, RIB = 0x6f4d33, STRAKE = 0x93673f, IRON = 0x4a4a52, ROPE = 0xc9b48a, CLOTH = 0xd9ceb0;
@@ -118,28 +118,30 @@ function buildDebris(root) {
   const make = {
     barrel() {
       const g = new Group();
-      g.add(mesh(new CylinderGeometry(0.4, 0.4, 0.95, 10), mat(0x8f6240), 0, 0.48, 0));
-      for (const y of [0.2, 0.76]) g.add(mesh(new CylinderGeometry(0.43, 0.43, 0.07, 10), iron, 0, y, 0));
+      const h = WRECK_PERCH.barrel.top;   // as tall as the rule says it is
+      g.add(mesh(new CylinderGeometry(0.4, 0.4, h, 10), mat(0x8f6240), 0, h / 2, 0));
+      for (const y of [0.2, h - 0.19]) g.add(mesh(new CylinderGeometry(0.43, 0.43, 0.07, 10), iron, 0, y, 0));
       return g;
     },
     barrelSide() {
       const o = new Group(), body = make.barrel();
       body.rotation.z = Math.PI / 2;
-      body.position.set(0.48, 0.43, 0);   // lies on its curve
+      body.position.set(0.48, WRECK_PERCH.barrelSide.top - 0.43, 0);   // lies on its curve, its top where the rule says
       o.add(body);
       return o;
     },
     crate() {
       const g = new Group();
-      g.add(mesh(new BoxGeometry(0.95, 0.8, 0.95), wood, 0, 0.4, 0));
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(mesh(new BoxGeometry(0.12, 0.84, 0.12), woodDark, 0.45 * sx, 0.4, 0.45 * sz));
-      g.add(mesh(new BoxGeometry(0.99, 0.08, 0.99), woodDark, 0, 0.8, 0));
+      const h = WRECK_PERCH.crate.top;    // the lid's top is the rule's top
+      g.add(mesh(new BoxGeometry(0.95, h - 0.04, 0.95), wood, 0, (h - 0.04) / 2, 0));
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(mesh(new BoxGeometry(0.12, h, 0.12), woodDark, 0.45 * sx, h / 2, 0.45 * sz));
+      g.add(mesh(new BoxGeometry(0.99, 0.08, 0.99), woodDark, 0, h - 0.04, 0));
       return g;
     },
     rope() {
       const g = new Group();
       for (let k = 0; k < 3; k++) {
-        const t = mesh(new TorusGeometry(0.48 - k * 0.02, 0.1, 6, 12), mat(ROPE), 0, 0.1 + k * 0.17, 0);
+        const t = mesh(new TorusGeometry(0.48 - k * 0.02, 0.1, 6, 12), mat(ROPE), 0, 0.1 + k * (WRECK_PERCH.rope.top - 0.2) / 2, 0);   // three turns, the top one's top at the rule's top
         t.rotation.x = Math.PI / 2;
         g.add(t);
       }

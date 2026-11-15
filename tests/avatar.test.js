@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { Box3, Vector3, Color } from 'three';
-import { createAvatar, hopHeight } from '../src/player/avatar.js';
+import { createAvatar } from '../src/player/avatar.js';
+import { hopHeight } from '../src/player/hop.js';
 
 const view = (o = {}) => ({ x: 0, y: 0, z: 0, yaw: 0, speed: 0, aim: [0, 0, -1], pointing: false, carrying: false, waveN: 0, jumpN: 0, ...o });
 const run = (a, v, secs) => { for (let i = 0; i < Math.round(secs * 60); i++) a.update(v, 1 / 60); };
@@ -121,6 +122,31 @@ describe('avatar', () => {
     expect(a.group.position.y).toBe(1.5);   // the walker's real y is never touched
     run(a, view({ y: 1.5, jumpN: 1 }), 0.4);
     expect(lift(a)).toBeCloseTo(rest, 3);
+  });
+
+  test('the lift follows hopHeight with steady ground; when the ground under the hop rises the lift shrinks by the same amount and the body never sinks below it', () => {
+    const lifter = (a) => a.group.getObjectByName('lifter').position.y;
+    const a = createAvatar(0xf08a3c);
+    run(a, view({ y: 1 }), 0.2);
+    a.update(view({ y: 1, jumpN: 1 }), 0);                // take-off frame
+    let t = 0;
+    for (let i = 0; i < 12; i++) { a.update(view({ y: 1, jumpN: 1 }), 1 / 60); t += 1 / 60; expect(lifter(a)).toBeCloseTo(hopHeight(t), 6); }
+    // a second hop, the ground rising by 0.9 during it (a walker landing on a barrel)
+    const b = createAvatar(0xf08a3c);
+    run(b, view({ y: 1 }), 0.3);
+    b.update(view({ y: 1, jumpN: 1 }), 0);
+    t = 0;
+    for (let i = 0; i < 40; i++) {
+      t += 1 / 60;
+      const y = 1 + (t > 0.2 ? 0.9 : 0);
+      b.update(view({ y, jumpN: 1 }), 1 / 60);
+      const lift = Math.max(0, hopHeight(t) - (y - 1));
+      expect(lifter(b)).toBeCloseTo(t < 0.5 ? lift : 0, 6);
+      expect(y + lifter(b)).toBeGreaterThanOrEqual(y - 1e-9);
+      expect(y + lifter(b)).toBeGreaterThanOrEqual(1 + Math.min(hopHeight(t), 0.9 * (t > 0.2)) - 1e-9);
+    }
+    run(b, view({ y: 1.9, jumpN: 1 }), 0.2);
+    expect(lifter(b)).toBe(0);                             // once the hop's time is up
   });
 
   test('the hop lifts the body but not the group (the shadow stays on the ground)', () => {

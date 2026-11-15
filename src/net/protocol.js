@@ -3,7 +3,7 @@ import { dirFromYawPitch } from '../core/math.js';
 import { readInput } from '../player/input.js';
 import { clean, MAX_LEN } from '../core/chat.js';
 
-export const PROTOCOL_V = 10;   // bump whenever the shape of S or dyn, or what a message means, changes
+export const PROTOCOL_V = 11;   // bump whenever the shape of S or dyn, or what a message means, changes
 export const MAX_BYTES = 16384;
 
 // [field, min, max]
@@ -97,11 +97,12 @@ export function pressTracker() {
   };
 }
 
-// The local walker as a `p` message.
+// The local walker as a `p` message. jumpN is the walker's hop count as the controller approved it
+// (player.hopN), so a friend never sees a hop the controller refused.
 export const snapshot = (player, inp, speed) => ({
   t: 'p', x: player.x, y: player.y, z: player.z, yaw: player.yaw,
   ay: inp.camYaw, ap: inp.camPitch, speed, hold: !!inp.hold,
-  eN: inp.eN, q: !!inp.q, shoutN: inp.shoutN, waveN: inp.waveN, jumpN: inp.jumpN, dist: player.dist,
+  eN: inp.eN, q: !!inp.q, shoutN: inp.shoutN, waveN: inp.waveN, jumpN: player.hopN, dist: player.dist,
 });
 
 // The `p` message from an input handle: built from the same merged input the local step

@@ -543,19 +543,22 @@ export class Game {
     this.veto = constraintFor(this.S, this.idx, pins);
     const before = p.dist;
     // once the walk has ended the walkers stand still where they are
-    const move = this.ending ? { ...inp, mx: 0, mz: 0, run: false } : inp;
+    const hands = this.holdsPlank(this.idx) || this.holdsMirror(this.idx);   // a timber or a mirror
+    const move = { ...inp, noHop: hands || this.holdsFlame(this.idx) };       // full hands: no hop
+    if (this.ending) { move.mx = 0; move.mz = 0; move.run = false; }
+    const hopN = p.hopN;
     stepPlayer(p, move, dt, this.dyn, this.veto);
     if (needsRespawn(p, this.dyn)) respawn(p, this.solved, this.idx);
     this.standin?.update(dt);
     if (dt > 0) this.speed = (p.dist - before) / dt;
 
-    const hopped = this.avatar.update({
+    this.avatar.update({
       x: p.x, y: p.y, z: p.z, yaw: p.yaw, speed: this.speed,
       aim: dirFromYawPitch(inp.camYaw, inp.camPitch),
-      pointing: !!inp.q, waveN: inp.waveN, jumpN: inp.jumpN,
-      carrying: this.holdsPlank(this.idx) || this.holdsMirror(this.idx), mirror: this.holdsMirror(this.idx), torch: this.holdsFlame(this.idx),
+      pointing: !!inp.q, waveN: inp.waveN, jumpN: p.hopN,   // the hops the controller approved, not the presses
+      carrying: hands, mirror: this.holdsMirror(this.idx), torch: this.holdsFlame(this.idx),
     }, dt);
-    if (hopped) this.audio.hop();   // only the local walker's own jump makes the sound
+    if (p.hopN !== hopN) this.audio.hop();   // only the local walker's own approved hop makes the sound
     this.updateRemote(dt);
     this.syncPuzzles(pins, inp, dt);
     if (this.ending) this.updateEnding(dt);

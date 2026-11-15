@@ -17,6 +17,16 @@ export const DEBRIS = [
   { kind: 'wheel',      x: 11.5, z: 127.6, yaw: 0.7 },
 ];
 
+// What a walker can hop onto: the circle's radius and the flat top's height above the sand, for the
+// things that are solid enough (the sail, anchor and wheel are flat or thin and are walked over).
+// The view draws from these same numbers.
+export const WRECK_PERCH = {
+  barrel:     { r: 0.6,  top: 0.95 },
+  barrelSide: { r: 0.65, top: 0.8 },
+  crate:      { r: 0.7,  top: 0.84 },
+  rope:       { r: 0.6,  top: 0.5 },
+};
+
 // A piece at its rest leans on the rock: the upper end is drawn TIP_R from the rock's centre,
 // TIP_RISE above its lower end (the rock is lower than the timber's own length, so the whole piece
 // is drawn slid a little along its own line, at most about a metre from where S says).

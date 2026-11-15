@@ -7,21 +7,13 @@ import {
 } from 'three';
 import { lerpAngle } from '../core/math.js';
 import { WALK } from '../config.js';
+import { HOP_SECS, hopHeight } from './hop.js';
 
 const STONE = 0xa9a39b;
 const STONE_DARK = 0x8d877f;
 const EYE = 0x2b2622;
 const WAVE_SECS = 1.2;
 const DOWN = new Vector3(0, -1, 0);
-const HOP_SECS = 0.5, HOP_HEIGHT = 0.7;
-
-// A hop, for show only: metres off the ground t seconds after take-off. One smooth arc
-// (a parabola: up fast, hang, down), 0 before take-off and exactly 0 from the landing on.
-export function hopHeight(t) {
-  if (!(t > 0 && t < HOP_SECS)) return 0;
-  const u = t / HOP_SECS;
-  return 4 * HOP_HEIGHT * u * (1 - u);
-}
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
 
@@ -99,7 +91,7 @@ export function createAvatar(colour) {
 
   group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
-  let yaw = null, phase = 0, swing = 0, lastWave = null, waveT = 0, lastJump = null, hopT = -1;
+  let yaw = null, phase = 0, swing = 0, lastWave = null, waveT = 0, lastJump = null, hopT = -1, hopFromY = 0;
   const q = new Quaternion(), tmp = new Vector3(), qRest = new Quaternion();
   const invYaw = new Quaternion(), yAxis = new Vector3(0, 1, 0);
 
@@ -133,19 +125,21 @@ export function createAvatar(colour) {
     if (view.waveN !== lastWave) { lastWave = view.waveN; waveT = WAVE_SECS; }
     waveT = Math.max(0, waveT - dt);
 
-    // hop: a fresh jumpN starts one, but only on the ground and with empty hands (no mirror,
-    // timber or flame: those are drawn from where the walker stands and would be left behind).
-    // A press in the air is dropped, never queued.
+    // hop: a fresh jumpN (the count the controller approved) starts one, but only with empty hands
+    // (no mirror, timber or flame: those are drawn from where the walker stands and would be left
+    // behind). A press in the air is dropped, never queued. The walker's own y is what it stands on,
+    // so the lift is the hop's arc less however far that has risen since take-off (a walker landing
+    // on a barrel): one smooth arc up and down onto the top.
     let hopped = false;
     const handsFull = !!(view.carrying || view.torch);
     if (lastJump === null) lastJump = view.jumpN;
     if (view.jumpN !== lastJump) {
       lastJump = view.jumpN;
-      if (hopT < 0 && !handsFull) { hopT = 0; hopped = true; }
+      if (hopT < 0 && !handsFull) { hopT = 0; hopFromY = view.y; hopped = true; }
     }
     if (handsFull) hopT = -1;   // picked something up in the air: down at once
     if (hopT >= 0) { hopT += dt; if (hopT >= HOP_SECS) hopT = -1; }
-    lifter.position.y = hopT >= 0 ? hopHeight(hopT) : 0;
+    lifter.position.y = hopT >= 0 ? Math.max(0, hopHeight(hopT) - (view.y - hopFromY)) : 0;
 
     const k = 1 - Math.exp(-14 * dt);
     invYaw.setFromAxisAngle(yAxis, -yaw);

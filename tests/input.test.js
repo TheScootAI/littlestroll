@@ -110,11 +110,11 @@ test('C3: the network snapshot carries the forced (pilot) input, counters includ
   const state = createInputState();
   state.eN = 5; state.shoutN = 2; state.waveN = 1; state.jumpN = 3;
   const input = { state, forced: { mx: 0, mz: 1, run: true, hold: true, eN: 7, q: true, shoutN: 3, waveN: 4, jumpN: 6, camYaw: 1, camPitch: 0.5 } };
-  const player = { x: 1, y: 2, z: 3, yaw: 0.2, dist: 9 };
+  const player = { x: 1, y: 2, z: 3, yaw: 0.2, dist: 9, hopN: 4 };   // what goes out as jumpN is the controller's approved count
   const m = netSnapshot(player, input, 4);
-  expect(m).toMatchObject({ t: 'p', x: 1, y: 2, z: 3, eN: 7, hold: true, q: true, shoutN: 3, waveN: 4, jumpN: 6, ay: 1, ap: 0.5, speed: 4, dist: 9 });
+  expect(m).toMatchObject({ t: 'p', x: 1, y: 2, z: 3, eN: 7, hold: true, q: true, shoutN: 3, waveN: 4, jumpN: 4, ay: 1, ap: 0.5, speed: 4, dist: 9 });
   // without a pilot the live state goes out
-  expect(netSnapshot(player, { state, forced: null }, 0)).toMatchObject({ eN: 5, shoutN: 2, waveN: 1, jumpN: 3, hold: false, q: false });
+  expect(netSnapshot(player, { state, forced: null }, 0)).toMatchObject({ eN: 5, shoutN: 2, waveN: 1, jumpN: 4, hold: false, q: false });
 });
 
 // A minimal fake browser for createInput.

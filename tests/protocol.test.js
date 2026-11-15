@@ -12,7 +12,7 @@ describe('protocol', () => {
     expect(decode(encode({ t: 'full' }))).toEqual({ t: 'full' });
     const s = { t: 's', S: { time: 1, gate: { a: 1 } } };
     expect(decode(encode(s))).toEqual(s);
-    expect(PROTOCOL_V).toBe(10);
+    expect(PROTOCOL_V).toBe(11);
     expect(MAX_BYTES).toBe(16384);
   });
 
@@ -61,8 +61,9 @@ describe('protocol', () => {
   });
 
   test('snapshot builds a valid p message', () => {
-    const player = { x: 1, y: 2, z: 3, yaw: 0.5, dist: 12.5 };
-    const inp = { camYaw: 0.1, camPitch: -0.2, hold: true, eN: 4, q: false, shoutN: 1, waveN: 0, jumpN: 2 };
+    // jumpN is the controller's approved hop count, not the presses
+    const player = { x: 1, y: 2, z: 3, yaw: 0.5, dist: 12.5, hopN: 2 };
+    const inp = { camYaw: 0.1, camPitch: -0.2, hold: true, eN: 4, q: false, shoutN: 1, waveN: 0, jumpN: 9 };
     expect(snapshot(player, inp, 3.2)).toEqual(P);
     expect(decode(encode(snapshot(player, inp, 3.2)))).toEqual(P);
   });

@@ -1,6 +1,7 @@
 // Trees and boulders are solid: the list of them, that nothing a walker must reach is buried in
 // one, that the trail stays open, and that obstacles() is blockers() plus them.
 import { test, expect } from 'vitest';
+import { PERCHES } from '../src/world/perches.js';
 import { TREE_R, BOULDER_R, SOLIDS, obstacles } from '../src/world/solids.js';
 import { placeScenery, placeFarScenery, placeLanternScenery, siteAnchors, trailDistance } from '../src/world/scenery.js';
 import { SITES, DYN_NONE, blockers } from '../src/world/layout.js';
@@ -53,12 +54,12 @@ test('the trail stays open round every solid', () => {
   for (const s of SOLIDS) expect(trailDistance(s.x, s.z), `${s.kind} at ${s.x.toFixed(1)}, ${s.z.toFixed(1)}`).toBeGreaterThanOrEqual(s.r + PLAYER_R + 0.5);
 });
 
-test('obstacles(dyn) is blockers(dyn) plus SOLIDS, one array built once', () => {
+test('obstacles(dyn).circles is blockers(dyn), SOLIDS and the wreck\'s perches, one array built once', () => {
   const all = { ...DYN_NONE, gateOpen: true, bridge: true, plank: true, ladder: true, causeway: true, bells: true, ring: true, lift: 1, marsh: 0x3fffffff, pillars: 0x3ffff };
   for (const dyn of [DYN_NONE, all, { ...DYN_NONE, spur: true }]) {
     const b = blockers(dyn), o = obstacles(dyn);
     expect(o.segments).toEqual(b.segments);
-    expect(o.circles).toEqual([...b.circles, ...SOLIDS]);
+    expect(o.circles).toEqual([...b.circles, ...SOLIDS, ...PERCHES.filter((q) => q.kind !== 'boulder')]);
   }
   expect(obstacles(DYN_NONE).circles).toBe(obstacles(DYN_NONE).circles);
 });
