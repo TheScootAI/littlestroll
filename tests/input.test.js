@@ -186,3 +186,17 @@ test('a space typed in a text field does not jump; on the page it jumps and is c
   expect(input.state.jumpN).toBe(1); expect(prevented).toBe(1);
   input.dispose();
 });
+
+test('Space on a focused button presses the button: no jump, and the key is left to the browser', () => {
+  const { win, canvas } = fakeDom([]);
+  const input = createInput(canvas);
+  const key = (type, target) => {
+    const e = new Event(type);
+    Object.defineProperty(e, 'target', { value: target });
+    Object.assign(e, { code: 'Space', repeat: false, preventDefault: () => { throw new Error('claimed'); } });
+    win.dispatchEvent(e);
+  };
+  for (const tagName of ['BUTTON', 'SELECT', 'A']) { key('keydown', { tagName }); key('keyup', { tagName }); }
+  expect(input.state.jumpN).toBe(0);
+  input.dispose();
+});

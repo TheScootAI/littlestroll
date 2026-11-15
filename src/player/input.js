@@ -75,6 +75,8 @@ export const readInput = (input) => {
 };
 
 const typing = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+// Space on a focused button, list or link is that control's own key: it presses it, no jump
+const ownsSpace = (e) => e.code === 'Space' && !!e.target && ['BUTTON', 'SELECT', 'A'].includes(e.target.tagName);
 
 export function createInput(canvas) {
   const state = createInputState();
@@ -92,11 +94,11 @@ export function createInput(canvas) {
   const locked = () => doc.pointerLockElement === canvas;
 
   const onKeyDown = (e) => {
-    if (typing(e.target)) return;
+    if (typing(e.target) || ownsSpace(e)) return;
     if (applyKey(state, held, e.code, true, e.repeat)) e.preventDefault();
   };
   const onKeyUp = (e) => {
-    if (applyKey(state, held, e.code, false, false)) e.preventDefault();
+    if (applyKey(state, held, e.code, false, false) && !ownsSpace(e)) e.preventDefault();
   };
   const onBlur = () => { releaseAll(state, held); dragging = false; };
   const onVisibility = () => { if (doc.hidden) onBlur(); };

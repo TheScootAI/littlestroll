@@ -201,6 +201,7 @@ export class Game {
   clearRemote() {
     this.remote = null;
     this.friendPress.reset();
+    this.remoteAvatar?.forget();
   }
 
   // [host, joiner] as the puzzle rules see them. `consume` turns eN changes into

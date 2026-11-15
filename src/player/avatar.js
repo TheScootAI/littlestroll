@@ -137,11 +137,13 @@ export function createAvatar(colour) {
     // timber or flame: those are drawn from where the walker stands and would be left behind).
     // A press in the air is dropped, never queued.
     let hopped = false;
+    const handsFull = !!(view.carrying || view.torch);
     if (lastJump === null) lastJump = view.jumpN;
     if (view.jumpN !== lastJump) {
       lastJump = view.jumpN;
-      if (hopT < 0 && !view.carrying && !view.torch) { hopT = 0; hopped = true; }
+      if (hopT < 0 && !handsFull) { hopT = 0; hopped = true; }
     }
+    if (handsFull) hopT = -1;   // picked something up in the air: down at once
     if (hopT >= 0) { hopT += dt; if (hopT >= HOP_SECS) hopT = -1; }
     lifter.position.y = hopT >= 0 ? hopHeight(hopT) : 0;
 
@@ -177,5 +179,9 @@ export function createAvatar(colour) {
     return hopped;   // true on the frame a hop begins (the local walker's whup)
   }
 
-  return { group, update };
+  // The walker this avatar shows has gone (the friend left or is reconnecting): whoever it
+  // shows next starts from their own counters, so an old jump or wave is not replayed.
+  const forget = () => { lastWave = lastJump = null; waveT = 0; hopT = -1; };
+
+  return { group, update, forget };
 }

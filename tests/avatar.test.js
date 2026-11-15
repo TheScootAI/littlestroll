@@ -141,6 +141,29 @@ describe('avatar', () => {
     expect(a.update(view({ jumpN: 7 }), 1 / 60)).toBeFalsy();
   });
 
+  test('forget(): a friend who reloads and comes back with a lower jumpN does not hop on sight', () => {
+    const a = createAvatar(0xf08a3c);
+    run(a, view({ jumpN: 3 }), 0.3);
+    const rest = lift(a);
+    a.forget();
+    run(a, view({ jumpN: 0 }), 0.25);
+    expect(lift(a)).toBeCloseTo(rest, 3);
+    run(a, view({ jumpN: 1 }), 0.25);            // and the next real jump still shows
+    expect(lift(a) - rest).toBeGreaterThan(0.5);
+  });
+
+  test('a hop ends at once when the hands fill, so nothing carried is left behind', () => {
+    for (const hands of [{ carrying: true }, { torch: true }]) {
+      const a = createAvatar(0xf08a3c);
+      run(a, view(), 0.2);
+      const rest = lift(a);
+      run(a, view({ jumpN: 1 }), 0.2);
+      expect(lift(a) - rest).toBeGreaterThan(0.3);
+      run(a, view({ ...hands, jumpN: 1 }), 0.05);
+      expect(lift(a)).toBeCloseTo(rest, 3);
+    }
+  });
+
   test('update says when a hop starts', () => {
     const a = createAvatar(0xf08a3c);
     a.update(view(), 1 / 60);
