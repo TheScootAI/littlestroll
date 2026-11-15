@@ -2,6 +2,8 @@
 import { test, expect } from 'vitest';
 import { SITES, TRAIL, zoneAt, heightAt, DYN_NONE } from '../src/world/layout.js';
 import { placeScenery } from '../src/world/terrain.js';
+import { reachable } from './helpers/reach.js';
+import { blockers } from '../src/world/layout.js';
 import { pointSegDist } from '../src/core/math.js';
 import { DEBRIS, leanEnds, TIP_R, TIP_RISE } from '../src/world/wreck.js';
 
@@ -94,5 +96,17 @@ test('a leaning timber keeps its full length, its tip is on the rock and it slid
     expect(d(e.a, p.a)).toBeLessThanOrEqual(1.1);   // a walker who comes for its end A still finds it (grab radius 1.2)
     const u = [(p.b[0] - p.a[0]) / p.len, (p.b[1] - p.a[1]) / p.len];   // same line as before
     expect((e.b[0] - e.a[0]) * u[1] - (e.b[1] - e.a[1]) * u[0]).toBeCloseTo(0, 6);
+  }
+});
+
+test('every end is reachable from the spawn with nothing solved', () => {
+  const r = reachable(SITES.spawn[0], DYN_NONE);
+  for (const [, , p] of ends) expect(r(...p)).toBe(true);
+});
+test('the wreck adds nothing to blockers(): no circle near its rock or any end', () => {
+  const { circles, segments } = blockers(DYN_NONE);
+  for (const p of [W.rock, ...ends.map((e) => e[2])]) {
+    for (const c of circles) expect(d(p, [c.x, c.z])).toBeGreaterThan(0.5);
+    for (const s of segments) expect(pointSegDist(p[0], p[1], s.ax, s.az, s.bx, s.bz).d).toBeGreaterThan(0.5);
   }
 });

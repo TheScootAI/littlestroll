@@ -64,6 +64,15 @@ function settle(b, i) {
   if (!dry(mx, mz) || !dry(b.ax, b.az) || !dry(b.bx, b.bz) || inStone(b.ax, b.az) || inStone(b.bx, b.bz)) toRest(b, i);
 }
 
+// Laid along the gap at the slot, centred, its own length.
+function layAcross(b, i) {
+  const [sx, sz] = SITES.plank.slot, len = lengthOf(i);
+  Object.assign(b, { ax: sx, az: sz - len / 2, bx: sx, bz: sz + len / 2 });
+}
+
+// Did the splash clock just restart? `prev` is null/undefined until a first state has been seen.
+export const splashed = (prev, sp) => prev != null && sp < prev;
+
 // The rigid board of length `len` for carriers at (ax, az) and (bx, bz): [ax, az, bx, bz] of
 // its two ends, centred between the carriers. `dir` is the way it lay before, for carriers who
 // stand on the same spot.
@@ -121,12 +130,12 @@ export function step(s, players, dt) {
     if (!was[i]) continue;
     const mx = (b.ax + b.bx) / 2, mz = (b.az + b.bz) / 2;
     b.holdA = null; b.holdB = null;   // it is down: the other holder lets go too
-    settle(b, i);
     const [sx, sz] = SITES.plank.slot;
     if (Math.hypot(mx - sx, mz - sz) <= PLACE_R) {
-      if (lengthOf(i) >= NEED) { s.placed = i; s.solved = true; }
+      if (lengthOf(i) >= NEED) layAcross(b, i);
       else { toRest(b, i); s.splash = 0; }   // too short: it tips into the water
-    }
+      if (lengthOf(i) >= NEED) { s.placed = i; s.solved = true; }
+    } else settle(b, i);
     return;
   }
   s.boards.forEach((b, i) => {
@@ -207,8 +216,7 @@ export function valid(s) {
 }
 
 export function forceSolve(s) {
-  const [sx, sz] = SITES.plank.slot;
   s.boards.forEach((b) => { b.holdA = null; b.holdB = null; });
-  Object.assign(s.boards[0], { ax: sx, az: sz - LEN / 2, bx: sx, bz: sz + LEN / 2 });
+  layAcross(s.boards[0], 0);
   s.placed = 0; s.solved = true;
 }

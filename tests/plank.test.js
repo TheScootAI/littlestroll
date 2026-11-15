@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { LEN, NEED, SLACK, GRAB_R, DROP_EXTRA, PLACE_R, lengthOf, create, step, prompt, veto, valid, forceSolve, board, carrying, held, atRest } from '../src/puzzles/plank.js';
+import { LEN, NEED, SLACK, GRAB_R, DROP_EXTRA, PLACE_R, lengthOf, create, step, prompt, veto, valid, forceSolve, board, carrying, held, atRest, splashed } from '../src/puzzles/plank.js';
 import { carrySearch } from './helpers/carry.js';
 import { createAll, stepAll, solvedCount, dynOf, promptFor, constraintFor, forceSolved, validState, solvedLine } from '../src/puzzles/index.js';
 import { SITES, heightAt } from '../src/world/layout.js';
@@ -190,6 +190,21 @@ test('the short board and the hatch let go at the slot are not laid: back at the
     expect(s.splash).toBeCloseTo(0.5, 9);
   }
 });
+test('splashed: no baseline, no splash; a drop splashes; a rise or no change does not', () => {
+  expect(splashed(null, 999)).toBe(false);
+  expect(splashed(undefined, 0)).toBe(false);
+  expect(splashed(999, 0)).toBe(true);
+  expect(splashed(3, 0.2)).toBe(true);
+  expect(splashed(0, 0.5)).toBe(false);
+  expect(splashed(5, 5)).toBe(false);
+});
+test('the piece laid at the slot is exactly what forceSolve produces', () => {
+  const s = carryTo(0, SITES.plank.slot, 4), f = create(); forceSolve(f);
+  expect(s.placed).toBe(0);
+  expect(s.boards[0]).toEqual(f.boards[0]);
+  expect(atRest(s, 0)).toBe(false);
+  expect(valid(s)).toBe(true); expect(valid(JSON.parse(JSON.stringify(s)))).toBe(true);
+});
 test('splash counts up and is capped at 999', () => {
   const s = create(); step(s, [P(far), P(far)], 1000);
   expect(s.splash).toBe(999);
@@ -262,6 +277,8 @@ test('the plank (4 m) and the short board (2.5 m) can be carried through the zig
   const opts = { slack: SLACK, margin: 0 };      // the game's own tolerances
   expect(carrySearch({ ...opts, len: 4, from: stands(4) }).done).toBe(true);
   expect(carrySearch({ ...opts, len: 2.5, from: stands(2.5) }).done).toBe(true);
+  // (the search does not cover a board already lying across a stone: only lag can put one there,
+  // and the game lets it slide along its own line)
   const spar = carrySearch({ ...opts, len: 6.5, from: stands(6.5) });
   expect(spar.done).toBe(false);
   expect(spar.reason).toBe('blocked');           // it could be lifted at the start: it is the stones that stop it

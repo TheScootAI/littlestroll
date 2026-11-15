@@ -35,7 +35,7 @@ import { OWLS, count as owlCount, news as owlNews } from './puzzles/owls.js';
 import { createView as createOwlsView } from './puzzles/views/owls.js';
 import { createView as createRelayView } from './puzzles/views/relay.js';
 import { mustWalk } from './puzzles/relay.js';
-import { carrying } from './puzzles/plank.js';
+import { carrying, splashed } from './puzzles/plank.js';
 
 export const SCARF = [0xf08a3c, 0x2fb5a6];   // host orange, joiner teal
 
@@ -235,7 +235,7 @@ export class Game {
     this.solved = n;
     // a too-short piece tipped into the water: splash restarts from 0 (host or joiner alike)
     const sp = this.S.plank?.splash;
-    if (Number.isFinite(sp)) { if (sp < (this.splashPrev ?? Infinity)) this.audio.splash?.(); this.splashPrev = sp; }
+    if (Number.isFinite(sp)) { if (splashed(this.splashPrev, sp)) this.audio.splash?.(); this.splashPrev = sp; }
     // an owl found (host or joiner alike); the first state after a welcome only sets the baseline.
     // Its line waits for a "solved" flash from the same update to finish (that one lasts 3 s),
     // unless the walk has ended by then: nothing is flashed over the ending.
@@ -333,7 +333,7 @@ export class Game {
       this.dyn = dynOf(this.S);
       this.solved = m.solved;
       this.bellPrev = null; this.pillarPrev = 0; this.ringPrev = null;
-      this.relayPrev = null; this.lanternPrev = null; this.owlPrev = null;
+      this.relayPrev = null; this.lanternPrev = null; this.owlPrev = null; this.splashPrev = null;
       // only the first welcome spawns; one after a reconnect keeps position, distance, camera
       if (!this.welcomedOnce) respawn(this.player, m.solved, this.idx);
       this.welcomedOnce = true;
