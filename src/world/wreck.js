@@ -44,8 +44,14 @@ export function fallPose(len, t) {
   const th = TIP * k, nz = LIP_Z - SLIDE * k, ny = BANK_Y - (BANK_Y - WATER_Y + 0.6) * k;
   return { a: [GAP_X, ny, nz], b: [GAP_X, ny - len * Math.sin(th), nz - len * Math.cos(th)] };
 }
-// When the far end first reaches the water: the splash starts then.
+// When the far end first reaches the water: the splash starts then. Worked out once per length
+// (the view asks every frame).
+const HIT = new Map();
 export function hitTime(len) {
-  for (let t = 0; t < FALL_END; t += 0.01) if (fallPose(len, t).b[1] <= WATER_Y) return t;
-  return FALL_END;
+  if (!HIT.has(len)) {
+    let hit = FALL_END;
+    for (let t = 0; t < FALL_END; t += 0.01) if (fallPose(len, t).b[1] <= WATER_Y) { hit = t; break; }
+    HIT.set(len, hit);
+  }
+  return HIT.get(len);
 }

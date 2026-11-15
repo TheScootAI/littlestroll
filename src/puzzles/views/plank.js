@@ -9,7 +9,7 @@ import {
 } from 'three';
 import { SITES, heightAt } from '../../world/layout.js';
 import { LEN, board as rigid, lengthOf, atRest } from '../plank.js';
-import { leanEnds, TIP_RISE, fallPose, hitTime } from '../../world/wreck.js';
+import { leanEnds, TIP_RISE, fallPose, hitTime, FALL_END } from '../../world/wreck.js';
 import { WATER_Y } from '../../config.js';
 
 const mat = (hex, extra = {}) => new MeshLambertMaterial({ color: hex, flatShading: true, ...extra });
@@ -140,6 +140,7 @@ export function createView(scene) {
           place(p, sp.ax - dx * ext, ay0 - dy * ext + hf, sp.az - dz * ext, sp.bx + dx * ext, by0 + dy * ext + hf, sp.bz + dz * ext);
           return;
         }
+        let fall = null;   // the pose of a too-short piece on its way into the water
         // a carried end rides on its holder's (smoothed) position; a free one stays where S says
         const end = (hold, x, z) => {
           const q = hold !== null ? ctx.players[hold] : null;
@@ -162,10 +163,9 @@ export function createView(scene) {
           const l = Math.hypot(ox - hx, oy - hy, oz - hz) || 1, k = len / l;
           const ex = hx + (ox - hx) * k, ez = hz + (oz - hz) * k, ey = hy + (oy - hy) * k;
           if (ha) { bx = ex; bz = ez; ya = hy; yb = ey; } else { ax = ex; az = ez; yb = hy; ya = ey; }
-        } else if (s.fell === i && fallPose(len, s.splash)) {
+        } else if (s.fell === i && s.splash < FALL_END && (fall = fallPose(len, s.splash))) {
           // too short for the gap: laid out from the near bank, then it falls in (not drawn at the wreck meanwhile)
-          const f = fallPose(len, s.splash);
-          place(p, f.a[0], f.a[1] + hf, f.a[2], f.b[0], f.b[1] + hf, f.b[2]);
+          place(p, fall.a[0], fall.a[1] + hf, fall.a[2], fall.b[0], fall.b[1] + hf, fall.b[2]);
           return;
         } else if (atRest(s, i)) {
           // leaning on the rock: end A on the sand, end B up on the rock
