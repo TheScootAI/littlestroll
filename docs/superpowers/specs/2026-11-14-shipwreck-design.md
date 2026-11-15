@@ -25,7 +25,9 @@ Four loose timbers lean against a rock beside it. Each is rigid and needs two ca
 
 - Lengths are fixed. A search over carrier positions shows that under the game's own carrying rules boards up to 5 m can be taken through the stones and boards of 5.5 m and over cannot; the spar is well past that, the plank well inside it.
 - The gap is 3.6 m of water. A piece at least 3.8 m long bridges it.
-- Letting go of a piece at the slot: if it is long enough it is laid and the puzzle is solved ("The plank is down"), otherwise it tips into the water with a splash and is back at the wreck, leaning on its rock. Nothing else is lost.
+- Letting go of a piece at the slot: if it is long enough it is laid and the puzzle is solved ("The plank is down"). Otherwise the players see it laid out across the gap from the near bank, see that it does not reach, and watch it tip and fall into the water (the owner: "have it be put in the place to go across, but since it is too short it will fall"); it is then back at the wreck, leaning on its rock. Nothing else is lost.
+- The timbers' ends are a steady orange; they do not pulse (the owner: "being orange is enough").
+- A carried timber rides at its carriers' height, so it stays in view on ramps and bridges.
 - A piece let go anywhere else stays where it is put down, if both its ends are on dry ground and clear of the stones; otherwise it is back at the wreck.
 - Everything else about carrying is as in the rigid-plank design: the carriers stay the piece's length apart (0.8 m either way), it is the piece at its full length that must clear the stones, a lone holder cannot walk off with an end, carriers cannot run, and carriers who end up far apart drop it.
 - One walker alone still cannot do it: every piece needs two.
