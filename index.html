@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#bfe3ea">
   <title>Little Stroll</title>
   <style>
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-    #view { display: block; position: fixed; inset: 0; width: 100vw; height: 100vh; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000;
+      overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+    /* dvh: the part of a phone's screen its address bar leaves free. touch-action: a finger on
+       the view steers the game and never scrolls or zooms the page. */
+    #view { display: block; position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh;
+      touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent; }
     #ui { position: fixed; inset: 0; pointer-events: none; }
   </style>
 </head>

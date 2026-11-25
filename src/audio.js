@@ -1,5 +1,5 @@
 // Quiet synthesised sound: Web Audio oscillators and noise, no files. The context is
-// built lazily on the first click or key press (browsers start audio suspended); every
+// built lazily on the first click, tap or key press (browsers start audio suspended); every
 // method is a no-op until then and never throws.
 import { riffNotes } from './core/riff.js';
 
@@ -166,10 +166,11 @@ export function createAudio() {
   if (typeof window !== 'undefined') {
     const go = () => {
       audio.resume();
-      if (live()) { window.removeEventListener('pointerdown', go); window.removeEventListener('keydown', go); }
+      if (live()) GESTURES.forEach((g) => window.removeEventListener(g, go, true));
     };
-    window.addEventListener('pointerdown', go);
-    window.addEventListener('keydown', go);
+    // pointerup and touchend too: a phone counts the finger lifting as the gesture, not its landing
+    const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'keydown'];
+    GESTURES.forEach((g) => window.addEventListener(g, go, true));
   }
   return audio;
 }

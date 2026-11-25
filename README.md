@@ -1,6 +1,6 @@
 # Little Stroll
 
-A two-player co-operative puzzle stroll that runs in the browser. Two friends, each on their own computer, stroll a trail across three small islands and meet eleven puzzles on the way. No puzzle can be solved by one person. Ten pieces of clothing (glasses, boots, a belt, a pirate hat and more) lie hidden off the trail for the curious: whoever walks up to one first puts it on, and both of you see it.
+A two-player co-operative puzzle stroll that runs in the browser. Two friends, each on their own computer, tablet or phone, stroll a trail across three small islands and meet eleven puzzles on the way. No puzzle can be solved by one person. Ten pieces of clothing (glasses, boots, a belt, a pirate hat and more) lie hidden off the trail for the curious: whoever walks up to one first puts it on, and both of you see it.
 
 Built with three.js. No accounts and no server: the two browsers connect directly.
 
@@ -12,17 +12,19 @@ Built with three.js. No accounts and no server: the two browsers connect directl
 
 You can type to each other in the game (Enter). There is no voice chat, so a call is still nicer.
 
-| Key | Does |
-| --- | --- |
-| W A S D | Stroll |
-| Shift | Run |
-| Space | Jump |
-| Mouse | Look (click the game first; Esc releases) |
-| E | Interact (hold for cranks) |
-| Q | Point |
-| F | Shout |
-| 1 | Wave |
-| Enter | Chat (Esc to cancel) |
+| Key | On a phone or tablet | Does |
+| --- | --- | --- |
+| W A S D | Left thumb: the stick | Stroll |
+| Shift | Push the stick to its rim | Run |
+| Space | **Jump** | Jump |
+| Mouse | Drag anywhere else on the view | Look (with a mouse, click the game first; Esc releases) |
+| E | **Use** | Interact (hold for cranks) |
+| Q | **Point** (hold, and slide the same finger to aim) | Point |
+| F | **Shout** | Shout |
+| 1 | **Wave** | Wave |
+| Enter | **Chat** | Chat (Esc, or a tap on the view, to cancel) |
+
+The touch controls show by themselves on a phone or tablet, and on a touch-screen laptop from the first time a finger is used. The stick sits bottom-left but follows your thumb: put it down anywhere on the lower left of the view. It works upright or on its side; on its side there is more to see.
 
 On a small share of home networks the two browsers can't connect directly. The game says so when that happens.
 

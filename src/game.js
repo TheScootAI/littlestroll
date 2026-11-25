@@ -15,6 +15,8 @@ import { CHEST } from './puzzles/beam.js';
 import { buildTerrain, followSun } from './world/terrain.js';
 import { createPlayer, stepPlayer, needsRespawn, respawn } from './player/controller.js';
 import { createInput, readInput } from './player/input.js';
+import { createTouchControls } from './ui/touch.js';
+import { needsUse } from './ui/hud.js';
 import { createCamera } from './player/camera.js';
 import { createAvatar } from './player/avatar.js';
 import { endingProgress, endShot } from './core/ending.js';
@@ -140,7 +142,15 @@ export class Game {
     this.chatIn = createGate();
     this.hud?.enableChat({ onSend: (t) => this.say(t), onOpen: () => this.input.release() });
 
-    this.hint = this.makeHint();
+    // the start hint is the HUD's; `hint` is true until the player has looked around
+    this.hint = !!this.hud;
+    this.hud?.showHint(true);
+    // phones and tablets: a stick, drag-to-look and buttons (hidden until a finger is used)
+    const ui = document.getElementById('ui');
+    this.touch = ui ? createTouchControls(ui, canvas, this.input, {
+      onChat: () => this.hud?.openChat(),
+      onEnable: () => this.hud?.setTouch(true),
+    }) : null;
     this.onResize = () => this.resize();
     window.addEventListener('resize', this.onResize);
     this.resize();
@@ -387,7 +397,7 @@ export class Game {
   // HUD prompt and every puzzle view. Views only read S.
   syncPuzzles(pins, inp, dt) {
     const prompt = promptFor(this.S, this.idx, pins);
-    if (prompt !== this.prompt) { this.prompt = prompt; this.hud?.setPrompt(prompt); }
+    if (prompt !== this.prompt) { this.prompt = prompt; this.hud?.setPrompt(prompt); this.touch?.setUsable(needsUse(prompt)); }
     const p = this.player;
     // `lift`: how far each walker's body is off its feet in a hop, for what a view draws in their hands
     const mine = { present: true, x: p.x, y: p.y, z: p.z, yaw: p.yaw, aim: dirFromYawPitch(inp.camYaw, inp.camPitch), lift: this.avatar.lift() };
@@ -490,21 +500,6 @@ export class Game {
     this.hud.setFriendArrow(edgeArrow(inp.camYaw, [p.x, p.z], [this.rx, this.rz]), performance.now() < this.pulseUntil);
   }
 
-  makeHint() {
-    const ui = document.getElementById('ui');
-    if (!ui) return null;
-    const el = document.createElement('div');
-    el.textContent = 'Click to look around · WASD to stroll · Shift to run · Space to jump · Enter to chat';
-    Object.assign(el.style, {
-      position: 'absolute', left: '50%', bottom: '28px', transform: 'translateX(-50%)',
-      padding: '8px 16px', borderRadius: '999px', background: 'rgba(60, 48, 40, 0.55)',
-      color: '#fff7ea', font: '500 15px/1.3 system-ui, sans-serif', letterSpacing: '0.02em',
-      transition: 'opacity 0.6s', whiteSpace: 'nowrap',
-    });
-    ui.appendChild(el);
-    return el;
-  }
-
   resize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.renderer.setSize(w, h, false);
@@ -571,10 +566,8 @@ export class Game {
     if (this.sun) followSun(this.sun, p.x, p.y, p.z);
 
     if (this.hint && this.input.captured) {
-      const el = this.hint;
-      this.hint = null;
-      el.style.opacity = '0';
-      setTimeout(() => el.remove(), 700);
+      this.hint = false;
+      this.hud?.showHint(false);
     }
   }
 
@@ -592,7 +585,10 @@ export class Game {
     if (document.pointerLockElement) document.exitPointerLock?.();
     this.prompt = null;
     this.hud?.setPrompt(null);
-    if (this.hint) { this.hint.remove(); this.hint = null; }
+    this.touch?.setUsable(false);
+    this.touch?.hide();
+    this.input.release();
+    if (this.hint) { this.hint = false; this.hud?.showHint(false); }
   }
 
   // Ease the camera to the wide shot over END_SECS, then show the card.

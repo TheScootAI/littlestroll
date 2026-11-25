@@ -12,7 +12,7 @@ import { injectStyles, el, ACCENT, INK, PAPER } from './style.js';
 import { issueUrl, shotSize, MAX_CHARS, SHOT_FILE } from '../core/feedback.js';
 
 const CSS = `
-.lr-fb { position: fixed; top: 12px; right: 12px; z-index: 30; pointer-events: none;
+.lr-fb { position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); z-index: 30; pointer-events: none;
   font-family: system-ui, -apple-system, sans-serif; color: ${INK};
   display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .lr-fb-btn { width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; pointer-events: auto;
@@ -21,10 +21,11 @@ const CSS = `
 .lr-fb-btn:hover, .lr-fb-btn:focus-visible { background: ${PAPER}; color: ${ACCENT}; outline: none; }
 .lr-fb-btn svg { width: 20px; height: 20px; display: block; }
 .lr-fb-card { display: none; box-sizing: border-box; width: min(340px, calc(100vw - 24px)); padding: 16px 16px 14px;
+  max-height: calc(100vh - 70px); max-height: calc(100dvh - 70px); overflow-y: auto;
   border-radius: 20px; background: rgba(255,247,234,0.96); box-shadow: 0 10px 30px rgba(90,60,30,0.28); pointer-events: auto; }
 .lr-fb-card h3 { margin: 0 0 8px; font-size: 17px; }
 .lr-fb-card textarea { box-sizing: border-box; width: 100%; height: 120px; resize: none; padding: 10px 12px; border-radius: 12px;
-  border: 1px solid rgba(74,59,48,0.25); background: #fff; color: ${INK}; font: 15px/1.35 system-ui, sans-serif; outline: none; }
+  border: 1px solid rgba(74,59,48,0.25); background: #fff; color: ${INK}; font: 16px/1.35 system-ui, sans-serif; outline: none; }
 .lr-fb-card textarea:focus { border-color: ${ACCENT}; }
 .lr-fb-card p { margin: 8px 0 12px; font-size: 13px; line-height: 1.35; opacity: 0.75; }
 .lr-fb-shot { display: none; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; line-height: 1.3; }
