@@ -75,6 +75,8 @@ jobs:
           mkdir -p live/dist/staging
           if [ "$BUILT" = success ]; then
             cp -r staging/dist/. live/dist/staging/
+            # the tab says which copy this is, and search engines are asked to leave it out
+            sed -i -e 's|<title>\([^<]*\)</title>|<title>\1 (staging)</title><meta name="robots" content="noindex">|' live/dist/staging/index.html
           else
             echo "::warning::The staging branch did not build, so /staging/ shows a note instead."
             echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Little Stroll staging</title><p style="font: 18px system-ui; margin: 2em">The staging build failed. The Actions tab of the repository says why.</p>' > live/dist/staging/index.html
