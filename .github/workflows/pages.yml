@@ -1,8 +1,12 @@
 name: Deploy to GitHub Pages
 
+# The live game is always built from main. Any other branch that is pushed is built into
+# /staging/ beside it, to try on real phones before it is merged; /staging/version.txt says
+# which branch and commit that is. A push to main keeps /staging/ on the newest branch that
+# is not merged yet. A staging build that fails never stops the live game from deploying.
 on:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -18,18 +22,68 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out main (the live game)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: live
+          fetch-depth: 0   # every branch, to find the one to stage
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+          cache-dependency-path: live/package-lock.json
+      - name: Build the live game
+        working-directory: live
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Choose the branch to stage
+        id: staging
+        working-directory: live
+        run: |
+          if [ "$GITHUB_REF_TYPE" = branch ] && [ "$GITHUB_REF_NAME" != main ]; then
+            ref="$GITHUB_REF_NAME"
+          else
+            ref=$(git for-each-ref --sort=-committerdate --no-merged origin/main \
+              --format='%(refname:lstrip=3)' refs/remotes/origin | grep -vx HEAD | head -n 1 || true)
+          fi
+          echo "Staging: ${ref:-nothing (every branch is merged)}"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - name: Check out the staging branch
+        if: steps.staging.outputs.ref != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.staging.outputs.ref }}
+          path: staging
+      - name: Build the staging copy
+        id: stagebuild
+        if: steps.staging.outputs.ref != ''
+        continue-on-error: true
+        working-directory: staging
+        run: |
+          npm ci
+          npm run build
+          npm test || echo "::warning::The tests fail on the staging branch. It was published to /staging/ all the same."
+      - name: Put staging beside the live game
+        if: steps.staging.outputs.ref != ''
+        env:
+          STAGING_REF: ${{ steps.staging.outputs.ref }}
+          BUILT: ${{ steps.stagebuild.outcome }}
+        run: |
+          mkdir -p live/dist/staging
+          if [ "$BUILT" = success ]; then
+            cp -r staging/dist/. live/dist/staging/
+          else
+            echo "::warning::The staging branch did not build, so /staging/ shows a note instead."
+            echo '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Little Stroll staging</title><p style="font: 18px system-ui; margin: 2em">The staging build failed. The Actions tab of the repository says why.</p>' > live/dist/staging/index.html
+          fi
+          printf '%s\n%s\n' "$STAGING_REF" "$(git -C staging rev-parse HEAD)" > live/dist/staging/version.txt
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: live/dist
   deploy:
     needs: build
     runs-on: ubuntu-latest

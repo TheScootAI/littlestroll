@@ -47,6 +47,10 @@ npm run build
 
 `npm run build` writes a static site to `dist/` that any static host can serve.
 
+## Trying a change before it is live
+
+The live game is always built from `main`. Push any other branch and the same deploy also builds it into a `staging/` folder beside the live game (the live address with `staging/` on the end), so a change can be tried on real phones first. `staging/version.txt` there names the branch and the commit. Merging the branch into `main` is what makes it live.
+
 ## Playing with an AI partner
 
 Add `?pilot` to the address and an AI assistant can be the second player. It gets a small command box in the top-right corner of its page: click it, type a command such as `help`, `where`, `goto gate.plateA`, `press` or `say hello`, and press Enter. The answers appear above the box as ordinary text. An assistant that can run JavaScript in the page can use the same controls as `window.__pilot` (`__pilot.help()` lists them). `?pilot=Name` puts a name on the badge, `&join=CODE` joins a stroll directly, and `&box=0` hides the command box.
